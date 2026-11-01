@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="pwa/echo.webmanifest">
+<meta name="theme-color" content="#ECEFF4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#10151F" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="pwa/echo-192.png">
+<script src="ha-token.js"></script>
+<title>Echo</title>
+<link rel="icon" href="pwa/echo-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#ECEFF4; --surface:#FFFFFF; --surface-2:#F4F6FA; --ink:#14213D; --muted:#5A6781; --line:#D5DBE6;
+  --accent:#1B4FA0; --accent-ink:#FFFFFF; --accent-soft:#DCE6F6; --ring:#1FA7C9;
+  --ok:#2E8B57; --warn:#B7790A; --bad:#C23B3B;
+  color-scheme:light; box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#10151F; --surface:#1A2130; --surface-2:#212A3B; --ink:#E5EAF3; --muted:#95A1B8; --line:#2C3749;
+    --accent:#6E9BEA; --accent-ink:#0C1830; --accent-soft:#1E2F4F; --ring:#4CC8E6; --ok:#4CC282; --warn:#E3A93A; --bad:#EF6B6B; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#10151F; --surface:#1A2130; --surface-2:#212A3B; --ink:#E5EAF3; --muted:#95A1B8; --line:#2C3749;
+  --accent:#6E9BEA; --accent-ink:#0C1830; --accent-soft:#1E2F4F; --ring:#4CC8E6; --ok:#4CC282; --warn:#E3A93A; --bad:#EF6B6B; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 Manrope,"Segoe UI",system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+button,a,select,input{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+button{-webkit-user-select:none;user-select:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1000px;margin:0 auto;padding:20px 16px 48px}
+
+header{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:start;margin-bottom:16px}
+h1{margin:0;font-size:1.6rem;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.meta{color:var(--muted);font-size:.85rem;display:flex;align-items:center;gap:6px;margin-top:3px}
+.meta i{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
+.meta.on i{background:var(--ok)} .meta.err i{background:var(--bad)}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;text-decoration:none;color:var(--ink)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.icon{width:40px;padding:8px}
+.btn:disabled{opacity:.5;cursor:default}
+.btn svg{width:20px;height:20px;flex:none}
+.btn:active:not(:disabled){transform:scale(.96)}
+@media (hover:hover){.btn:hover{border-color:var(--muted)} .dev:hover{border-color:var(--muted)}}
+
+section{margin-top:22px}
+section:first-child{margin-top:0}
+section > h2{font-size:1.05rem;font-weight:800;margin:0 0 10px;display:flex;align-items:center;gap:8px}
+section > h2 small{margin-left:auto;font-size:.8rem;color:var(--muted);font-weight:600}
+
+/* Jetzt läuft */
+.playing{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(420px,100%),1fr));gap:12px}
+.now{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px;display:grid;grid-template-columns:120px minmax(0,1fr);gap:16px;align-items:center}
+.cover{width:100%;aspect-ratio:1;border-radius:12px;background:var(--surface-2);display:grid;place-items:center;overflow:hidden;color:var(--muted)}
+.cover img{width:100%;height:100%;object-fit:cover;display:block}
+.cover svg{width:44%;height:44%}
+.ninfo{min-width:0;display:grid;gap:2px}
+.ninfo .dn{font-size:.8rem;font-weight:700;color:var(--ring);display:flex;align-items:center;gap:6px}
+.ninfo .dn::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--ring);box-shadow:0 0 0 3px color-mix(in srgb,var(--ring) 25%,transparent)}
+.ninfo .dn.ps{color:var(--muted)} .ninfo .dn.ps::before{background:var(--muted);box-shadow:none}
+.ninfo .ti{font-size:1.15rem;font-weight:800;line-height:1.25;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ninfo .ar{color:var(--muted);font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prog{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;font-size:.75rem;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:6px}
+.bar{height:5px;border-radius:3px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--ring);transition:width 1s linear}
+.ctrl{grid-column:1/-1;display:grid;grid-template-columns:auto auto auto minmax(0,1fr);gap:8px;align-items:center}
+.ctrl .btn{width:48px;height:48px;padding:0;border-radius:50%}
+.ctrl .btn.primary{width:56px;height:56px}
+.ctrl .btn svg{width:22px;height:22px}
+.vol{display:grid;grid-template-columns:auto minmax(0,1fr) 3ch;gap:8px;align-items:center;color:var(--muted);font-size:.85rem;font-variant-numeric:tabular-nums}
+.vol button{border:0;background:none;color:var(--muted);padding:6px;cursor:pointer;display:grid;place-items:center;border-radius:8px}
+.vol button svg{width:20px;height:20px}
+.vol button.m{color:var(--bad)}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:32px;background:transparent;cursor:pointer;margin:0}
+input[type=range]::-webkit-slider-runnable-track{height:8px;border-radius:4px;background:linear-gradient(to right,var(--accent) var(--p,0%),var(--line) var(--p,0%))}
+input[type=range]::-moz-range-track{height:8px;border-radius:4px;background:linear-gradient(to right,var(--accent) var(--p,0%),var(--line) var(--p,0%))}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:#fff;border:3px solid var(--accent);margin-top:-8px;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:#fff;border:3px solid var(--accent)}
+input[type=range]:disabled{opacity:.4}
+
+/* Alle Geräte */
+.devs{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
+.dev{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:grid;gap:6px}
+.dev .top{display:flex;align-items:center;gap:12px}
+.dev .ic{width:44px;height:44px;border-radius:10px;background:var(--surface-2);display:grid;place-items:center;color:var(--muted);flex:none;overflow:hidden}
+.dev .ic img{width:100%;height:100%;object-fit:cover}
+.dev .ic svg{width:24px;height:24px}
+.dev .tx{flex:1;min-width:0}
+.dev .tx b{display:block;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dev .tx span{display:block;color:var(--muted);font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dev .pp{width:44px;height:44px;border-radius:50%;padding:0;flex:none}
+.dev.off{opacity:.55}
+.dev.off .vol{display:none}
+.empty{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:36px 20px;text-align:center;color:var(--muted)}
+.empty .btn{margin-top:12px}
+
+dialog{border:0;padding:0;background:var(--surface);color:var(--ink);border-radius:14px;width:min(520px,calc(100% - 24px));max-height:calc(100% - 40px)}
+dialog::backdrop{background:rgba(8,14,26,.5)}
+.dh{display:flex;gap:12px;align-items:flex-start;padding:18px 20px 12px;border-bottom:1px solid var(--line)}
+.dh h2{margin:0;flex:1;font-size:1.15rem}
+.dh p{margin:2px 0 0;color:var(--muted);font-size:.85rem}
+.db{padding:16px 20px 20px;display:grid;gap:14px}
+.field{display:grid;gap:5px}
+.field label{font-size:.85rem;font-weight:600}
+.field input{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 12px;min-height:40px;width:100%}
+.hl{display:grid;gap:6px;max-height:40vh;overflow:auto}
+.hl label{display:flex;gap:10px;align-items:center;font-weight:600;padding:8px 10px;border:1px solid var(--line);border-radius:8px;cursor:pointer}
+.hl input{width:20px;height:20px;accent-color:var(--accent)}
+.hl small{color:var(--muted);font-weight:500;margin-left:auto;font-size:.75rem}
+.hint{font-size:.8rem;color:var(--muted);margin:0}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;font-size:.9rem;box-shadow:0 6px 24px rgba(0,0,0,.25);z-index:50;max-width:calc(100% - 32px)}
+.toast.err{background:var(--bad);color:#fff}
+
+@media (max-width:640px){
+  .wrap{padding:12px 12px 32px}
+  input,select,textarea{font-size:16px!important}
+  h1{font-size:1.35rem}
+  .btn{min-height:44px} .btn.icon{width:44px;height:44px}
+  .now{grid-template-columns:88px minmax(0,1fr);gap:12px;padding:12px;border-radius:16px}
+  .ninfo .ti{font-size:1.02rem}
+  .ctrl{grid-template-columns:auto auto auto minmax(0,1fr);gap:6px}
+  .ctrl .btn{width:44px;height:44px} .ctrl .btn.primary{width:52px;height:52px}
+  .vol{grid-template-columns:auto minmax(0,1fr) 3ch;gap:4px}
+  .devs{grid-template-columns:1fr;gap:8px}
+  section{margin-top:18px}
+  dialog{width:100%;max-width:100%;margin:auto 0 0;border-radius:18px 18px 0 0;max-height:92%;padding-bottom:env(safe-area-inset-bottom,0px)}
+  dialog[open]{animation:sheet .22s ease-out}
+  dialog::before{content:"";display:block;width:40px;height:4px;border-radius:2px;background:var(--line);margin:8px auto 0}
+  .dh{padding:12px 16px 10px} .db{padding:14px 16px 20px}
+}
+@keyframes sheet{from{transform:translateY(48px);opacity:.3}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){dialog[open]{animation:none!important}.bar i{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div><h1>Echo</h1><div class="meta" id="meta"><i></i><span>Nicht verbunden</span></div></div>
+    <button class="btn" id="pauseAll" hidden>Alle pausieren</button>
+    <button class="btn icon" id="setBtn" aria-label="Einstellungen" title="Einstellungen">⚙</button>
+  </header>
+  <main id="main"></main>
+</div>
+
+<dialog id="setDlg" aria-labelledby="setTitle">
+  <form method="dialog" id="setForm">
+    <div class="dh"><div style="flex:1"><h2 id="setTitle">Verbindung zu Home Assistant</h2><p>Wird nur in diesem Browser gespeichert.</p></div>
+      <button class="btn icon" value="cancel" aria-label="Schließen">✕</button></div>
+    <div class="db">
+      <div class="field"><label for="cfgUrl">Adresse von Home Assistant</label><input id="cfgUrl" type="url" required></div>
+      <div class="field"><label for="cfgToken">Langlebiges Zugriffstoken</label><input id="cfgToken" type="password" autocomplete="off" placeholder="Leer lassen für HA-Anmeldung">
+        <p class="hint">Nur nötig, wenn du in diesem Browser nicht bei Home Assistant angemeldet bist.</p></div>
+      <div class="field" id="hideBox" hidden><label>Angezeigte Geräte</label><div id="hideList" class="hl"></div>
+        <p class="hint">Hier kannst du z. B. Lautsprechergruppen oder „Dieses Gerät“ ausblenden.</p></div>
+      <div style="display:flex;justify-content:flex-end"><button class="btn primary" value="ok">Speichern</button></div>
+    </div>
+  </form>
+</dialog>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const load = k => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } };
+const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+let tt;
+function toast(msg, err){
+  document.querySelector('.toast')?.remove();
+  const el = Object.assign(document.createElement('div'), {className:'toast' + (err ? ' err' : ''), textContent:msg});
+  el.setAttribute('role', 'status'); document.body.append(el);
+  clearTimeout(tt); tt = setTimeout(() => el.remove(), err ? 6000 : 2200);
+}
+
+/* ---------- Anmeldung ----------
+   Die Seite nutzt automatisch die Anmeldung von Home Assistant aus diesem Browser.
+   Optional kannst du in der Datei ha-token.js ein langlebiges Token eintragen, dann funktionieren
+   alle Seiten auf jedem Gerät ohne Anmeldung (nur im lokalen Netz empfehlenswert). */
+const FIXED_TOKEN = window.HA_FIXED_TOKEN || '';
+
+async function getToken(manual){
+  if (FIXED_TOKEN) return {token: FIXED_TOKEN, via: 'festes Token'};
+  // 1. Als Dashboard in HA eingebettet (Seitenleiste, Companion-App): Anmeldung der HA-Oberfläche mitbenutzen
+  try {
+    const auth = window.parent !== window && window.parent.document.querySelector('home-assistant')?.hass?.auth;
+    if (auth) { if (auth.expired) await auth.refreshAccessToken(); return {token: auth.accessToken, via: 'HA-Anmeldung'}; }
+  } catch {}
+  // 2. Direkt geöffnet: gespeicherte HA-Anmeldung ("Angemeldet bleiben") verwenden und bei Bedarf erneuern
+  try {
+    const t = JSON.parse(localStorage.getItem('hassTokens'));
+    if (t?.refresh_token) {
+      if (!t.expires || t.expires < Date.now() + 60000) {
+        const r = await fetch((t.hassUrl || location.origin) + '/auth/token', {
+          method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: new URLSearchParams({grant_type: 'refresh_token', client_id: t.clientId || location.origin + '/', refresh_token: t.refresh_token})
+        });
+        if (!r.ok) throw new Error('refresh');
+        const n = await r.json();
+        Object.assign(t, {access_token: n.access_token, expires_in: n.expires_in, expires: Date.now() + n.expires_in * 1000});
+        localStorage.setItem('hassTokens', JSON.stringify(t));
+      }
+      return {token: t.access_token, via: 'HA-Anmeldung'};
+    }
+  } catch {}
+  // 3. Token aus den Einstellungen dieser Seite
+  return manual ? {token: manual, via: 'eigenes Token'} : null;
+}
+const NO_LOGIN = 'Keine Anmeldung gefunden. Öffne Home Assistant einmal in diesem Browser und melde dich mit „Angemeldet bleiben“ an, oder trag in den Einstellungen ein Token ein.';
+
+const cfg = Object.assign({url:'', token:''}, load('zbm:cfg') || {}, load('car:cfg') || {}, load('echo:cfg') || {});
+if (location.protocol.startsWith('http')) cfg.url = location.origin;
+
+const S = {entities:[], devices:[], states:new Map()};
+let ws, msgId = 0; const pending = new Map();
+function setMeta(kind, text){ const m = $('#meta'); m.className = 'meta ' + kind; m.querySelector('span').textContent = text; }
+
+async function connect(){
+  if (ws) { ws.onclose = null; ws.close(); }
+  setMeta('', 'Verbinde …');
+  const auth = await getToken(cfg.token);
+  if (!cfg.url || !auth) { setMeta('err', 'Nicht angemeldet'); showError(NO_LOGIN); return; }
+  ws = new WebSocket(cfg.url.replace(/^http/i, 'ws').replace(/\/+$/, '') + '/api/websocket');
+  let authed = false;
+  ws.onmessage = async e => {
+    const m = JSON.parse(e.data);
+    if (m.type === 'auth_required') ws.send(JSON.stringify({type:'auth', access_token:auth.token}));
+    else if (m.type === 'auth_invalid') { setMeta('err', 'Anmeldung abgelehnt'); showError('Die Anmeldung wurde abgelehnt. Melde dich in Home Assistant neu an oder trag ein neues Token ein.'); }
+    else if (m.type === 'auth_ok') {
+      authed = true; S.via = auth.via;
+      send({type:'subscribe_events', event_type:'state_changed'}).catch(() => {});
+      try { await loadAll(); } catch (err) { showError(err.message); }
+    }
+    else if (m.type === 'result') { const p = pending.get(m.id); if (p) { pending.delete(m.id); m.success ? p.res(m.result) : p.rej(new Error(m.error?.message || 'Fehler')); } }
+    else if (m.type === 'event' && m.event.event_type === 'state_changed') {
+      const {entity_id, new_state} = m.event.data;
+      if (!S.mine?.has(entity_id)) return;
+      new_state ? S.states.set(entity_id, new_state) : S.states.delete(entity_id);
+      scheduleRender();
+    }
+  };
+  ws.onerror = () => { if (!authed) { setMeta('err', 'Nicht verbunden'); showError('Keine Verbindung zu ' + cfg.url + '.'); } };
+  ws.onclose = () => { if (authed) { setMeta('err', 'Verbindung verloren, neuer Versuch …'); setTimeout(connect, 5000); } };
+}
+function send(msg){
+  return new Promise((res, rej) => {
+    if (!ws || ws.readyState !== 1) return rej(new Error('Nicht verbunden'));
+    const id = ++msgId; pending.set(id, {res, rej}); ws.send(JSON.stringify({...msg, id}));
+  });
+}
+const call = (domain, service, data) => send({type:'call_service', domain, service, service_data:data});
+
+async function loadAll(){
+  const [devices, entities, states] = await Promise.all([
+    send({type:'config/device_registry/list'}), send({type:'config/entity_registry/list'}), send({type:'get_states'})]);
+  // Echo-Geräte: Alexa Media Player (HACS) oder Media-Player von Geräten des Herstellers Amazon
+  const amazonDevs = new Set(devices.filter(d => /amazon/i.test(d.manufacturer || '') || (d.identifiers || []).some(([dom]) => /alexa/.test(dom))).map(d => d.id));
+  const cand = entities.filter(e => !e.disabled_by && e.entity_id.startsWith('media_player.') && (/alexa/.test(e.platform || '') || amazonDevs.has(e.device_id)));
+  const stMap = new Map(states.map(s => [s.entity_id, s]));
+  S.devices = devices;
+  // Doppelte entfernen: pro Gerät und pro Name nur einen Media Player behalten.
+  // Bevorzugt: offizielle Integration "Alexa Devices", dann erreichbar, dann mit Lautstärke.
+  const score = e => { const s = stMap.get(e.entity_id);
+    return (e.platform === 'alexa_devices' ? 100 : /alexa/.test(e.platform || '') ? 50 : 0)
+      + (s && s.state !== 'unavailable' ? 20 : 0) + (s?.attributes.volume_level != null ? 5 : 0) + (s ? 1 : 0); };
+  const devName = e => { const d = devices.find(x => x.id === e.device_id); return d?.name_by_user || d?.name || ''; };
+  const keyOf = e => (devName(e) || stMap.get(e.entity_id)?.attributes.friendly_name || e.original_name || e.entity_id)
+    .toLowerCase().replace(/^(amazon\s+)?echo(\s+(dot|show|pop|studio|plus|spot|flex))?(\s+\d+)?\s+/, '').replace(/[^a-z0-9äöüß]+/g, '');
+  const best = new Map();
+  for (const e of cand.sort((a, b) => score(b) - score(a))) {
+    const keys = [e.device_id ? 'd:' + e.device_id : null, 'n:' + keyOf(e)].filter(Boolean);
+    if (keys.some(k => best.has(k))) continue;
+    keys.forEach(k => best.set(k, e));
+  }
+  S.allEntities = [...new Set(best.values())];
+  S.hidden = new Set(load('echo:hidden') || []);
+  S.entities = S.allEntities.filter(e => !S.hidden.has(e.entity_id));
+  S.dupes = cand.length - S.allEntities.length;
+  S.mine = new Set(S.allEntities.map(e => e.entity_id));
+  S.states = new Map(states.filter(s => S.mine.has(s.entity_id)).map(s => [s.entity_id, s]));
+  setMeta('on', `${S.entities.length} ${S.entities.length === 1 ? 'Gerät' : 'Geräte'}${S.hidden.size ? ` (${S.hidden.size} ausgeblendet)` : ''}${S.via ? ', über ' + S.via : ''}`);
+  render();
+}
+
+/* ---------- Hilfen ---------- */
+const st = id => S.states.get(id?.entity_id || id);
+const nameOf = e => st(e)?.attributes.friendly_name || e.name || e.original_name || e.entity_id;
+const isPlaying = s => s?.state === 'playing';
+const hasMedia = s => s && ['playing', 'paused'].includes(s.state) && (s.attributes.media_title || s.attributes.media_artist);
+const F = {PAUSE:1, VOL_SET:4, MUTE:8, PREV:16, NEXT:32, PLAY:16384};
+const has = (s, f) => ((s?.attributes.supported_features || 0) & f) === f;
+const STATE_DE = {playing:'Spielt', paused:'Pausiert', idle:'Bereit', standby:'Bereit', on:'Bereit', off:'Aus', unavailable:'Offline', unknown:'Unbekannt'};
+const I = {
+  play:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>',
+  pause:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>',
+  prev:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg>',
+  next:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg>',
+  vol:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg>',
+  mute:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H3v6h3l5 4z"/><path d="M22 9l-6 6M16 9l6 6"/></svg>',
+  echo:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M6.3 8.5a7 7 0 0 1 11.4 0" stroke-linecap="round"/></svg>'
+};
+const pic = s => { const p = s?.attributes.entity_picture; return p ? (p.startsWith('http') ? p : cfg.url + p) : ''; };
+const mmss = sec => { sec = Math.max(0, Math.round(sec)); const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60;
+  return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(s).padStart(2, '0'); };
+function position(s){
+  const a = s.attributes, dur = +a.media_duration, pos = +a.media_position;
+  if (!dur || !Number.isFinite(pos)) return null;
+  let now = pos;
+  if (isPlaying(s) && a.media_position_updated_at) now += (Date.now() - Date.parse(a.media_position_updated_at)) / 1000;
+  return {pos:Math.min(dur, now), dur};
+}
+
+/* ---------- Darstellung ---------- */
+let rt; function scheduleRender(){ clearTimeout(rt); rt = setTimeout(render, 200); }
+function showError(msg){ $('#main').innerHTML = `<div class="empty">${esc(msg)}<br><button class="btn primary" onclick="openSettings()">Einstellungen öffnen</button></div>`; }
+
+function volHTML(e, s){
+  const lvl = s?.attributes.volume_level, v = lvl != null ? Math.round(lvl * 100) : null, muted = s?.attributes.is_volume_muted;
+  const can = s && s.state !== 'unavailable' && v != null;
+  return `<div class="vol">
+    <button data-mute="${esc(e.entity_id)}" class="${muted ? 'm' : ''}" aria-label="${muted ? 'Ton an' : 'Stummschalten'}" ${has(s, F.MUTE) ? '' : 'disabled'}>${muted ? I.mute : I.vol}</button>
+    <input type="range" min="0" max="100" step="1" value="${v ?? 0}" style="--p:${v ?? 0}%" data-vol="${esc(e.entity_id)}" aria-label="Lautstärke ${esc(nameOf(e))}" ${can ? '' : 'disabled'}>
+    <span data-vval="${esc(e.entity_id)}">${v ?? '–'}</span></div>`;
+}
+
+function render(){
+  if (!S.entities.length) {
+    $('#main').innerHTML = '<div class="empty">Keine Echo-Geräte gefunden.<br>Richte in Home Assistant die Integration „Alexa Devices“ ein (oder „Alexa Media Player“ aus HACS).</div>'; return;
+  }
+  const ae = document.activeElement;
+  if (S.dragging && ae?.type === 'range') { S.pendingRender = true; return; }
+  const offl = e => !st(e) || st(e).state === 'unavailable';
+  const list = [...S.entities].sort((a, b) => (offl(a) - offl(b)) || (isPlaying(st(b)) - isPlaying(st(a))) || (!!hasMedia(st(b)) - !!hasMedia(st(a))) || nameOf(a).localeCompare(nameOf(b), 'de'));
+  const active = list.filter(e => hasMedia(st(e)));
+  $('#pauseAll').hidden = !list.some(e => isPlaying(st(e)));
+  let html = '';
+
+  if (active.length) html += `<section><h2>Jetzt läuft</h2><div class="playing">${active.map(e => {
+    const s = st(e), a = s.attributes, p = position(s), img = pic(s), playing = isPlaying(s);
+    return `<div class="now">
+      <div class="cover">${img ? `<img src="${esc(img)}" alt="" referrerpolicy="no-referrer">` : I.echo}</div>
+      <div class="ninfo"><span class="dn ${playing ? '' : 'ps'}">${esc(nameOf(e))}${playing ? '' : ' (pausiert)'}</span>
+        <span class="ti">${esc(a.media_title || 'Unbekannter Titel')}</span>
+        <span class="ar">${esc([a.media_artist, a.media_album_name].filter(Boolean).join(' – ') || a.source || '')}</span>
+        ${p ? `<div class="prog" data-prog="${esc(e.entity_id)}"><span>${mmss(p.pos)}</span><div class="bar"><i style="width:${p.pos / p.dur * 100}%"></i></div><span>${mmss(p.dur)}</span></div>` : ''}
+      </div>
+      <div class="ctrl">
+        <button class="btn" data-cmd="media_previous_track" data-ent="${esc(e.entity_id)}" aria-label="Zurück" ${has(s, F.PREV) ? '' : 'disabled'}>${I.prev}</button>
+        <button class="btn primary" data-cmd="media_play_pause" data-ent="${esc(e.entity_id)}" aria-label="${playing ? 'Pause' : 'Abspielen'}">${playing ? I.pause : I.play}</button>
+        <button class="btn" data-cmd="media_next_track" data-ent="${esc(e.entity_id)}" aria-label="Weiter" ${has(s, F.NEXT) ? '' : 'disabled'}>${I.next}</button>
+        ${volHTML(e, s)}
+      </div></div>`;
+  }).join('')}</div></section>`;
+
+  const rest = list.filter(e => !active.includes(e));
+  if (rest.length) html += `<section><h2>${active.length ? 'Weitere Geräte' : 'Alle Geräte'}<small>${rest.filter(e => st(e)?.state !== 'unavailable').length} online</small></h2><div class="devs">${rest.map(e => {
+    const s = st(e), off = !s || s.state === 'unavailable';
+    return `<div class="dev ${off ? 'off' : ''}"><div class="top">
+        <div class="ic">${I.echo}</div>
+        <div class="tx"><b>${esc(nameOf(e))}</b><span>${esc(STATE_DE[s?.state] || s?.state || 'Offline')}</span></div>
+        <button class="btn pp" data-cmd="media_play" data-ent="${esc(e.entity_id)}" aria-label="Wiedergabe fortsetzen" ${off || !has(s, F.PLAY) ? 'disabled' : ''}>${I.play}</button>
+      </div>${volHTML(e, s)}</div>`;
+  }).join('')}</div></section>`;
+
+  $('#main').innerHTML = html;
+  S.pendingRender = false;
+}
+// Fortschrittsbalken jede Sekunde weiterlaufen lassen, ohne alles neu zu zeichnen
+setInterval(() => {
+  for (const el of document.querySelectorAll('[data-prog]')) {
+    const s = st(el.dataset.prog); if (!s) continue; const p = position(s); if (!p) continue;
+    el.firstElementChild.textContent = mmss(p.pos); el.querySelector('.bar i').style.width = (p.pos / p.dur * 100) + '%';
+  }
+}, 1000);
+
+/* ---------- Aktionen ---------- */
+async function run(fn, msg){
+  try { await fn(); if (msg) toast(msg); }
+  catch (err) { toast('Fehlgeschlagen: ' + err.message, true); }
+}
+$('#main').addEventListener('click', e => {
+  const t = e.target.closest('button'); if (!t || t.disabled) return;
+  const d = t.dataset;
+  if (d.cmd) return run(() => call('media_player', d.cmd, {entity_id:d.ent}));
+  if (d.mute) { const m = !!st(d.mute)?.attributes.is_volume_muted; return run(() => call('media_player', 'volume_mute', {entity_id:d.mute, is_volume_muted:!m})); }
+});
+$('#main').addEventListener('input', e => {
+  const el = e.target; if (!el.dataset.vol) return;
+  S.dragging = true; el.style.setProperty('--p', el.value + '%');
+  const out = document.querySelector(`[data-vval="${CSS.escape(el.dataset.vol)}"]`); if (out) out.textContent = el.value;
+});
+$('#main').addEventListener('change', e => {
+  const el = e.target; if (!el.dataset.vol) return;
+  S.dragging = false;
+  run(() => call('media_player', 'volume_set', {entity_id:el.dataset.vol, volume_level:+el.value / 100}));
+  el.blur(); if (S.pendingRender) scheduleRender();
+});
+$('#pauseAll').onclick = () => {
+  const ids = S.entities.filter(e => isPlaying(st(e))).map(e => e.entity_id);
+  if (ids.length) run(() => call('media_player', 'media_pause', {entity_id:ids}), 'Alle pausiert');
+};
+
+function openSettings(){
+  $('#cfgUrl').value = cfg.url; $('#cfgToken').value = cfg.token || '';
+  const all = (S.allEntities || []).slice().sort((a, b) => nameOf(a).localeCompare(nameOf(b), 'de'));
+  $('#hideBox').hidden = !all.length;
+  $('#hideList').innerHTML = all.map(e => `<label><input type="checkbox" value="${esc(e.entity_id)}" ${S.hidden?.has(e.entity_id) ? '' : 'checked'}>${esc(nameOf(e))}<small>${esc(e.entity_id.replace('media_player.', ''))}</small></label>`).join('');
+  $('#setDlg').showModal();
+}
+$('#setBtn').onclick = openSettings;
+$('#setForm').addEventListener('submit', e => {
+  if (e.submitter?.value !== 'ok') return;
+  cfg.url = $('#cfgUrl').value.trim().replace(/\/+$/, ''); cfg.token = $('#cfgToken').value.trim();
+  const hide = [...$('#hideList').querySelectorAll('input')].filter(i => !i.checked).map(i => i.value);
+  save('echo:hidden', hide);
+  const changed = cfg.url !== (load('echo:cfg')?.url ?? cfg.url) || cfg.token !== (load('echo:cfg')?.token ?? '');
+  save('echo:cfg', {url:cfg.url, token:cfg.token});
+  if (changed || !S.allEntities) connect();
+  else { S.hidden = new Set(hide); S.entities = S.allEntities.filter(e => !S.hidden.has(e.entity_id)); render(); }
+});
+connect();
+</script>
+</body>
+</html>

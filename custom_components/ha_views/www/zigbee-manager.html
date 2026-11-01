@@ -1,0 +1,734 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="pwa/zigbee.webmanifest">
+<meta name="theme-color" content="#EEF1F4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141A20" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="pwa/zigbee-192.png">
+<script src="ha-token.js"></script>
+<title>Zigbee-Geräte</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📡</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEF1F4; --surface:#FFFFFF; --surface-2:#F5F7F9; --ink:#1C2530; --muted:#5E6B78; --line:#D8DEE5;
+  --accent:#0F6E73; --accent-ink:#FFFFFF; --accent-soft:#D9ECEC;
+  --ok:#2F8F5B; --warn:#B7790A; --bad:#C23B3B; --bar-off:#D3D9E0;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#141A20; --surface:#1C232B; --surface-2:#222A33; --ink:#E6EBF0; --muted:#94A1AE; --line:#2E3842;
+    --accent:#3BB3B0; --accent-ink:#0B2426; --accent-soft:#1D3A3C;
+    --ok:#4CC282; --warn:#E3A93A; --bad:#EF6B6B; --bar-off:#36414C; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#141A20; --surface:#1C232B; --surface-2:#222A33; --ink:#E6EBF0; --muted:#94A1AE; --line:#2E3842;
+  --accent:#3BB3B0; --accent-ink:#0B2426; --accent-soft:#1D3A3C;
+  --ok:#4CC282; --warn:#E3A93A; --bad:#EF6B6B; --bar-off:#36414C; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 Manrope,"Segoe UI",system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1080px;margin:0 auto;padding:20px 16px 48px}
+
+/* Kopfzeile */
+header{display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px;margin-bottom:20px}
+h1{font-size:1.65rem;font-weight:800;letter-spacing:-.02em;margin:0;line-height:1.1}
+.conn{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:.85rem}
+.conn i{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.conn.on i{background:var(--ok)} .conn.err i{background:var(--bad)} .conn.demo i{background:var(--warn)}
+.head-actions{margin-left:auto;display:flex;gap:8px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;text-decoration:none}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.danger{color:var(--bad)}
+.btn.icon{padding:8px;width:40px;justify-content:center}
+.btn:disabled{opacity:.5;cursor:default}
+
+/* Anlern-Knopf mit Countdown-Ring */
+.join svg{width:20px;height:20px;transform:rotate(-90deg)}
+.join circle{fill:none;stroke-width:3}
+.join .track{stroke:currentColor;opacity:.25}
+.join .prog{stroke:currentColor;stroke-linecap:round;transition:stroke-dashoffset 1s linear}
+.join.active{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+
+/* Werkzeugleiste */
+.tools{display:grid;grid-template-columns:1fr repeat(3,auto);gap:8px;margin-bottom:12px}
+.tools input,.tools select,.field input,.field select{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 12px;min-height:40px;width:100%}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.chip{border:1px solid var(--line);background:transparent;border-radius:999px;padding:6px 12px;cursor:pointer;font-weight:600;font-size:.88rem;display:inline-flex;gap:6px;align-items:baseline}
+.chip b{font-weight:800}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chip.bad b{color:var(--bad)} .chip.warn b{color:var(--warn)}
+.chip[aria-pressed="true"] b{color:inherit}
+
+/* Geräteliste */
+.list{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.row,.list-head{display:grid;grid-template-columns:10px minmax(0,1fr) 130px 96px 64px 120px;gap:14px;align-items:center;padding:12px 16px}
+.list-head{color:var(--muted);font-size:.8rem;font-weight:600;border-bottom:1px solid var(--line);background:var(--surface-2)}
+.row{width:100%;border:0;border-bottom:1px solid var(--line);background:none;text-align:left;cursor:pointer}
+.row:last-child{border-bottom:0}
+.row:hover{background:var(--surface-2)}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--ok)}
+.dot.off{background:var(--bad)} .dot.dis{background:var(--bar-off)}
+.who{min-width:0}
+.who strong{display:block;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.who small{display:block;color:var(--muted);font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tag{display:inline-block;font-size:.72rem;font-weight:700;padding:1px 6px;border-radius:4px;background:var(--surface-2);border:1px solid var(--line);margin-left:6px;vertical-align:1px;color:var(--muted)}
+.area,.seen{color:var(--muted);font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sub{display:none}
+.batt{display:flex;align-items:center;gap:6px;font-size:.85rem;font-variant-numeric:tabular-nums}
+.batt .cell{width:22px;height:11px;border:1.5px solid currentColor;border-radius:2px;position:relative;opacity:.9}
+.batt .cell::after{content:"";position:absolute;right:-4px;top:2.5px;width:2px;height:4px;background:currentColor;border-radius:0 1px 1px 0}
+.batt .cell i{position:absolute;left:1px;top:1px;bottom:1px;border-radius:1px;background:currentColor}
+.batt.low{color:var(--bad)} .none{color:var(--muted);font-size:.85rem}
+.sig{display:flex;align-items:flex-end;gap:2px;height:16px}
+.sig i{width:4px;border-radius:1px;background:var(--bar-off)}
+.sig i:nth-child(1){height:25%}.sig i:nth-child(2){height:50%}.sig i:nth-child(3){height:75%}.sig i:nth-child(4){height:100%}
+.sig.l1 i:nth-child(-n+1),.sig.l2 i:nth-child(-n+2),.sig.l3 i:nth-child(-n+3),.sig.l4 i{background:var(--ok)}
+.sig.weak i:nth-child(-n+2){background:var(--warn)}
+.sig.weak.l1 i:nth-child(1){background:var(--bad)}
+.sig span{font-size:.75rem;color:var(--muted);margin-left:5px;font-variant-numeric:tabular-nums;align-self:center}
+.empty{padding:40px 20px;text-align:center;color:var(--muted)}
+.empty .btn{margin-top:12px}
+
+@media (max-width:720px){
+  .tools{grid-template-columns:1fr 1fr}
+  .tools .search{grid-column:1/-1}
+  .list-head{display:none}
+  .row{grid-template-columns:10px minmax(0,1fr) auto;grid-template-areas:"dot who sig" ". sub batt";gap:4px 12px;padding:12px 14px}
+  .dot{grid-area:dot;align-self:start;margin-top:6px}
+  .who{grid-area:who} .sig{grid-area:sig;justify-self:end} .batt{grid-area:batt;justify-self:end}
+  .area,.seen{display:none}
+  .sub{display:block;grid-area:sub;color:var(--muted);font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  h1{font-size:1.4rem}
+  .head-actions{margin-left:0;width:100%}
+  .head-actions .join{flex:1;justify-content:center}
+}
+
+/* Dialoge */
+dialog{border:0;padding:0;background:var(--surface);color:var(--ink);border-radius:14px;width:min(560px,calc(100% - 24px));max-height:calc(100% - 40px)}
+dialog::backdrop{background:rgba(10,16,22,.45)}
+dialog[open]{animation:pop .18s ease-out}
+@keyframes pop{from{transform:translateY(12px);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){dialog[open]{animation:none}.join .prog{transition:none}}
+@media (max-width:720px){
+  dialog.sheet{width:100%;max-width:100%;margin:auto 0 0;border-radius:16px 16px 0 0;max-height:88%;padding-bottom:env(safe-area-inset-bottom,0px)}
+}
+.dlg-head{display:flex;align-items:flex-start;gap:12px;padding:18px 20px 12px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface);z-index:1}
+.dlg-head h2{margin:0;font-size:1.2rem;font-weight:800;letter-spacing:-.01em;flex:1;min-width:0;overflow-wrap:anywhere}
+.dlg-head p{margin:2px 0 0;color:var(--muted);font-size:.85rem}
+.dlg-body{padding:16px 20px 20px;display:grid;gap:18px}
+.field{display:grid;gap:5px}
+.field label{font-size:.85rem;font-weight:600}
+.field .hint{font-size:.8rem;color:var(--muted);margin:0}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;margin:0;font-size:.9rem}
+.facts dt{color:var(--muted)} .facts dd{margin:0;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+h3{margin:0 0 6px;font-size:.95rem;font-weight:700}
+.ents{list-style:none;margin:0;padding:0;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.ents li{display:flex;justify-content:space-between;gap:12px;padding:8px 12px;border-bottom:1px solid var(--line);font-size:.88rem}
+.ents li:last-child{border-bottom:0}
+.ents li span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ents li span:last-child{color:var(--muted);white-space:nowrap}
+.ents li.u span:last-child{color:var(--bad)}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.actions .spacer{flex:1}
+
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;font-size:.9rem;box-shadow:0 6px 24px rgba(0,0,0,.25);z-index:50;max-width:calc(100% - 32px)}
+.toast.err{background:var(--bad);color:#fff}
+.banner{background:var(--accent-soft);border:1px solid var(--accent);border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:.9rem;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.banner .btn{min-height:34px;padding:4px 12px}
+
+.filters{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg)}
+@media (max-width:720px){
+  .filters{margin:0 -12px;padding:8px 12px 2px;box-shadow:0 6px 10px -10px rgba(0,0,0,.4)}
+  .tools{grid-template-columns:1fr 1fr;gap:6px}
+  .tools .search{grid-column:1/-1}
+  #sortSel{grid-column:1/-1}
+  .chips{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 -12px 10px;padding:2px 12px 6px}
+  .chips::-webkit-scrollbar{display:none}
+  .chip{flex:none;padding:8px 14px}
+  header{margin-bottom:12px}
+  .head-actions .btn.icon{flex:none}
+  .row{padding:14px 12px;gap:4px 10px}
+  .list{border-radius:14px}
+  .dlg-head{padding:12px 16px 10px}
+  .dlg-body{padding:14px 16px 20px}
+  #devForm.two,.two{grid-template-columns:1fr}
+  #devForm .btn.primary{width:100%}
+  .actions{flex-direction:column;align-items:stretch}
+  .actions .spacer{display:none}
+  .facts{grid-template-columns:minmax(0,auto) minmax(0,1fr)}
+}
+
+/* ===== Mobil-Optimierung ===== */
+[hidden]{display:none!important}
+a.btn{color:var(--ink)} a.btn.primary{color:var(--accent-ink)}
+button,a,select,input{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+html{-webkit-text-size-adjust:100%}
+@media (hover:none){ .btn:hover,.tile:hover,.row:hover,.chip:hover{border-color:var(--line);background:inherit} .btn.primary:hover{background:var(--accent)} }
+@media (max-width:640px){
+  .wrap{padding:12px 12px 32px}
+  input,select,textarea{font-size:16px!important} /* verhindert automatisches Zoomen auf dem iPhone */
+  .btn{min-height:44px} .btn.icon{width:44px;height:44px}
+  dialog{width:100%;max-width:100%;margin:auto 0 0;border-radius:18px 18px 0 0;max-height:92%;padding-bottom:env(safe-area-inset-bottom,0px)}
+  dialog[open]{animation:sheet .22s ease-out}
+  dialog::before{content:"";display:block;width:40px;height:4px;border-radius:2px;background:var(--line);margin:8px auto 0}
+  .kv{font-size:.9rem}
+}
+@keyframes sheet{from{transform:translateY(48px);opacity:.3}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){dialog[open]{animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Zigbee-Geräte</h1>
+      <div class="conn" id="conn"><i></i><span>Nicht verbunden</span></div>
+    </div>
+    <div class="head-actions">
+      <button class="btn join" id="joinBtn" title="Neue Geräte können beitreten">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle class="track" cx="12" cy="12" r="9"/><circle class="prog" cx="12" cy="12" r="9" stroke-dasharray="56.55" stroke-dashoffset="56.55"/></svg>
+        <span id="joinLabel">Gerät anlernen</span>
+      </button>
+      <button class="btn icon" id="reloadBtn" title="Neu laden" aria-label="Neu laden">↻</button>
+      <button class="btn icon" id="settingsBtn" title="Einstellungen" aria-label="Einstellungen">⚙</button>
+    </div>
+  </header>
+
+  <div id="banner"></div>
+
+  <div class="filters">
+  <div class="tools">
+    <input class="search" id="q" type="search" placeholder="Gerät suchen …" aria-label="Suchen">
+    <select id="areaSel" aria-label="Bereich"></select>
+    <select id="protoSel" aria-label="Integration">
+      <option value="">ZHA + Z2M</option><option value="ZHA">ZHA</option><option value="Z2M">Zigbee2MQTT</option>
+    </select>
+    <select id="sortSel" aria-label="Sortierung">
+      <option value="name">Nach Name</option><option value="area">Nach Bereich</option>
+      <option value="battery">Batterie zuerst leer</option><option value="lqi">Schwächstes Signal zuerst</option>
+      <option value="seen">Zuletzt gesehen</option>
+    </select>
+  </div>
+  <div class="chips" id="chips"></div>
+  </div>
+
+  <div class="list" id="list"></div>
+</div>
+
+<!-- Gerätedetails -->
+<dialog class="sheet" id="devDlg" aria-labelledby="devTitle"></dialog>
+
+<!-- Einstellungen -->
+<dialog id="setDlg" aria-labelledby="setTitle">
+  <form method="dialog" id="setForm">
+    <div class="dlg-head">
+      <div style="flex:1"><h2 id="setTitle">Verbindung zu Home Assistant</h2>
+      <p>Die Daten bleiben nur in diesem Browser gespeichert.</p></div>
+      <button class="btn icon" value="cancel" aria-label="Schließen">✕</button>
+    </div>
+    <div class="dlg-body">
+      <div class="field">
+        <label for="cfgUrl">Adresse von Home Assistant</label>
+        <input id="cfgUrl" type="url" placeholder="http://homeassistant.local:8123" required>
+      </div>
+      <div class="field">
+        <label for="cfgToken">Langlebiges Zugriffstoken</label>
+        <input id="cfgToken" type="password" autocomplete="off" placeholder="Leer lassen für HA-Anmeldung">
+        <p class="hint">Nur nötig, wenn du in diesem Browser nicht bei Home Assistant angemeldet bist. Erstellen unter Profil → Sicherheit → Langlebige Zugriffstokens.</p>
+      </div>
+      <div class="two">
+        <div class="field"><label for="cfgBatt">Batterie schwach unter (%)</label><input id="cfgBatt" type="number" min="1" max="99"></div>
+        <div class="field"><label for="cfgLqi">Signal schwach unter (LQI)</label><input id="cfgLqi" type="number" min="1" max="255"></div>
+      </div>
+      <div class="field">
+        <label for="cfgTopic">Zigbee2MQTT-Basis-Topic</label>
+        <input id="cfgTopic" type="text" placeholder="zigbee2mqtt">
+        <p class="hint">Nur nötig, wenn du Zigbee2MQTT nutzt und das Topic geändert hast.</p>
+      </div>
+      <div class="actions">
+        <button class="btn" type="button" id="demoBtn">Mit Beispieldaten ansehen</button>
+        <span class="spacer"></span>
+        <button class="btn primary" id="connectBtn" value="ok">Verbinden</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<script>
+/* ---------- Hilfsfunktionen ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const store = {
+  get(k, d){ try { const v = localStorage.getItem('zbm:'+k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v){ try { localStorage.setItem('zbm:'+k, JSON.stringify(v)); } catch {} }
+};
+const rtf = new Intl.RelativeTimeFormat('de', {numeric:'auto'});
+function ago(iso){
+  const t = Date.parse(iso); if (!iso || isNaN(t)) return '–';
+  const s = (t - Date.now()) / 1000, a = Math.abs(s);
+  if (a < 60) return 'gerade eben';
+  if (a < 3600) return rtf.format(Math.round(s/60), 'minute');
+  if (a < 86400) return rtf.format(Math.round(s/3600), 'hour');
+  return rtf.format(Math.round(s/86400), 'day');
+}
+let toastTimer;
+function toast(msg, err){
+  document.querySelector('.toast')?.remove();
+  const el = document.createElement('div'); el.className = 'toast' + (err ? ' err' : ''); el.textContent = msg;
+  el.setAttribute('role', 'status'); document.body.append(el);
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.remove(), err ? 6000 : 3000);
+}
+
+/* ---------- Anmeldung ----------
+   Die Seite nutzt automatisch die Anmeldung von Home Assistant aus diesem Browser.
+   Optional kannst du in der Datei ha-token.js ein langlebiges Token eintragen, dann funktionieren
+   alle Seiten auf jedem Gerät ohne Anmeldung (nur im lokalen Netz empfehlenswert). */
+const FIXED_TOKEN = window.HA_FIXED_TOKEN || '';
+
+async function getToken(manual){
+  if (FIXED_TOKEN) return {token: FIXED_TOKEN, via: 'festes Token'};
+  // 1. Als Dashboard in HA eingebettet (Seitenleiste, Companion-App): Anmeldung der HA-Oberfläche mitbenutzen
+  try {
+    const auth = window.parent !== window && window.parent.document.querySelector('home-assistant')?.hass?.auth;
+    if (auth) { if (auth.expired) await auth.refreshAccessToken(); return {token: auth.accessToken, via: 'HA-Anmeldung'}; }
+  } catch {}
+  // 2. Direkt geöffnet: gespeicherte HA-Anmeldung ("Angemeldet bleiben") verwenden und bei Bedarf erneuern
+  try {
+    const t = JSON.parse(localStorage.getItem('hassTokens'));
+    if (t?.refresh_token) {
+      if (!t.expires || t.expires < Date.now() + 60000) {
+        const r = await fetch((t.hassUrl || location.origin) + '/auth/token', {
+          method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: new URLSearchParams({grant_type: 'refresh_token', client_id: t.clientId || location.origin + '/', refresh_token: t.refresh_token})
+        });
+        if (!r.ok) throw new Error('refresh');
+        const n = await r.json();
+        Object.assign(t, {access_token: n.access_token, expires_in: n.expires_in, expires: Date.now() + n.expires_in * 1000});
+        localStorage.setItem('hassTokens', JSON.stringify(t));
+      }
+      return {token: t.access_token, via: 'HA-Anmeldung'};
+    }
+  } catch {}
+  // 3. Token aus den Einstellungen dieser Seite
+  return manual ? {token: manual, via: 'eigenes Token'} : null;
+}
+const NO_LOGIN = 'Keine Anmeldung gefunden. Öffne Home Assistant einmal in diesem Browser und melde dich mit „Angemeldet bleiben“ an, oder trag in den Einstellungen ein Token ein.';
+
+/* ---------- Zustand ---------- */
+const cfg = Object.assign({
+  url: '',
+  token: '', z2mTopic: 'zigbee2mqtt', battLow: 20, lqiLow: 60
+}, store.get('cfg', {}));
+if (location.protocol.startsWith('http')) cfg.url = location.origin;
+
+const S = {
+  devices: [], entities: [], areas: [], states: new Map(), zha: new Map(), relevant: new Set(),
+  models: [], filter: 'all', q: '', area: '', proto: '', sort: store.get('sort', 'name'),
+  demo: false, openId: null
+};
+let ha = null;
+
+/* ---------- Home-Assistant-WebSocket ---------- */
+class HA {
+  constructor(base, token){ this.base = base.replace(/\/+$/, ''); this.token = token; this.id = 0; this.pending = new Map(); }
+  connect(){
+    return new Promise((resolve, reject) => {
+      const wsUrl = this.base.replace(/^http/i, 'ws') + '/api/websocket';
+      let ws; try { ws = new WebSocket(wsUrl); } catch { return reject(new Error('Die Adresse ist ungültig: ' + this.base)); }
+      this.ws = ws; let authed = false;
+      ws.onmessage = e => {
+        const m = JSON.parse(e.data);
+        if (m.type === 'auth_required') ws.send(JSON.stringify({type:'auth', access_token:this.token}));
+        else if (m.type === 'auth_ok') { authed = true; resolve(); }
+        else if (m.type === 'auth_invalid') { reject(new Error('Die Anmeldung wurde abgelehnt. Melde dich in Home Assistant neu an oder trag ein neues Token ein.')); ws.close(); }
+        else if (m.type === 'result') {
+          const p = this.pending.get(m.id);
+          if (p) { this.pending.delete(m.id); m.success ? p.res(m.result) : p.rej(new Error(m.error?.message || 'Befehl fehlgeschlagen')); }
+        }
+        else if (m.type === 'event' && this.onEvent) this.onEvent(m.event);
+      };
+      ws.onerror = () => { if (!authed) reject(new Error('Keine Verbindung zu ' + this.base + '. Adresse und Netzwerk prüfen.')); };
+      ws.onclose = () => {
+        for (const p of this.pending.values()) p.rej(new Error('Verbindung getrennt'));
+        this.pending.clear();
+        if (authed && this.onClose) this.onClose();
+      };
+    });
+  }
+  send(msg){
+    return new Promise((res, rej) => {
+      if (!this.ws || this.ws.readyState !== 1) return rej(new Error('Nicht verbunden'));
+      const id = ++this.id; this.pending.set(id, {res, rej});
+      this.ws.send(JSON.stringify({...msg, id}));
+    });
+  }
+  call(domain, service, service_data){ return this.send({type:'call_service', domain, service, service_data}); }
+  mqtt(topic, payload){ return this.call('mqtt', 'publish', {topic, payload: JSON.stringify(payload)}); }
+}
+
+function setConn(kind, text){
+  const c = $('#conn'); c.className = 'conn ' + kind; c.querySelector('span').textContent = text;
+}
+
+async function connect(){
+  S.demo = false;
+  if (ha?.ws) { ha.onClose = null; ha.ws.close(); }
+  setConn('', 'Verbinde …');
+  const auth = await getToken(cfg.token);
+  if (!cfg.url || !auth) { setConn('err', 'Nicht angemeldet'); renderBanner(NO_LOGIN); return; }
+  ha = new HA(cfg.url, auth.token);
+  try {
+    await ha.connect();
+    setConn('on', 'Verbunden über ' + auth.via);
+    ha.onEvent = onEvent;
+    ha.onClose = () => { setConn('err', 'Verbindung verloren, neuer Versuch in 5 s'); setTimeout(connect, 5000); };
+    for (const t of ['state_changed','device_registry_updated','entity_registry_updated','area_registry_updated'])
+      ha.send({type:'subscribe_events', event_type:t}).catch(() => {});
+    await loadAll();
+  } catch (e) {
+    setConn('err', 'Nicht verbunden');
+    renderBanner(e.message);
+  }
+}
+
+async function loadAll(){
+  const [devices, entities, areas, states] = await Promise.all([
+    ha.send({type:'config/device_registry/list'}),
+    ha.send({type:'config/entity_registry/list'}),
+    ha.send({type:'config/area_registry/list'}),
+    ha.send({type:'get_states'})
+  ]);
+  let zha = []; try { zha = await ha.send({type:'zha/devices'}); } catch {}
+  Object.assign(S, {devices, entities, areas, states: new Map(states.map(s => [s.entity_id, s])), zha: new Map(zha.map(z => [z.device_reg_id, z]))});
+  renderBanner(); build(); render(); refreshOpen();
+}
+
+let buildTimer, reloadTimer;
+function onEvent(ev){
+  if (ev.event_type === 'state_changed') {
+    const {entity_id, new_state} = ev.data;
+    if (!S.relevant.has(entity_id)) return;
+    new_state ? S.states.set(entity_id, new_state) : S.states.delete(entity_id);
+    clearTimeout(buildTimer); buildTimer = setTimeout(() => { build(); render(); refreshOpen(); }, 400);
+  } else {
+    clearTimeout(reloadTimer); reloadTimer = setTimeout(() => loadAll().catch(() => {}), 800);
+  }
+}
+
+/* ---------- Datenmodell ---------- */
+function build(){
+  const byDev = new Map();
+  for (const e of S.entities) if (e.device_id) { if (!byDev.has(e.device_id)) byDev.set(e.device_id, []); byDev.get(e.device_id).push(e); }
+  const num = s => { const n = parseFloat(s?.state); return Number.isFinite(n) ? n : null; };
+  S.relevant = new Set();
+  S.models = S.devices.map(d => {
+    const idf = (d.identifiers || []).find(([dom, id]) => dom === 'zha' || (dom === 'mqtt' && String(id).startsWith('zigbee2mqtt_')));
+    if (!idf) return null;
+    const proto = idf[0] === 'zha' ? 'ZHA' : 'Z2M';
+    const raw = String(idf[1]);
+    const isBridge = proto === 'Z2M' && raw.startsWith('zigbee2mqtt_bridge_');
+    const ieee = proto === 'ZHA' ? raw : raw.replace(/^zigbee2mqtt_(bridge_)?/, '');
+    const ents = byDev.get(d.id) || [];
+    ents.forEach(e => S.relevant.add(e.entity_id));
+    const live = ents.filter(e => !e.disabled_by).map(e => S.states.get(e.entity_id)).filter(Boolean);
+    const z = S.zha.get(d.id);
+    const battS = live.find(s => s.attributes.device_class === 'battery' && s.attributes.unit_of_measurement === '%');
+    const lqiS = live.find(s => /_(linkquality|lqi)$/.test(s.entity_id));
+    const seenS = live.find(s => /_last_seen$/.test(s.entity_id) && !isNaN(Date.parse(s.state)));
+    let lastSeen = z?.last_seen || seenS?.state || null;
+    if (!lastSeen && live.length) lastSeen = live.map(s => s.last_reported || s.last_updated).sort().pop();
+    const online = (z && typeof z.available === 'boolean') ? z.available : (live.length ? live.some(s => s.state !== 'unavailable') : true);
+    return {
+      id: d.id, name: d.name_by_user || d.name || ieee, defaultName: d.name || '', nameByUser: d.name_by_user || '',
+      manufacturer: z?.manufacturer || d.manufacturer || '', model: z?.model || d.model || '',
+      area_id: d.area_id || '', proto, ieee, isCoord: z?.device_type === 'Coordinator' || isBridge,
+      battery: num(battS), lqi: z?.lqi ?? num(lqiS), rssi: z?.rssi ?? null, lastSeen, online,
+      power: z?.power_source || (battS ? 'Batterie' : 'Netz'), disabled: !!d.disabled_by, sw: d.sw_version || '',
+      entities: ents.map(e => ({id: e.entity_id, name: e.name || e.original_name, disabled: !!e.disabled_by, st: S.states.get(e.entity_id)}))
+    };
+  }).filter(Boolean);
+}
+
+/* ---------- Filter & Darstellung ---------- */
+const areaName = id => S.areas.find(a => a.area_id === id)?.name || '';
+const isLowBatt = m => m.battery != null && m.battery < cfg.battLow;
+const isWeak = m => m.lqi != null && m.lqi < cfg.lqiLow && !m.isCoord && m.online;
+const FILTERS = [
+  {key:'all', label:'Alle', test:() => true},
+  {key:'offline', label:'Offline', test:m => !m.online, cls:'bad'},
+  {key:'battery', label:'Batterie schwach', test:isLowBatt, cls:'warn'},
+  {key:'signal', label:'Signal schwach', test:isWeak, cls:'warn'},
+  {key:'battpowered', label:'Batteriebetrieben', test:m => m.battery != null}
+];
+
+function visible(){
+  const f = FILTERS.find(x => x.key === S.filter);
+  const q = S.q.trim().toLowerCase();
+  let list = S.models.filter(m =>
+    f.test(m) && (!S.area || m.area_id === S.area) && (!S.proto || m.proto === S.proto) &&
+    (!q || [m.name, m.model, m.manufacturer, m.ieee, areaName(m.area_id)].join(' ').toLowerCase().includes(q)));
+  const byName = (a, b) => a.name.localeCompare(b.name, 'de');
+  const sorters = {
+    name: byName,
+    area: (a, b) => (areaName(a.area_id) || '~').localeCompare(areaName(b.area_id) || '~', 'de') || byName(a, b),
+    battery: (a, b) => (a.battery ?? 999) - (b.battery ?? 999) || byName(a, b),
+    lqi: (a, b) => (a.lqi ?? 999) - (b.lqi ?? 999) || byName(a, b),
+    seen: (a, b) => (Date.parse(b.lastSeen) || 0) - (Date.parse(a.lastSeen) || 0)
+  };
+  return list.sort(sorters[S.sort] || byName);
+}
+
+function battHTML(m){
+  if (m.battery == null) return `<span class="batt none">${m.power === 'Batterie' ? '–' : 'Netz'}</span>`;
+  const p = Math.max(0, Math.min(100, m.battery));
+  return `<span class="batt${isLowBatt(m) ? ' low' : ''}" title="Batterie ${p} %"><span class="cell"><i style="width:${Math.max(2, p/100*16)}px"></i></span>${Math.round(p)} %</span>`;
+}
+function sigHTML(m){
+  if (m.lqi == null) return `<span class="sig none" title="Kein LQI verfügbar">–</span>`;
+  const l = m.lqi >= 150 ? 4 : m.lqi >= 100 ? 3 : m.lqi >= 60 ? 2 : m.lqi > 0 ? 1 : 0;
+  return `<span class="sig l${l}${isWeak(m) ? ' weak' : ''}" title="Linkqualität ${m.lqi}"><i></i><i></i><i></i><i></i><span>${m.lqi}</span></span>`;
+}
+
+function render(){
+  // Bereichsauswahl
+  const sel = $('#areaSel'), cur = S.area;
+  sel.innerHTML = '<option value="">Alle Bereiche</option>' + [...S.areas].sort((a, b) => a.name.localeCompare(b.name, 'de'))
+    .map(a => `<option value="${esc(a.area_id)}">${esc(a.name)}</option>`).join('');
+  sel.value = cur;
+
+  // Filter-Chips mit Anzahl
+  $('#chips').innerHTML = FILTERS.map(f => {
+    const n = S.models.filter(f.test).length;
+    if (f.key !== 'all' && f.key !== S.filter && !n && f.cls) return '';
+    return `<button class="chip ${n && f.cls ? f.cls : ''}" data-f="${f.key}" aria-pressed="${S.filter === f.key}">${f.label} <b>${n}</b></button>`;
+  }).join('');
+
+  const list = visible();
+  if (!S.models.length) {
+    $('#list').innerHTML = `<div class="empty">${S.demo || ha?.ws?.readyState === 1
+      ? 'Keine Zigbee-Geräte gefunden. Ist ZHA oder Zigbee2MQTT eingerichtet?'
+      : 'Verbinde dich mit Home Assistant, um deine Zigbee-Geräte zu sehen.<br><button class="btn primary" onclick="openSettings()">Verbindung einrichten</button>'}</div>`;
+    return;
+  }
+  if (!list.length) { $('#list').innerHTML = '<div class="empty">Kein Gerät passt zu Suche und Filter.</div>'; return; }
+
+  $('#list').innerHTML = `<div class="list-head"><span></span><span>Gerät</span><span>Bereich</span><span>Batterie</span><span>Signal</span><span>Zuletzt gesehen</span></div>` +
+    list.map(m => {
+      const area = areaName(m.area_id);
+      return `<button class="row" data-id="${esc(m.id)}">
+        <span class="dot ${m.disabled ? 'dis' : m.online ? '' : 'off'}" title="${m.disabled ? 'Deaktiviert' : m.online ? 'Online' : 'Offline'}"></span>
+        <span class="who"><strong>${esc(m.name)}${m.isCoord ? '<span class="tag">Koordinator</span>' : ''}</strong>
+          <small>${esc([m.manufacturer, m.model].filter(Boolean).join(' ') || m.ieee)}<span class="tag">${m.proto}</span></small></span>
+        <span class="area">${esc(area || '–')}</span>
+        ${battHTML(m)}
+        ${sigHTML(m)}
+        <span class="seen">${m.online ? esc(ago(m.lastSeen)) : '<span style="color:var(--bad)">offline</span>'}</span>
+        <span class="sub">${esc(area || 'Kein Bereich')}, ${m.online ? esc(ago(m.lastSeen)) : 'offline'}</span>
+      </button>`;
+    }).join('');
+}
+
+function renderBanner(err){
+  $('#banner').innerHTML = err
+    ? `<div class="banner" style="border-color:var(--bad)"><span style="flex:1">${esc(err)}</span><button class="btn" onclick="openSettings()">Einstellungen</button></div>`
+    : S.demo ? `<div class="banner"><span style="flex:1">Du siehst Beispieldaten. Änderungen werden nicht gespeichert.</span><button class="btn" onclick="openSettings()">Mit Home Assistant verbinden</button></div>` : '';
+}
+
+/* ---------- Gerätedetails ---------- */
+function openDevice(id){
+  S.openId = id; drawDevice();
+  const d = $('#devDlg'); if (!d.open) d.showModal();
+}
+function refreshOpen(){ if (S.openId && $('#devDlg').open && !$('#devDlg').contains(document.activeElement?.closest('input,select') || null)) drawDevice(); }
+
+function drawDevice(){
+  const m = S.models.find(x => x.id === S.openId); if (!m) { $('#devDlg').close(); return; }
+  const areaOpts = '<option value="">Kein Bereich</option>' + [...S.areas].sort((a, b) => a.name.localeCompare(b.name, 'de'))
+    .map(a => `<option value="${esc(a.area_id)}" ${a.area_id === m.area_id ? 'selected' : ''}>${esc(a.name)}</option>`).join('');
+  const ents = m.entities.map(e => {
+    const st = e.st, u = st?.state === 'unavailable';
+    const val = e.disabled ? 'deaktiviert' : st ? `${st.state}${st.attributes.unit_of_measurement ? ' ' + st.attributes.unit_of_measurement : ''}` : '–';
+    return `<li class="${u ? 'u' : ''}"><span title="${esc(e.id)}">${esc(e.name || st?.attributes.friendly_name || e.id)}</span><span>${esc(val)}</span></li>`;
+  }).join('');
+  $('#devDlg').innerHTML = `
+    <div class="dlg-head">
+      <span class="dot ${m.online ? '' : 'off'}" style="margin-top:8px"></span>
+      <div style="flex:1;min-width:0"><h2 id="devTitle">${esc(m.name)}</h2>
+        <p>${m.online ? 'Online' : 'Offline'}, ${esc(m.proto === 'ZHA' ? 'ZHA' : 'Zigbee2MQTT')}</p></div>
+      <button class="btn icon" onclick="$('#devDlg').close()" aria-label="Schließen">✕</button>
+    </div>
+    <div class="dlg-body">
+      <form id="devForm" class="two" style="align-items:end">
+        <div class="field"><label for="devName">Name</label><input id="devName" value="${esc(m.name)}" placeholder="${esc(m.defaultName)}"></div>
+        <div class="field"><label for="devArea">Bereich</label><select id="devArea">${areaOpts}</select></div>
+        <div style="grid-column:1/-1;display:flex;justify-content:flex-end"><button class="btn primary">Änderungen speichern</button></div>
+      </form>
+      <dl class="facts">
+        <dt>IEEE</dt><dd>${esc(m.ieee)}</dd>
+        <dt>Hersteller</dt><dd>${esc(m.manufacturer || '–')}</dd>
+        <dt>Modell</dt><dd>${esc(m.model || '–')}</dd>
+        ${m.sw ? `<dt>Firmware</dt><dd>${esc(m.sw)}</dd>` : ''}
+        <dt>Stromversorgung</dt><dd>${esc(m.power)}${m.battery != null ? `, ${Math.round(m.battery)} %` : ''}</dd>
+        <dt>Signal</dt><dd>${m.lqi != null ? `LQI ${m.lqi}` : '–'}${m.rssi != null ? `, RSSI ${m.rssi} dBm` : ''}</dd>
+        <dt>Zuletzt gesehen</dt><dd>${m.lastSeen ? esc(ago(m.lastSeen)) + ` (${esc(new Date(m.lastSeen).toLocaleString('de-DE'))})` : '–'}</dd>
+      </dl>
+      <div><h3>Entitäten (${m.entities.length})</h3><ul class="ents">${ents || '<li><span>Keine Entitäten</span><span></span></li>'}</ul></div>
+      <div class="actions">
+        ${!m.isCoord ? `<button class="btn" id="reconfBtn">Neu konfigurieren</button>` : ''}
+        ${cfg.url && !S.demo ? `<a class="btn" href="${esc(cfg.url.replace(/\/+$/, ''))}/config/devices/device/${esc(m.id)}" target="_top">In Home Assistant öffnen</a>` : ''}
+        <span class="spacer"></span>
+        ${!m.isCoord ? `<button class="btn danger" id="removeBtn">Gerät entfernen</button>` : ''}
+      </div>
+    </div>`;
+  $('#devForm').onsubmit = e => { e.preventDefault(); saveDevice(m); };
+  $('#reconfBtn')?.addEventListener('click', () => reconfigure(m));
+  $('#removeBtn')?.addEventListener('click', () => removeDevice(m));
+}
+
+async function saveDevice(m){
+  const name = $('#devName').value.trim(), area = $('#devArea').value;
+  const nameByUser = !name || name === m.defaultName ? null : name;
+  if (S.demo) { Object.assign(m, {name: name || m.defaultName, area_id: area}); render(); drawDevice(); toast('Gespeichert'); return; }
+  try {
+    await ha.send({type:'config/device_registry/update', device_id:m.id, name_by_user:nameByUser, area_id:area || null});
+    toast('Gespeichert'); await loadAll();
+  } catch (e) { toast('Speichern fehlgeschlagen: ' + e.message, true); }
+}
+
+async function reconfigure(m){
+  if (S.demo) { toast('Neu konfigurieren gestartet'); return; }
+  try {
+    if (m.proto === 'ZHA') await ha.send({type:'zha/devices/reconfigure', ieee:m.ieee});
+    else await ha.mqtt(`${cfg.z2mTopic}/bridge/request/device/configure`, {id:m.ieee});
+    toast('Neu konfigurieren gestartet. Batteriegeräte ggf. kurz aufwecken.');
+  } catch (e) { toast('Fehlgeschlagen: ' + e.message, true); }
+}
+
+async function removeDevice(m){
+  if (!confirm(`„${m.name}“ aus dem Zigbee-Netz entfernen? Das Gerät muss danach neu angelernt werden.`)) return;
+  if (S.demo) { S.models = S.models.filter(x => x.id !== m.id); $('#devDlg').close(); render(); toast('Gerät entfernt'); return; }
+  try {
+    if (m.proto === 'ZHA') await ha.call('zha', 'remove', {ieee:m.ieee});
+    else await ha.mqtt(`${cfg.z2mTopic}/bridge/request/device/remove`, {id:m.ieee});
+    $('#devDlg').close(); toast('Gerät entfernt'); setTimeout(() => loadAll().catch(() => {}), 1500);
+  } catch (e) { toast('Entfernen fehlgeschlagen: ' + e.message, true); }
+}
+
+/* ---------- Anlernen ---------- */
+const JOIN_SECS = 120; let joinLeft = 0, joinTimer = null;
+function joinProtos(){
+  const p = new Set(S.models.map(m => m.proto));
+  if (!p.size && S.zha.size) p.add('ZHA');
+  return p.size ? p : new Set(['ZHA', 'Z2M']);
+}
+async function setJoin(on){
+  if (!S.demo) {
+    const tasks = [];
+    for (const p of joinProtos()) {
+      if (p === 'ZHA') tasks.push(ha.call('zha', 'permit', {duration: on ? JOIN_SECS : 0}));
+      else tasks.push(ha.mqtt(`${cfg.z2mTopic}/bridge/request/permit_join`, on ? {value:true, time:JOIN_SECS} : {value:false, time:0}));
+    }
+    const res = await Promise.allSettled(tasks);
+    if (res.every(r => r.status === 'rejected')) throw res[0].reason;
+  }
+}
+function drawJoin(){
+  const b = $('#joinBtn'), prog = b.querySelector('.prog');
+  b.classList.toggle('active', joinLeft > 0);
+  prog.style.strokeDashoffset = joinLeft > 0 ? 56.55 * (1 - joinLeft / JOIN_SECS) : 56.55;
+  $('#joinLabel').textContent = joinLeft > 0 ? `Anlernen läuft, noch ${joinLeft} s` : 'Gerät anlernen';
+}
+$('#joinBtn').onclick = async () => {
+  try {
+    if (joinLeft > 0) { await setJoin(false); clearInterval(joinTimer); joinLeft = 0; drawJoin(); toast('Anlernen beendet'); return; }
+    await setJoin(true); joinLeft = JOIN_SECS; drawJoin();
+    toast('Neue Geräte können jetzt beitreten. Setze das Gerät in den Kopplungsmodus.');
+    clearInterval(joinTimer);
+    joinTimer = setInterval(() => { joinLeft--; drawJoin(); if (joinLeft <= 0) { clearInterval(joinTimer); toast('Anlernen beendet'); if (!S.demo) loadAll().catch(() => {}); } }, 1000);
+  } catch (e) { toast('Anlernen fehlgeschlagen: ' + e.message, true); }
+};
+
+/* ---------- Einstellungen ---------- */
+function openSettings(){
+  $('#cfgUrl').value = cfg.url; $('#cfgToken').value = cfg.token; $('#cfgTopic').value = cfg.z2mTopic;
+  $('#cfgBatt').value = cfg.battLow; $('#cfgLqi').value = cfg.lqiLow;
+  $('#setDlg').showModal();
+}
+$('#setForm').addEventListener('submit', e => {
+  if (e.submitter?.value !== 'ok') return;
+  Object.assign(cfg, {
+    url: $('#cfgUrl').value.trim().replace(/\/+$/, ''), token: $('#cfgToken').value.trim(),
+    z2mTopic: $('#cfgTopic').value.trim() || 'zigbee2mqtt',
+    battLow: +$('#cfgBatt').value || 20, lqiLow: +$('#cfgLqi').value || 60
+  });
+  store.set('cfg', cfg); connect();
+});
+$('#demoBtn').onclick = () => { $('#setDlg').close(); loadDemo(); };
+
+/* ---------- Beispieldaten ---------- */
+function loadDemo(){
+  if (ha?.ws) { ha.onClose = null; ha.ws.close(); }
+  S.demo = true; setConn('demo', 'Beispieldaten');
+  S.areas = ['Wohnzimmer','Küche','Schlafzimmer','Bad','Flur','Büro','Garten'].map((n, i) => ({area_id:'a' + i, name:n}));
+  const now = Date.now(), min = 60000;
+  const d = [
+    ['Koordinator','dresden elektronik','ConBee II','','ZHA',null,255,1,true,'Netz',true],
+    ['Deckenlicht Wohnzimmer','Philips','LCT015','a0','ZHA',null,212,2,true,'Netz'],
+    ['Stehlampe','IKEA of Sweden','TRADFRI bulb E27 WS','a0','ZHA',null,168,4,true,'Netz'],
+    ['Fenstersensor Wohnzimmer','Aqara','MCCGQ11LM','a0','Z2M',84,96,35,true,'Batterie'],
+    ['Bewegungsmelder Flur','Philips','SML001','a4','ZHA',12,74,8,true,'Batterie'],
+    ['Temperatur Küche','Aqara','WSDCGQ11LM','a1','Z2M',67,118,12,true,'Batterie'],
+    ['Steckdose Kaffeemaschine','IKEA of Sweden','TRADFRI control outlet','a1','ZHA',null,190,3,true,'Netz'],
+    ['Heizkörperthermostat Bad','Danfoss','eTRV0100','a3','Z2M',41,52,20,true,'Batterie'],
+    ['Wassermelder Bad','Aqara','SJCGQ11LM','a3','Z2M',91,88,300,true,'Batterie'],
+    ['Nachttischlampe','Innr','RB 285 C','a2','ZHA',null,0,2900,false,'Netz'],
+    ['Schalter Schlafzimmer','IKEA of Sweden','TRADFRI remote control','a2','ZHA',9,61,95,true,'Batterie'],
+    ['Rollladen Büro','Ubisys','J1','a5','Z2M',null,142,6,true,'Netz'],
+    ['Vibrationssensor Briefkasten','Aqara','DJT11LM','a6','Z2M',55,31,720,true,'Batterie'],
+    ['Gartensteckdose','Heiman','HS2SK','a6','ZHA',null,44,5,true,'Netz'],
+    ['Türsensor Haustür','Sonoff','SNZB-04','a4','Z2M',0,null,4300,false,'Batterie']
+  ];
+  S.models = d.map(([name, man, model, area, proto, batt, lqi, seenMin, online, power, coord], i) => {
+    const ieee = proto === 'ZHA' ? '00:17:88:01:0' + i.toString(16) + ':4a:2c:' + (10 + i) : '0x00158d000' + (400000 + i * 7331).toString(16);
+    return {id:'demo' + i, name, defaultName:model, manufacturer:man, model, area_id:area, proto, ieee, isCoord:!!coord,
+      battery:batt, lqi, rssi: lqi != null ? Math.round(-95 + lqi / 5) : null, lastSeen:new Date(now - seenMin * min).toISOString(),
+      online, power, disabled:false, sw:'',
+      entities:[{id:'sensor.demo_' + i, name, disabled:false, st:{state: online ? (batt != null ? String(batt) : 'on') : 'unavailable', attributes:{unit_of_measurement: batt != null ? '%' : ''}}}]};
+  });
+  renderBanner(); render();
+}
+
+/* ---------- Ereignisse ---------- */
+$('#q').oninput = e => { S.q = e.target.value; render(); };
+$('#areaSel').onchange = e => { S.area = e.target.value; render(); };
+$('#protoSel').onchange = e => { S.proto = e.target.value; render(); };
+$('#sortSel').value = S.sort;
+$('#sortSel').onchange = e => { S.sort = e.target.value; store.set('sort', S.sort); render(); };
+$('#chips').onclick = e => { const b = e.target.closest('[data-f]'); if (b) { S.filter = b.dataset.f; render(); } };
+$('#list').onclick = e => { const r = e.target.closest('.row'); if (r) openDevice(r.dataset.id); };
+$('#reloadBtn').onclick = () => S.demo ? loadDemo() : connect();
+$('#settingsBtn').onclick = openSettings;
+$('#devDlg').addEventListener('close', () => { S.openId = null; });
+$('#devDlg').addEventListener('click', e => { if (e.target.id === 'devDlg') e.target.close(); });
+setInterval(() => { if (S.models.length) render(); }, 60000);
+
+render();
+connect();
+</script>
+</body>
+</html>

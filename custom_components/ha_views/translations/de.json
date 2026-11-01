@@ -1,0 +1,36 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Home Assistant Views",
+        "description": "Steuerseiten für deine Geräte. Jede Ansicht erscheint automatisch, sobald die passende Integration eingerichtet ist (z. B. „Transit“ nur mit FordPass), und verschwindet wieder, wenn du sie entfernst.",
+        "data": {
+          "sidebar": "In der Seitenleiste anzeigen",
+          "token": "Festes Zugriffstoken (optional)"
+        },
+        "data_description": {
+          "sidebar": "Abgewählte Ansichten bleiben über die Übersicht „Smart Home“ erreichbar.",
+          "token": "Nur nötig für Handy-Verknüpfungen außerhalb der HA-Oberfläche. In der Seitenleiste wird automatisch deine HA-Anmeldung verwendet. Achtung: Das Token ist im lokalen Netz ohne Anmeldung abrufbar."
+        }
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Home Assistant Views ist bereits eingerichtet."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Home Assistant Views",
+        "data": {
+          "sidebar": "In der Seitenleiste anzeigen",
+          "token": "Festes Zugriffstoken (optional)"
+        },
+        "data_description": {
+          "sidebar": "Es erscheinen nur Ansichten, deren Integration eingerichtet ist.",
+          "token": "Nur für Handy-Verknüpfungen außerhalb der HA-Oberfläche. Leer lassen, um es zu entfernen."
+        }
+      }
+    }
+  }
+}

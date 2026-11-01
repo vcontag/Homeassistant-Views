@@ -1,0 +1,31 @@
+{
+  "id": "/ha_views/receiver.html",
+  "name": "Receiver",
+  "short_name": "Receiver",
+  "lang": "de",
+  "start_url": "../receiver.html",
+  "scope": "../receiver.html",
+  "display": "standalone",
+  "background_color": "#ECEFF4",
+  "theme_color": "#ECEFF4",
+  "icons": [
+    {
+      "src": "receiver-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "receiver-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "receiver-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="pwa/receiver.webmanifest">
+<meta name="theme-color" content="#ECEFF4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#10151F" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="pwa/receiver-192.png">
+<script src="ha-token.js"></script>
+<title>Receiver</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔊</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#ECEFF4; --surface:#FFFFFF; --surface-2:#F4F6FA; --ink:#14213D; --muted:#5A6781; --line:#D5DBE6;
+  --accent:#1B4FA0; --accent-ink:#FFFFFF; --accent-soft:#DCE6F6;
+  --ok:#2E8B57; --warn:#B7790A; --bad:#C23B3B;
+  color-scheme:light; box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#10151F; --surface:#1A2130; --surface-2:#212A3B; --ink:#E5EAF3; --muted:#95A1B8; --line:#2C3749;
+    --accent:#6E9BEA; --accent-ink:#0C1830; --accent-soft:#1E2F4F; --ok:#4CC282; --warn:#E3A93A; --bad:#EF6B6B; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#10151F; --surface:#1A2130; --surface-2:#212A3B; --ink:#E5EAF3; --muted:#95A1B8; --line:#2C3749;
+  --accent:#6E9BEA; --accent-ink:#0C1830; --accent-soft:#1E2F4F; --ok:#4CC282; --warn:#E3A93A; --bad:#EF6B6B; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 Manrope,"Segoe UI",system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+button,a,select,input{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1000px;margin:0 auto;padding:20px 16px 48px}
+
+header{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 12px;align-items:start;margin-bottom:16px}
+h1{margin:0;font-size:1.6rem;font-weight:800;letter-spacing:-.02em;line-height:1.1;overflow-wrap:anywhere}
+.meta{color:var(--muted);font-size:.85rem;display:flex;align-items:center;gap:6px;margin-top:3px}
+.meta i{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
+.meta.on i{background:var(--ok)} .meta.err i{background:var(--bad)}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;text-decoration:none;color:var(--ink)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.icon{width:40px;padding:8px}
+.btn:disabled{opacity:.5;cursor:default}
+.btn svg{width:20px;height:20px;flex:none}
+@media (hover:hover){.btn:hover{border-color:var(--muted)} .tile:hover,.src:hover{border-color:var(--muted)}}
+
+/* Hauptzone */
+.hero{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px;display:grid;gap:18px}
+.htop{display:flex;align-items:center;gap:16px}
+.power{width:64px;height:64px;border-radius:50%;border:0;cursor:pointer;flex:none;display:grid;place-items:center;background:var(--surface-2);color:var(--muted);box-shadow:inset 0 0 0 3px var(--line);transition:background .2s,color .2s,box-shadow .2s}
+.power svg{width:28px;height:28px}
+.power.on{background:var(--accent);color:var(--accent-ink);box-shadow:none}
+.htxt{min-width:0}
+.htxt .st{font-size:1.25rem;font-weight:800;line-height:1.2}
+.htxt .sub{color:var(--muted);font-size:.9rem;overflow-wrap:anywhere}
+.now{display:flex;gap:14px;align-items:center;background:var(--surface-2);border-radius:12px;padding:10px}
+.now img{width:64px;height:64px;border-radius:8px;object-fit:cover;flex:none;background:var(--line)}
+.now .t{min-width:0}
+.now b{display:block;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.now span{display:block;color:var(--muted);font-size:.88rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.media{display:flex;gap:8px;justify-content:center}
+.media .btn{width:56px;height:48px;padding:0;border-radius:24px}
+
+.vol{display:grid;gap:10px}
+.vtop{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.vtop label{font-weight:700}
+.vtop b{font-size:1.8rem;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.vtop b.muted{color:var(--muted);text-decoration:line-through}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:36px;background:transparent;cursor:pointer;margin:0}
+input[type=range]::-webkit-slider-runnable-track{height:10px;border-radius:5px;background:linear-gradient(to right,var(--accent) var(--p,0%),var(--line) var(--p,0%))}
+input[type=range]::-moz-range-track{height:10px;border-radius:5px;background:linear-gradient(to right,var(--accent) var(--p,0%),var(--line) var(--p,0%))}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;border-radius:50%;background:#fff;border:3px solid var(--accent);margin-top:-9px;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:#fff;border:3px solid var(--accent)}
+input[type=range]:disabled{opacity:.4}
+.vbtns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.vbtns .btn{min-height:48px;font-size:1.1rem}
+.vbtns .btn.on{background:var(--bad);border-color:var(--bad);color:#fff}
+.off .vol,.off .now,.off .media{opacity:.45;pointer-events:none}
+
+section{margin-top:24px}
+section > h2{font-size:1.05rem;font-weight:800;margin:0 0 10px;display:flex;align-items:center;gap:8px}
+section > h2 small{margin-left:auto;font-size:.8rem;color:var(--muted);font-weight:600}
+.srcs{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+.src{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:12px;font-weight:700;cursor:pointer;min-height:52px;text-align:left;overflow-wrap:anywhere}
+.src[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.src:disabled{opacity:.5;cursor:default}
+.ctl{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px;min-height:60px;margin-top:8px}
+.ctl .n{flex:1;min-width:0;font-weight:600;font-size:.92rem}
+.ctl .n small{display:block;color:var(--muted);font-weight:500;font-size:.8rem}
+.ctl select,.ctl input:not([type=range]){background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:6px 8px;min-height:36px;max-width:160px}
+.sw{position:relative;width:48px;height:28px;border-radius:14px;border:0;background:var(--line);cursor:pointer;flex:none;transition:background .2s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.sw[aria-checked="true"]{background:var(--accent)}
+.sw[aria-checked="true"]::after{transform:translateX(20px)}
+.sw:disabled{opacity:.5}
+
+.zones{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px}
+.zone{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;gap:10px}
+.zone .zt{display:flex;align-items:center;gap:10px}
+.zone .zt b{flex:1;font-size:1rem}
+.zone .zt span{color:var(--muted);font-size:.85rem;font-variant-numeric:tabular-nums}
+.zone select{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:6px 8px;min-height:40px;width:100%}
+.zone.off .zbody{opacity:.45;pointer-events:none}
+.zone .zbody{display:grid;gap:8px}
+
+.controls{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.controls .ctl{margin-top:0}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;text-align:left;display:grid;gap:2px;min-width:0}
+.tile span{color:var(--muted);font-size:.8rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile strong{font-size:1.05rem;font-weight:700;overflow-wrap:anywhere}
+.empty{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:36px 20px;text-align:center;color:var(--muted)}
+.empty .btn{margin-top:12px}
+
+dialog{border:0;padding:0;background:var(--surface);color:var(--ink);border-radius:14px;width:min(520px,calc(100% - 24px));max-height:calc(100% - 40px)}
+dialog::backdrop{background:rgba(8,14,26,.5)}
+.dh{display:flex;gap:12px;align-items:flex-start;padding:18px 20px 12px;border-bottom:1px solid var(--line)}
+.dh h2{margin:0;flex:1;font-size:1.15rem}
+.dh p{margin:2px 0 0;color:var(--muted);font-size:.85rem}
+.db{padding:16px 20px 20px;display:grid;gap:14px}
+.field{display:grid;gap:5px}
+.field label{font-size:.85rem;font-weight:600}
+.field input{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 12px;min-height:40px;width:100%}
+.hint{font-size:.8rem;color:var(--muted);margin:0}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;font-size:.9rem;box-shadow:0 6px 24px rgba(0,0,0,.25);z-index:50;max-width:calc(100% - 32px)}
+.toast.err{background:var(--bad);color:#fff}
+
+/* ===== Handy ===== */
+@media (max-width:640px){
+  .wrap{padding:12px 12px 32px}
+  input,select,textarea{font-size:16px!important}
+  h1{font-size:1.35rem}
+  .btn{min-height:44px} .btn.icon{width:44px;height:44px}
+  .hero{padding:14px;gap:14px;border-radius:16px}
+  .power{width:56px;height:56px}
+  .srcs{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .src{padding:10px;min-height:48px;font-size:.92rem}
+  .ctl select{max-width:58%}
+  .controls{grid-template-columns:1fr;gap:8px}
+  .tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  section{margin-top:20px}
+  dialog{width:100%;max-width:100%;margin:auto 0 0;border-radius:18px 18px 0 0;max-height:92%;padding-bottom:env(safe-area-inset-bottom,0px)}
+  dialog[open]{animation:sheet .22s ease-out}
+  dialog::before{content:"";display:block;width:40px;height:4px;border-radius:2px;background:var(--line);margin:8px auto 0}
+  .dh{padding:12px 16px 10px} .db{padding:14px 16px 20px}
+}
+@keyframes sheet{from{transform:translateY(48px);opacity:.3}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){dialog[open]{animation:none!important}.power,.sw,.sw::after{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div><h1 id="title">Receiver</h1><div class="meta" id="meta"><i></i><span>Nicht verbunden</span></div></div>
+    <button class="btn icon" id="setBtn" aria-label="Einstellungen" title="Einstellungen">⚙</button>
+  </header>
+  <main id="main"></main>
+</div>
+
+<dialog id="setDlg" aria-labelledby="setTitle">
+  <form method="dialog" id="setForm">
+    <div class="dh"><div style="flex:1"><h2 id="setTitle">Verbindung zu Home Assistant</h2><p>Wird nur in diesem Browser gespeichert.</p></div>
+      <button class="btn icon" value="cancel" aria-label="Schließen">✕</button></div>
+    <div class="db">
+      <div class="field"><label for="cfgUrl">Adresse von Home Assistant</label><input id="cfgUrl" type="url" required></div>
+      <div class="field"><label for="cfgToken">Langlebiges Zugriffstoken</label><input id="cfgToken" type="password" autocomplete="off" placeholder="Leer lassen für HA-Anmeldung">
+        <p class="hint">Nur nötig, wenn du in diesem Browser nicht bei Home Assistant angemeldet bist.</p></div>
+      <div style="display:flex;justify-content:flex-end"><button class="btn primary" value="ok">Verbinden</button></div>
+    </div>
+  </form>
+</dialog>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const load = k => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } };
+const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+const nf1 = new Intl.NumberFormat('de-DE', {minimumFractionDigits:1, maximumFractionDigits:1});
+let tt;
+function toast(msg, err){
+  document.querySelector('.toast')?.remove();
+  const el = Object.assign(document.createElement('div'), {className:'toast' + (err ? ' err' : ''), textContent:msg});
+  el.setAttribute('role', 'status'); document.body.append(el);
+  clearTimeout(tt); tt = setTimeout(() => el.remove(), err ? 6000 : 2500);
+}
+
+/* ---------- Anmeldung ----------
+   Die Seite nutzt automatisch die Anmeldung von Home Assistant aus diesem Browser.
+   Optional kannst du in der Datei ha-token.js ein langlebiges Token eintragen, dann funktionieren
+   alle Seiten auf jedem Gerät ohne Anmeldung (nur im lokalen Netz empfehlenswert). */
+const FIXED_TOKEN = window.HA_FIXED_TOKEN || '';
+
+async function getToken(manual){
+  if (FIXED_TOKEN) return {token: FIXED_TOKEN, via: 'festes Token'};
+  // 1. Als Dashboard in HA eingebettet (Seitenleiste, Companion-App): Anmeldung der HA-Oberfläche mitbenutzen
+  try {
+    const auth = window.parent !== window && window.parent.document.querySelector('home-assistant')?.hass?.auth;
+    if (auth) { if (auth.expired) await auth.refreshAccessToken(); return {token: auth.accessToken, via: 'HA-Anmeldung'}; }
+  } catch {}
+  // 2. Direkt geöffnet: gespeicherte HA-Anmeldung ("Angemeldet bleiben") verwenden und bei Bedarf erneuern
+  try {
+    const t = JSON.parse(localStorage.getItem('hassTokens'));
+    if (t?.refresh_token) {
+      if (!t.expires || t.expires < Date.now() + 60000) {
+        const r = await fetch((t.hassUrl || location.origin) + '/auth/token', {
+          method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: new URLSearchParams({grant_type: 'refresh_token', client_id: t.clientId || location.origin + '/', refresh_token: t.refresh_token})
+        });
+        if (!r.ok) throw new Error('refresh');
+        const n = await r.json();
+        Object.assign(t, {access_token: n.access_token, expires_in: n.expires_in, expires: Date.now() + n.expires_in * 1000});
+        localStorage.setItem('hassTokens', JSON.stringify(t));
+      }
+      return {token: t.access_token, via: 'HA-Anmeldung'};
+    }
+  } catch {}
+  // 3. Token aus den Einstellungen dieser Seite
+  return manual ? {token: manual, via: 'eigenes Token'} : null;
+}
+const NO_LOGIN = 'Keine Anmeldung gefunden. Öffne Home Assistant einmal in diesem Browser und melde dich mit „Angemeldet bleiben“ an, oder trag in den Einstellungen ein Token ein.';
+
+const cfg = Object.assign({url:'', token:''}, load('zbm:cfg') || {}, load('car:cfg') || {}, load('wash:cfg') || {}, load('robo:cfg') || {}, load('avr:cfg') || {});
+if (location.protocol.startsWith('http')) cfg.url = location.origin;
+
+const S = {entities:[], devices:[], states:new Map()};
+let ws, msgId = 0; const pending = new Map();
+function setMeta(kind, text){ const m = $('#meta'); m.className = 'meta ' + kind; m.querySelector('span').textContent = text; }
+
+async function connect(){
+  if (ws) { ws.onclose = null; ws.close(); }
+  setMeta('', 'Verbinde …');
+  const auth = await getToken(cfg.token);
+  if (!cfg.url || !auth) { setMeta('err', 'Nicht angemeldet'); showError(NO_LOGIN); return; }
+  ws = new WebSocket(cfg.url.replace(/^http/i, 'ws').replace(/\/+$/, '') + '/api/websocket');
+  let authed = false;
+  ws.onmessage = async e => {
+    const m = JSON.parse(e.data);
+    if (m.type === 'auth_required') ws.send(JSON.stringify({type:'auth', access_token:auth.token}));
+    else if (m.type === 'auth_invalid') { setMeta('err', 'Anmeldung abgelehnt'); showError('Die Anmeldung wurde abgelehnt. Melde dich in Home Assistant neu an oder trag ein neues Token ein.'); }
+    else if (m.type === 'auth_ok') {
+      authed = true; S.via = auth.via;
+      send({type:'subscribe_events', event_type:'state_changed'}).catch(() => {});
+      try { await loadAll(); } catch (err) { showError(err.message); }
+    }
+    else if (m.type === 'result') { const p = pending.get(m.id); if (p) { pending.delete(m.id); m.success ? p.res(m.result) : p.rej(new Error(m.error?.message || 'Fehler')); } }
+    else if (m.type === 'event' && m.event.event_type === 'state_changed') {
+      const {entity_id, new_state} = m.event.data;
+      if (!S.mine?.has(entity_id)) return;
+      new_state ? S.states.set(entity_id, new_state) : S.states.delete(entity_id);
+      scheduleRender();
+    }
+  };
+  ws.onerror = () => { if (!authed) { setMeta('err', 'Nicht verbunden'); showError('Keine Verbindung zu ' + cfg.url + '.'); } };
+  ws.onclose = () => { if (authed) { setMeta('err', 'Verbindung verloren, neuer Versuch …'); setTimeout(connect, 5000); } };
+}
+function send(msg){
+  return new Promise((res, rej) => {
+    if (!ws || ws.readyState !== 1) return rej(new Error('Nicht verbunden'));
+    const id = ++msgId; pending.set(id, {res, rej}); ws.send(JSON.stringify({...msg, id}));
+  });
+}
+const call = (domain, service, data) => send({type:'call_service', domain, service, service_data:data});
+
+async function loadAll(){
+  const [devices, entities, states] = await Promise.all([
+    send({type:'config/device_registry/list'}), send({type:'config/entity_registry/list'}), send({type:'get_states'})]);
+  const denonDevs = new Set(devices.filter(d => (d.identifiers || []).some(([dom]) => dom === 'denonavr')).map(d => d.id));
+  S.entities = entities.filter(e => !e.disabled_by && (e.platform === 'denonavr' || denonDevs.has(e.device_id)));
+  S.devices = devices.filter(d => denonDevs.has(d.id) || S.entities.some(e => e.device_id === d.id));
+  S.mine = new Set(S.entities.map(e => e.entity_id));
+  S.states = new Map(states.filter(s => S.mine.has(s.entity_id)).map(s => [s.entity_id, s]));
+  render();
+}
+
+/* ---------- Hilfen ---------- */
+const st = id => S.states.get(id?.entity_id || id);
+const players = () => S.entities.filter(e => e.entity_id.startsWith('media_player.'))
+  .sort((a, b) => (/zone/i.test(a.entity_id) ? 1 : 0) - (/zone/i.test(b.entity_id) ? 1 : 0) || a.entity_id.localeCompare(b.entity_id));
+const mainDev = () => S.devices.find(d => d.id === players()[0]?.device_id) || S.devices[0];
+const devName = d => d?.name_by_user || d?.name || 'Receiver';
+function zoneName(e){
+  const s = st(e); let n = s?.attributes.friendly_name || e.original_name || e.entity_id;
+  const dn = devName(mainDev());
+  if (n.toLowerCase().startsWith(dn.toLowerCase())) n = n.slice(dn.length).trim();
+  const z = n.match(/zone\s*(\d)/i);
+  return z ? 'Zone ' + z[1] : n || 'Hauptzone';
+}
+const isOn = s => s && !['off', 'standby', 'unavailable', 'unknown'].includes(s.state);
+// Denon: volume_level 0…1 entspricht -80 … +20 dB
+const toDb = lvl => Math.round((lvl * 100 - 80) * 2) / 2;
+const toLvl = db => Math.min(1, Math.max(0, (db + 80) / 100));
+const DB_MIN = -80, DB_MAX = 0;
+const MODE_DE = {MUSIC:'Musik', MOVIE:'Film', GAME:'Spiel', DIRECT:'Direct', 'PURE DIRECT':'Pure Direct', STEREO:'Stereo', AUTO:'Auto',
+  VIRTUAL:'Virtuell', 'MCH STEREO':'Mehrkanal-Stereo', 'MULTI CH STEREO':'Mehrkanal-Stereo', 'DOLBY DIGITAL':'Dolby Digital',
+  'DTS SURROUND':'DTS Surround', 'ROCK ARENA':'Rock Arena', 'JAZZ CLUB':'Jazz Club', 'MONO MOVIE':'Mono-Film', 'MATRIX':'Matrix', 'VIDEO GAME':'Videospiel'};
+const modeDe = m => MODE_DE[String(m).toUpperCase()] || m;
+const F = {PAUSE:1, PREV:16, NEXT:32, ON:128, OFF:256, SOURCE:2048, PLAY:16384, MODE:65536};
+const has = (s, f) => ((s?.attributes.supported_features || 0) & f) === f;
+const I = {
+  power:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.3 7.3a8 8 0 1 0 11.4 0"/></svg>',
+  prev:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg>',
+  next:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg>',
+  play:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>',
+  pause:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>'
+};
+
+/* ---------- Darstellung ---------- */
+let rt; function scheduleRender(){ clearTimeout(rt); rt = setTimeout(render, 200); }
+function showError(msg){ $('#main').innerHTML = `<div class="empty">${esc(msg)}<br><button class="btn primary" onclick="openSettings()">Einstellungen öffnen</button></div>`; }
+const volHTML = (id, s, big) => {
+  const on = isOn(s), lvl = s?.attributes.volume_level, db = lvl != null ? toDb(lvl) : null, muted = s?.attributes.is_volume_muted;
+  const p = db != null ? ((Math.min(DB_MAX, db) - DB_MIN) / (DB_MAX - DB_MIN) * 100) : 0;
+  const slider = `<input type="range" min="${DB_MIN}" max="${DB_MAX}" step="0.5" value="${db ?? DB_MIN}" style="--p:${p}%" data-vol="${esc(id)}" aria-label="Lautstärke" ${on && db != null ? '' : 'disabled'}>`;
+  if (!big) return slider;
+  return `<div class="vol"><div class="vtop"><label>Lautstärke</label><b class="${muted ? 'muted' : ''}" id="vval">${db != null ? nf1.format(db) + ' dB' : '–'}</b></div>${slider}
+    <div class="vbtns"><button class="btn" data-step="down" data-ent="${esc(id)}" aria-label="Leiser">−</button>
+    <button class="btn ${muted ? 'on' : ''}" data-mute="${esc(id)}" aria-pressed="${!!muted}" title="Stummschalten">🔇 Stumm</button>
+    <button class="btn" data-step="up" data-ent="${esc(id)}" aria-label="Lauter">+</button></div></div>`;
+};
+
+function render(){
+  const P = players();
+  if (!P.length) { $('#main').innerHTML = '<div class="empty">Kein Denon-Receiver gefunden.</div>'; return; }
+  // Nicht neu zeichnen, während ein Regler gezogen oder eine Auswahl geöffnet ist
+  const ae = document.activeElement;
+  if (ae && $('#main').contains(ae) && (ae.type === 'range' && S.dragging || ae.tagName === 'SELECT')) { S.pendingRender = true; return; }
+  const d = mainDev(); $('#title').textContent = devName(d); document.title = devName(d);
+  setMeta('on', [d?.manufacturer || 'Denon', d?.model && d.model !== devName(d) ? d.model : '', S.via ? 'über ' + S.via : ''].filter(Boolean).join(', '));
+
+  const main = P[0], s = st(main), on = isOn(s), id = main.entity_id;
+  const src = s?.attributes.source, title = s?.attributes.media_title, artist = s?.attributes.media_artist || s?.attributes.media_album_name;
+  const pic = s?.attributes.entity_picture;
+  const playing = s?.state === 'playing';
+  const media = on && (has(s, F.PREV) || has(s, F.NEXT) || has(s, F.PAUSE)) && title;
+  let html = `<div class="hero ${on ? '' : 'off'}">
+    <div class="htop"><button class="power ${on ? 'on' : ''}" data-power="${esc(id)}" aria-pressed="${on}" aria-label="${on ? 'Ausschalten' : 'Einschalten'}">${I.power}</button>
+      <div class="htxt"><div class="st">${!s || s.state === 'unavailable' ? 'Nicht erreichbar' : on ? (src ? esc(src) : 'An') : 'Aus'}</div>
+      <div class="sub">${on ? [s.attributes.sound_mode ? 'Klang: ' + esc(modeDe(s.attributes.sound_mode)) : '', P.length > 1 ? 'Hauptzone' : ''].filter(Boolean).join(', ') : 'Zum Einschalten tippen'}</div></div></div>
+    ${on && title ? `<div class="now">${pic ? `<img src="${esc(pic.startsWith('http') ? pic : cfg.url + pic)}" alt="">` : ''}<div class="t"><b>${esc(title)}</b>${artist ? `<span>${esc(artist)}</span>` : ''}</div></div>` : ''}
+    ${media ? `<div class="media">${has(s, F.PREV) ? `<button class="btn" data-media="media_previous_track" aria-label="Zurück">${I.prev}</button>` : ''}
+      <button class="btn primary" data-media="media_play_pause" aria-label="${playing ? 'Pause' : 'Abspielen'}">${playing ? I.pause : I.play}</button>
+      ${has(s, F.NEXT) ? `<button class="btn" data-media="media_next_track" aria-label="Weiter">${I.next}</button>` : ''}</div>` : ''}
+    ${volHTML(id, s, true)}
+  </div>`;
+
+  // Quellen
+  const sources = s?.attributes.source_list || [];
+  if (sources.length) html += `<section><h2>Quelle</h2><div class="srcs">${sources.map(x =>
+    `<button class="src" data-src="${esc(x)}" data-ent="${esc(id)}" aria-pressed="${on && x === src}" ${s?.state === 'unavailable' ? 'disabled' : ''}>${esc(x)}</button>`).join('')}</div></section>`;
+
+  // Klang
+  const modes = s?.attributes.sound_mode_list || [];
+  const deq = s?.attributes.dynamic_eq;
+  if (modes.length || deq != null) {
+    html += `<section><h2>Klang${s?.attributes.sound_mode_raw ? `<small>${esc(s.attributes.sound_mode_raw)}</small>` : ''}</h2>`;
+    if (modes.length) html += `<div class="srcs">${modes.map(m => `<button class="src" data-mode="${esc(m)}" data-ent="${esc(id)}" aria-pressed="${on && m === s.attributes.sound_mode}" ${on ? '' : 'disabled'}>${esc(modeDe(m))}</button>`).join('')}</div>`;
+    if (deq != null) html += `<div class="ctl"><div class="n">Dynamic EQ<small>Passt Bässe und Höhen bei leiser Lautstärke an</small></div>
+      <button class="sw" role="switch" aria-checked="${!!deq}" aria-label="Dynamic EQ" data-deq="${esc(id)}" ${on ? '' : 'disabled'}></button></div>`;
+    html += `</section>`;
+  }
+
+  // Weitere Zonen
+  if (P.length > 1) html += `<section><h2>Weitere Zonen</h2><div class="zones">${P.slice(1).map(z => {
+    const zs = st(z), zon = isOn(zs), zl = zs?.attributes.volume_level;
+    return `<div class="zone ${zon ? '' : 'off'}"><div class="zt"><b>${esc(zoneName(z))}</b><span>${zon && zl != null ? nf1.format(toDb(zl)) + ' dB' : zon ? '' : 'Aus'}</span>
+        <button class="sw" role="switch" aria-checked="${zon}" aria-label="${esc(zoneName(z))} ein/aus" data-power="${esc(z.entity_id)}"></button></div>
+      <div class="zbody">${volHTML(z.entity_id, zs, false)}
+        ${(zs?.attributes.source_list || []).length ? `<select data-zsrc="${esc(z.entity_id)}" aria-label="Quelle ${esc(zoneName(z))}">${zs.attributes.source_list.map(x => `<option ${x === zs.attributes.source ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>` : ''}
+      </div></div>`;
+  }).join('')}</div></section>`;
+
+  // Weitere Entitäten des Receivers (z. B. Schalter, Sensoren)
+  const others = S.entities.filter(e => !e.entity_id.startsWith('media_player.'));
+  const ctls = others.filter(e => /^(switch|select|number|button)\./.test(e.entity_id));
+  const sens = others.filter(e => /^(sensor|binary_sensor)\./.test(e.entity_id));
+  if (ctls.length) html += `<section><h2>Weitere Einstellungen</h2><div class="controls">${ctls.map(ctlHTML).join('')}</div></section>`;
+  if (sens.length) html += `<section><h2>Werte</h2><div class="tiles">${sens.map(e => { const x = st(e);
+    return `<div class="tile"><span>${esc(x?.attributes.friendly_name || e.entity_id)}</span><strong>${esc(x ? x.state + (x.attributes.unit_of_measurement ? ' ' + x.attributes.unit_of_measurement : '') : '–')}</strong></div>`; }).join('')}</div></section>`;
+
+  $('#main').innerHTML = html;
+  S.pendingRender = false;
+}
+function ctlHTML(e){
+  const id = e.entity_id, dom = id.split('.')[0], s = st(e), na = !s || s.state === 'unavailable';
+  let n = s?.attributes.friendly_name || e.entity_id; const dn = devName(mainDev());
+  if (n.toLowerCase().startsWith(dn.toLowerCase() + ' ')) n = n.slice(dn.length + 1);
+  n = esc(n);
+  if (dom === 'switch') return `<div class="ctl"><div class="n">${n}</div><button class="sw" role="switch" aria-checked="${s?.state === 'on'}" aria-label="${n}" data-act="switch" data-ent="${esc(id)}" ${na ? 'disabled' : ''}></button></div>`;
+  if (dom === 'select') return `<div class="ctl"><div class="n">${n}</div><select data-act="select" data-ent="${esc(id)}" aria-label="${n}" ${na ? 'disabled' : ''}>${(s?.attributes.options || []).map(o => `<option ${o === s.state ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select></div>`;
+  if (dom === 'number') { const a = s?.attributes || {}; return `<div class="ctl"><div class="n">${n}</div><input type="number" data-act="number" data-ent="${esc(id)}" aria-label="${n}" value="${esc(s?.state)}" min="${a.min ?? ''}" max="${a.max ?? ''}" step="${a.step ?? 1}" ${na ? 'disabled' : ''}></div>`; }
+  if (dom === 'button') return `<div class="ctl"><div class="n">${n}</div><button class="btn" data-act="button" data-ent="${esc(id)}" ${na ? 'disabled' : ''}>Ausführen</button></div>`;
+  return '';
+}
+
+/* ---------- Aktionen ---------- */
+async function run(fn, msg){
+  try { await fn(); if (msg) toast(msg); }
+  catch (err) { toast('Fehlgeschlagen: ' + err.message, true); }
+}
+const mainId = () => players()[0]?.entity_id;
+$('#main').addEventListener('click', e => {
+  const t = e.target.closest('button'); if (!t || t.disabled) return;
+  const d = t.dataset;
+  if (d.power) { const on = isOn(st(d.power)); return run(() => call('media_player', on ? 'turn_off' : 'turn_on', {entity_id:d.power}), on ? 'Wird ausgeschaltet' : 'Wird eingeschaltet'); }
+  if (d.src) return run(() => call('media_player', 'select_source', {entity_id:d.ent, source:d.src}), 'Quelle: ' + d.src);
+  if (d.mode) return run(() => call('media_player', 'select_sound_mode', {entity_id:d.ent, sound_mode:d.mode}), 'Klang: ' + modeDe(d.mode));
+  if (d.mute) { const m = !!st(d.mute)?.attributes.is_volume_muted; return run(() => call('media_player', 'volume_mute', {entity_id:d.mute, is_volume_muted:!m})); }
+  if (d.step) return run(() => call('media_player', d.step === 'up' ? 'volume_up' : 'volume_down', {entity_id:d.ent}));
+  if (d.media) return run(() => call('media_player', d.media, {entity_id:mainId()}));
+  if (d.deq) { const v = !st(d.deq)?.attributes.dynamic_eq; return run(() => call('denonavr', 'set_dynamic_eq', {entity_id:d.deq, dynamic_eq:v}), 'Dynamic EQ ' + (v ? 'an' : 'aus')); }
+  if (d.act === 'switch') return run(() => call('switch', t.getAttribute('aria-checked') === 'true' ? 'turn_off' : 'turn_on', {entity_id:d.ent}));
+  if (d.act === 'button') return run(() => call('button', 'press', {entity_id:d.ent}), 'Ausgeführt');
+});
+// Lautstärke: Anzeige beim Ziehen, senden beim Loslassen
+$('#main').addEventListener('input', e => {
+  const el = e.target; if (!el.dataset.vol) return;
+  S.dragging = true;
+  const v = +el.value; el.style.setProperty('--p', ((v - DB_MIN) / (DB_MAX - DB_MIN) * 100) + '%');
+  if (el.dataset.vol === mainId()) $('#vval').textContent = nf1.format(v) + ' dB';
+});
+$('#main').addEventListener('change', e => {
+  const el = e.target;
+  if (el.dataset.vol) {
+    S.dragging = false;
+    run(() => call('media_player', 'volume_set', {entity_id:el.dataset.vol, volume_level:toLvl(+el.value)}));
+    el.blur(); if (S.pendingRender) scheduleRender(); return;
+  }
+  if (el.dataset.zsrc) run(() => call('media_player', 'select_source', {entity_id:el.dataset.zsrc, source:el.value}), 'Quelle: ' + el.value);
+  if (el.dataset.act === 'select') run(() => call('select', 'select_option', {entity_id:el.dataset.ent, option:el.value}));
+  if (el.dataset.act === 'number') run(() => call('number', 'set_value', {entity_id:el.dataset.ent, value:+el.value}));
+  el.blur(); if (S.pendingRender) scheduleRender();
+});
+['pointerup', 'touchend'].forEach(ev => document.addEventListener(ev, () => { if (S.dragging) { S.dragging = false; } }));
+
+function openSettings(){ $('#cfgUrl').value = cfg.url; $('#cfgToken').value = cfg.token || ''; $('#setDlg').showModal(); }
+$('#setBtn').onclick = openSettings;
+$('#setForm').addEventListener('submit', e => {
+  if (e.submitter?.value !== 'ok') return;
+  cfg.url = $('#cfgUrl').value.trim().replace(/\/+$/, ''); cfg.token = $('#cfgToken').value.trim();
+  save('avr:cfg', {url:cfg.url, token:cfg.token}); connect();
+});
+connect();
+</script>
+</body>
+</html>

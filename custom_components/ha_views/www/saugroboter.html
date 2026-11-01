@@ -1,0 +1,811 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="pwa/saugroboter.webmanifest">
+<meta name="theme-color" content="#ECEFF4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#10151F" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="pwa/saugroboter-192.png">
+<script src="ha-token.js"></script>
+<title>Saugroboter</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#ECEFF4; --surface:#FFFFFF; --surface-2:#F4F6FA; --ink:#14213D; --muted:#5A6781; --line:#D5DBE6;
+  --accent:#1B4FA0; --accent-ink:#FFFFFF; --accent-soft:#DCE6F6;
+  --ok:#2E8B57; --warn:#B7790A; --bad:#C23B3B;
+  color-scheme:light; box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#10151F; --surface:#1A2130; --surface-2:#212A3B; --ink:#E5EAF3; --muted:#95A1B8; --line:#2C3749;
+    --accent:#6E9BEA; --accent-ink:#0C1830; --accent-soft:#1E2F4F; --ok:#4CC282; --warn:#E3A93A; --bad:#EF6B6B; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#10151F; --surface:#1A2130; --surface-2:#212A3B; --ink:#E5EAF3; --muted:#95A1B8; --line:#2C3749;
+  --accent:#6E9BEA; --accent-ink:#0C1830; --accent-soft:#1E2F4F; --ok:#4CC282; --warn:#E3A93A; --bad:#EF6B6B; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 Manrope,"Segoe UI",system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+button,a,select,input{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1000px;margin:0 auto;padding:20px 16px 48px}
+
+header{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 12px;align-items:start;margin-bottom:16px}
+h1{margin:0;font-size:1.6rem;font-weight:800;letter-spacing:-.02em;line-height:1.1;overflow-wrap:anywhere}
+.meta{color:var(--muted);font-size:.85rem;display:flex;align-items:center;gap:6px;margin-top:3px}
+.meta i{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
+.meta.on i{background:var(--ok)} .meta.err i{background:var(--bad)}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;text-decoration:none;color:var(--ink)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.danger{color:var(--bad)}
+.btn.icon{width:40px;padding:8px}
+.btn:disabled{opacity:.5;cursor:default}
+@media (hover:hover){.btn:hover{border-color:var(--muted)} .tile:hover{border-color:var(--muted)}}
+
+/* Hauptbereich */
+.hero{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:22px;display:grid;grid-template-columns:auto 1fr;gap:24px;align-items:center}
+.ring{position:relative;width:140px;height:140px;flex:none}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:10}
+.ring .track{stroke:var(--surface-2)}
+.ring .prog{stroke:var(--ok);stroke-linecap:round;transition:stroke-dashoffset .6s ease}
+.ring.low .prog{stroke:var(--bad)} .ring.mid .prog{stroke:var(--warn)}
+.ring .in{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
+.ring .in b{font-size:1.7rem;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}
+.ring .in small{font-size:.75rem;color:var(--muted);font-weight:600}
+.ring.charging .prog{animation:charge 2s ease-in-out infinite}
+@keyframes charge{50%{opacity:.55}}
+.hinfo{min-width:0;display:grid;gap:4px}
+.hinfo .st{font-size:1.3rem;font-weight:800;line-height:1.2}
+.hinfo .st.active{color:var(--accent)} .hinfo .st.err{color:var(--bad)}
+.hinfo .line{color:var(--muted);font-size:.9rem}
+.hinfo .err{color:var(--bad);font-weight:600;font-size:.9rem}
+.acts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;grid-column:1/-1}
+.acts.f1{grid-template-columns:repeat(4,minmax(0,1fr)) minmax(0,1.6fr)}
+.acts.f2{grid-template-columns:repeat(4,minmax(0,1fr)) repeat(2,minmax(0,1.9fr))}
+.fanbox{display:grid;align-content:center;gap:1px;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:4px 10px;min-height:58px;min-width:0;cursor:pointer}
+.fanbox{text-align:left;font:inherit;color:var(--ink)}
+.fanbox span{font-size:.72rem;font-weight:600;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fanbox{position:relative;padding-right:22px!important}
+.fanbox b{display:block;font-size:.95rem;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fanbox::after{content:"";position:absolute;right:10px;bottom:17px;width:6px;height:6px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg)}
+.fanbox:disabled{opacity:.5;cursor:default}
+.opts{display:grid;gap:8px}
+.opt{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:12px 14px;font-weight:700;text-align:left;cursor:pointer;min-height:48px;display:flex;justify-content:space-between;align-items:center}
+.opt[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.hero.withmap{grid-template-columns:auto minmax(0,1fr) minmax(0,260px)}
+.hmap{position:relative;border:1px solid var(--line);background:var(--surface-2);border-radius:12px;padding:0;overflow:hidden;cursor:zoom-in;display:block;width:100%}
+.hmap img{display:block;width:100%;height:170px;object-fit:contain}
+.hmap span{position:absolute;right:6px;bottom:6px;background:var(--surface);border:1px solid var(--line);border-radius:6px;font-size:.8rem;line-height:1;padding:4px 6px;color:var(--muted)}
+dialog.wide{width:min(900px,calc(100% - 24px))}
+.bigmap{display:block;width:100%;height:auto;max-height:75vh;object-fit:contain;background:var(--surface-2);border-radius:10px}
+.acts .btn{flex-direction:column;gap:2px;padding:8px 4px;min-height:58px;font-size:.82rem}
+.acts .btn svg{width:22px;height:22px}
+
+/* Schnellwahl */
+.quick{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-top:12px}
+.q{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 14px;display:grid;gap:4px}
+.q label{color:var(--muted);font-size:.8rem;font-weight:600}
+.q select{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:6px 8px;min-height:40px;width:100%;font-weight:600}
+
+section{margin-top:24px}
+section > h2{font-size:1.05rem;font-weight:800;margin:0 0 10px;display:flex;align-items:center;gap:8px}
+section > h2 small{margin-left:auto;font-size:.8rem;color:var(--muted);font-weight:600}
+
+/* Karte */
+.map{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:grid;place-items:center;min-height:120px}
+.map img{display:block;width:100%;height:auto;max-height:520px;object-fit:contain;background:var(--surface-2)}
+.map p{color:var(--muted);padding:20px;margin:0;text-align:center}
+
+/* Räume */
+.rooms{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.ritem{display:flex;background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;min-width:0}
+.ritem.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.room{flex:1;min-width:0;border:0;background:none;padding:10px 12px;font-weight:600;cursor:pointer;min-height:48px;text-align:left;display:flex;align-items:center;gap:8px}
+.room .box{width:20px;height:20px;border-radius:6px;border:2px solid var(--line);flex:none;display:grid;place-items:center;font-size:.75rem;color:var(--accent-ink)}
+.ritem.on .box{background:var(--accent);border-color:var(--accent)}
+.room .nm{min-width:0;hyphens:auto;-webkit-hyphens:auto;overflow-wrap:break-word;line-height:1.2}
+.ritem.on .room{background:var(--accent-soft)}
+.rgo{border:0;border-left:1px solid var(--line);background:var(--accent-soft);color:var(--accent);width:44px;flex:none;cursor:pointer;display:grid;place-items:center}
+.rgo svg{width:20px;height:20px}
+.rgo:disabled{opacity:.4;cursor:default}
+.rhint{color:var(--muted);font-size:.82rem;margin:0 0 10px}
+.roombar{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}
+.roombar .rep{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:.88rem;font-weight:600}
+.roombar select{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 8px;min-height:40px}
+.roombar .btn.primary{margin-left:auto}
+
+/* Station */
+.dock{background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--ok);border-radius:14px;padding:14px 16px;display:grid;gap:12px}
+.dock.warn{border-left-color:var(--warn)} .dock.bad{border-left-color:var(--bad)}
+.dock .dtop{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.dock .dst{font-size:1.1rem;font-weight:800}
+.dock.bad .dst{color:var(--bad)} .dock.warn .dst{color:var(--warn)}
+.dock .dsub{color:var(--muted);font-size:.88rem}
+.pills{display:flex;flex-wrap:wrap;gap:6px}
+.pill{border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:.82rem;font-weight:600;background:var(--surface-2)}
+.pill.bad{border-color:var(--bad);color:var(--bad)} .pill.good{color:var(--ok)}
+.dacts{display:flex;flex-wrap:wrap;gap:8px}
+.dock .controls{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+.dock .ctl{background:var(--surface-2);min-height:52px;padding:8px 12px}
+.dock .ctl select{background:var(--surface)}
+
+/* Verbrauchsmaterial */
+.wear{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.w{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;gap:6px}
+.w{min-width:0}
+.w .top{display:flex;justify-content:space-between;gap:2px 8px;align-items:baseline;flex-wrap:wrap}
+.w .top span{font-weight:700;font-size:.92rem}
+.w .top b{font-size:.85rem;color:var(--muted);font-weight:600;white-space:nowrap}
+.bar{height:8px;border-radius:4px;background:var(--surface-2);border:1px solid var(--line);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--ok)}
+.w.mid .bar i{background:var(--warn)} .w.low .bar i{background:var(--bad)} .w.low .top b{color:var(--bad)}
+.w .btn{justify-self:start;min-height:34px;padding:4px 12px;font-size:.82rem}
+
+/* Einstellungen & Werte */
+.group + .group{margin-top:16px}
+.group h3{margin:0 0 8px;font-size:.88rem;font-weight:700;color:var(--muted);display:flex;align-items:center;gap:8px}
+.group h3::after{content:"";flex:1;height:1px;background:var(--line)}
+.controls{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.ctl{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px;min-height:60px}
+.ctl .n{flex:1;min-width:0;font-weight:600;font-size:.92rem}
+.ctl .n small{display:block;color:var(--muted);font-weight:500;font-size:.8rem}
+.ctl select,.ctl input{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:6px 8px;min-height:36px;max-width:150px}
+.sw{position:relative;width:48px;height:28px;border-radius:14px;border:0;background:var(--line);cursor:pointer;flex:none;transition:background .2s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.sw[aria-checked="true"]{background:var(--accent)}
+.sw[aria-checked="true"]::after{transform:translateX(20px)}
+.sw:disabled{opacity:.5}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;text-align:left;cursor:pointer;display:grid;gap:2px;min-width:0}
+.tile span{color:var(--muted);font-size:.8rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile strong{font-size:1.05rem;font-weight:700;overflow-wrap:anywhere}
+.tile small{color:var(--muted);font-size:.75rem}
+.bad{color:var(--bad)!important} .good{color:var(--ok)!important}
+.empty{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:36px 20px;text-align:center;color:var(--muted)}
+.empty .btn{margin-top:12px}
+
+dialog{border:0;padding:0;background:var(--surface);color:var(--ink);border-radius:14px;width:min(520px,calc(100% - 24px));max-height:calc(100% - 40px)}
+dialog::backdrop{background:rgba(8,14,26,.5)}
+.dh{display:flex;gap:12px;align-items:flex-start;padding:18px 20px 12px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface)}
+.dh h2{margin:0;flex:1;font-size:1.15rem}
+.dh p{margin:2px 0 0;color:var(--muted);font-size:.85rem;overflow-wrap:anywhere}
+.db{padding:16px 20px 20px;display:grid;gap:14px}
+.kv{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:6px 12px;margin:0;font-size:.88rem}
+.kv dt{color:var(--muted);overflow-wrap:break-word} .kv dd{margin:0;text-align:right;font-weight:600;overflow-wrap:break-word}
+.big{font-size:1.55rem;font-weight:800}
+.field{display:grid;gap:5px}
+.field label{font-size:.85rem;font-weight:600}
+.field input{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 12px;min-height:40px;width:100%}
+.hint{font-size:.8rem;color:var(--muted);margin:0}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;font-size:.9rem;box-shadow:0 6px 24px rgba(0,0,0,.25);z-index:50;max-width:calc(100% - 32px)}
+.toast.err{background:var(--bad);color:#fff}
+
+/* ===== Handy ===== */
+@media (max-width:640px){
+  .wrap{padding:12px 12px 32px}
+  input,select,textarea{font-size:16px!important}
+  h1{font-size:1.35rem}
+  .btn{min-height:44px} .btn.icon{width:44px;height:44px}
+  .hero{grid-template-columns:104px minmax(0,1fr);gap:14px;padding:14px;border-radius:16px}
+  .ring{width:104px;height:104px}
+  .ring .in b{font-size:1.3rem}
+  .hinfo .st{font-size:1.1rem}
+  .hero.withmap{grid-template-columns:104px minmax(0,1fr)}
+  .hmap{grid-column:1/-1}
+  .acts{gap:6px}
+  .acts.f1{grid-template-columns:repeat(4,minmax(0,1fr)) minmax(0,2.8fr)}
+  .acts.f2{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .acts.f2 .fanbox{grid-column:span 2;min-height:52px}
+  .acts.f2 .fanbox b{font-size:.9rem}
+  .acts.f2 .fanbox{padding:4px 10px}
+  .hero{padding:12px}
+  .acts .btn{font-size:.74rem;padding:6px 2px}
+  .fanbox{padding:4px 6px}
+  .hmap img{height:150px}
+  .quick{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .quick .q:first-child:nth-last-child(odd){grid-column:1/-1}
+  .q{padding:8px 10px}
+  section{margin-top:20px}
+  .roombar .btn.primary{flex:1 1 100%;margin-left:0}
+  .rooms{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .room{padding:8px;gap:7px;font-size:.9rem}
+  .rgo{width:40px}
+  .room .box{display:none}
+  .wear{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .dock{padding:12px}
+  .dock .controls{grid-template-columns:1fr}
+  .dacts .btn{flex:1 1 calc(50% - 4px)}
+  .w{padding:10px 12px}
+  .controls{grid-template-columns:1fr;gap:8px}
+  .ctl select{max-width:58%}
+  .tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .tile{padding:10px 12px}
+  dialog{width:100%;max-width:100%;margin:auto 0 0;border-radius:18px 18px 0 0;max-height:92%;padding-bottom:env(safe-area-inset-bottom,0px)}
+  dialog[open]{animation:sheet .22s ease-out}
+  dialog::before{content:"";display:block;width:40px;height:4px;border-radius:2px;background:var(--line);margin:8px auto 0}
+  .dh{padding:12px 16px 10px} .db{padding:14px 16px 20px}
+}
+@keyframes sheet{from{transform:translateY(48px);opacity:.3}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){dialog[open],.ring.charging .prog{animation:none!important}.ring .prog,.sw,.sw::after{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div><h1 id="title">Saugroboter</h1><div class="meta" id="meta"><i></i><span>Nicht verbunden</span></div></div>
+    <button class="btn icon" id="setBtn" aria-label="Einstellungen" title="Einstellungen">⚙</button>
+  </header>
+  <main id="main"></main>
+</div>
+
+<dialog id="detail"></dialog>
+<dialog id="setDlg" aria-labelledby="setTitle">
+  <form method="dialog" id="setForm">
+    <div class="dh"><div style="flex:1"><h2 id="setTitle">Verbindung zu Home Assistant</h2><p>Wird nur in diesem Browser gespeichert.</p></div>
+      <button class="btn icon" value="cancel" aria-label="Schließen">✕</button></div>
+    <div class="db">
+      <div class="field"><label for="cfgUrl">Adresse von Home Assistant</label><input id="cfgUrl" type="url" required></div>
+      <div class="field"><label for="cfgToken">Langlebiges Zugriffstoken</label><input id="cfgToken" type="password" autocomplete="off" placeholder="Leer lassen für HA-Anmeldung">
+        <p class="hint">Nur nötig, wenn du in diesem Browser nicht bei Home Assistant angemeldet bist.</p></div>
+      <div style="display:flex;justify-content:flex-end"><button class="btn primary" value="ok">Verbinden</button></div>
+    </div>
+  </form>
+</dialog>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const load = k => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } };
+const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+const nf = new Intl.NumberFormat('de-DE', {maximumFractionDigits:1});
+const rtf = new Intl.RelativeTimeFormat('de', {numeric:'auto'});
+function ago(iso){
+  const t = Date.parse(iso); if (isNaN(t)) return '';
+  const s = (t - Date.now()) / 1000, a = Math.abs(s);
+  if (a < 60) return 'gerade eben';
+  if (a < 3600) return rtf.format(Math.round(s/60), 'minute');
+  if (a < 86400) return rtf.format(Math.round(s/3600), 'hour');
+  return rtf.format(Math.round(s/86400), 'day');
+}
+let tt;
+function toast(msg, err){
+  document.querySelector('.toast')?.remove();
+  const el = Object.assign(document.createElement('div'), {className:'toast' + (err ? ' err' : ''), textContent:msg});
+  el.setAttribute('role', 'status'); document.body.append(el);
+  clearTimeout(tt); tt = setTimeout(() => el.remove(), err ? 6000 : 3500);
+}
+
+/* ---------- Anmeldung ----------
+   Die Seite nutzt automatisch die Anmeldung von Home Assistant aus diesem Browser.
+   Optional kannst du in der Datei ha-token.js ein langlebiges Token eintragen, dann funktionieren
+   alle Seiten auf jedem Gerät ohne Anmeldung (nur im lokalen Netz empfehlenswert). */
+const FIXED_TOKEN = window.HA_FIXED_TOKEN || '';
+
+async function getToken(manual){
+  if (FIXED_TOKEN) return {token: FIXED_TOKEN, via: 'festes Token'};
+  // 1. Als Dashboard in HA eingebettet (Seitenleiste, Companion-App): Anmeldung der HA-Oberfläche mitbenutzen
+  try {
+    const auth = window.parent !== window && window.parent.document.querySelector('home-assistant')?.hass?.auth;
+    if (auth) { if (auth.expired) await auth.refreshAccessToken(); return {token: auth.accessToken, via: 'HA-Anmeldung'}; }
+  } catch {}
+  // 2. Direkt geöffnet: gespeicherte HA-Anmeldung ("Angemeldet bleiben") verwenden und bei Bedarf erneuern
+  try {
+    const t = JSON.parse(localStorage.getItem('hassTokens'));
+    if (t?.refresh_token) {
+      if (!t.expires || t.expires < Date.now() + 60000) {
+        const r = await fetch((t.hassUrl || location.origin) + '/auth/token', {
+          method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: new URLSearchParams({grant_type: 'refresh_token', client_id: t.clientId || location.origin + '/', refresh_token: t.refresh_token})
+        });
+        if (!r.ok) throw new Error('refresh');
+        const n = await r.json();
+        Object.assign(t, {access_token: n.access_token, expires_in: n.expires_in, expires: Date.now() + n.expires_in * 1000});
+        localStorage.setItem('hassTokens', JSON.stringify(t));
+      }
+      return {token: t.access_token, via: 'HA-Anmeldung'};
+    }
+  } catch {}
+  // 3. Token aus den Einstellungen dieser Seite
+  return manual ? {token: manual, via: 'eigenes Token'} : null;
+}
+const NO_LOGIN = 'Keine Anmeldung gefunden. Öffne Home Assistant einmal in diesem Browser und melde dich mit „Angemeldet bleiben“ an, oder trag in den Einstellungen ein Token ein.';
+
+const cfg = Object.assign({url:'', token:''}, load('zbm:cfg') || {}, load('car:cfg') || {}, load('wash:cfg') || {}, load('robo:cfg') || {});
+if (location.protocol.startsWith('http')) cfg.url = location.origin;
+
+const S = {devices:[], entities:[], states:new Map(), dev: load('robo:dev'), busy:new Set(), rooms:null, sel:new Set(), repeat:1};
+let ws, msgId = 0; const pending = new Map();
+function setMeta(kind, text){ const m = $('#meta'); m.className = 'meta ' + kind; m.querySelector('span').textContent = text; }
+
+async function connect(){
+  if (ws) { ws.onclose = null; ws.close(); }
+  setMeta('', 'Verbinde …');
+  const auth = await getToken(cfg.token);
+  if (!cfg.url || !auth) { setMeta('err', 'Nicht angemeldet'); showError(NO_LOGIN); return; }
+  ws = new WebSocket(cfg.url.replace(/^http/i, 'ws').replace(/\/+$/, '') + '/api/websocket');
+  let authed = false;
+  ws.onmessage = async e => {
+    const m = JSON.parse(e.data);
+    if (m.type === 'auth_required') ws.send(JSON.stringify({type:'auth', access_token:auth.token}));
+    else if (m.type === 'auth_invalid') { setMeta('err', 'Anmeldung abgelehnt'); showError('Die Anmeldung wurde abgelehnt. Melde dich in Home Assistant neu an oder trag ein neues Token ein.'); }
+    else if (m.type === 'auth_ok') {
+      authed = true; S.via = auth.via;
+      send({type:'subscribe_events', event_type:'state_changed'}).catch(() => {});
+      try { await loadAll(); } catch (err) { showError(err.message); }
+    }
+    else if (m.type === 'result') { const p = pending.get(m.id); if (p) { pending.delete(m.id); m.success ? p.res(m.result) : p.rej(new Error(m.error?.message || 'Fehler')); } }
+    else if (m.type === 'event' && m.event.event_type === 'state_changed') {
+      const {entity_id, new_state} = m.event.data;
+      if (!S.mine?.has(entity_id)) return;
+      new_state ? S.states.set(entity_id, new_state) : S.states.delete(entity_id);
+      scheduleRender();
+    }
+  };
+  ws.onerror = () => { if (!authed) { setMeta('err', 'Nicht verbunden'); showError('Keine Verbindung zu ' + cfg.url + '.'); } };
+  ws.onclose = () => { if (authed) { setMeta('err', 'Verbindung verloren, neuer Versuch …'); setTimeout(connect, 5000); } };
+}
+function send(msg){
+  return new Promise((res, rej) => {
+    if (!ws || ws.readyState !== 1) return rej(new Error('Nicht verbunden'));
+    const id = ++msgId; pending.set(id, {res, rej}); ws.send(JSON.stringify({...msg, id}));
+  });
+}
+const call = (domain, service, data) => send({type:'call_service', domain, service, service_data:data});
+
+async function loadAll(){
+  const [devices, entities, states] = await Promise.all([
+    send({type:'config/device_registry/list'}), send({type:'config/entity_registry/list'}), send({type:'get_states'})]);
+  const vacDevs = new Set(entities.filter(e => e.entity_id.startsWith('vacuum.') && e.device_id && !e.disabled_by).map(e => e.device_id));
+  S.devices = devices.filter(d => vacDevs.has(d.id));
+  // Stationen: eigenes Gerät, das über den Sauger angebunden ist oder "Dock" im Namen trägt
+  S.docks = new Map(S.devices.map(v => [v.id, devices.filter(d => d.id !== v.id && !vacDevs.has(d.id) && (d.via_device_id === v.id ||
+    (/dock|station/i.test((d.name || '') + ' ' + (d.model || '')) && (d.config_entries || []).some(c => (v.config_entries || []).includes(c)) &&
+     ((d.name || '').toLowerCase().startsWith((v.name || '').toLowerCase()) || (d.model || '').startsWith(v.model || '#')))))]));
+  const ids = new Set([...S.devices.map(d => d.id), ...[...S.docks.values()].flat().map(d => d.id)]);
+  S.entities = entities.filter(e => !e.disabled_by && ids.has(e.device_id));
+  // Karten-Bilder: auch ohne Gerätezuordnung und deaktivierte merken (für den Hinweis)
+  const roboImgs = entities.filter(e => e.entity_id.startsWith('image.') && (e.platform === 'roborock' || ids.has(e.device_id)));
+  S.extraImgs = roboImgs.filter(e => !e.disabled_by && !ids.has(e.device_id));
+  S.disabledImgs = roboImgs.filter(e => e.disabled_by);
+  S.entities.push(...S.extraImgs);
+  S.mine = new Set(S.entities.map(e => e.entity_id));
+  S.states = new Map(states.filter(s => S.mine.has(s.entity_id)).map(s => [s.entity_id, s]));
+  if (!S.devices.some(d => d.id === S.dev)) S.dev = S.devices[0]?.id;
+  render();
+  loadRooms();
+}
+
+/* ---------- Texte ---------- */
+const norm = v => String(v ?? '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+const DE = {
+  // Zustand des Saugers
+  cleaning:'Reinigt', docked:'An der Station', returning:'Fährt zur Station', paused:'Pausiert', idle:'Bereit', error:'Fehler',
+  // Status-Sensor
+  starting:'Startet', charger_disconnected:'Nicht an der Station', remote_control:'Fernsteuerung', returning_home:'Fährt zur Station',
+  manual_mode:'Manueller Modus', charging:'Lädt', charging_problem:'Ladeproblem', spot_cleaning:'Punktreinigung', shutting_down:'Schaltet ab',
+  updating:'Update läuft', docking:'Dockt an', going_to_target:'Fährt zum Ziel', zoned_cleaning:'Zonenreinigung', segment_cleaning:'Raumreinigung',
+  room_cleaning:'Raumreinigung', emptying_the_bin:'Leert Staubbehälter', washing_the_mop:'Wäscht Wischmopp', going_to_wash_the_mop:'Fährt zum Mopp-Waschen',
+  smart:'Smart', light:'Leicht', daily:'Täglich', washing:'Wäscht', drying:'Trocknet', emptying:'Leert', idle_dock:'Bereit',
+  charging_complete:'Voll geladen', device_offline:'Offline', locked:'Gesperrt', air_drying_stopping:'Trocknung wird beendet', mapping:'Kartiert',
+  back_to_dock_washing_duster:'Fährt zum Waschen', unknown:'Unbekannt', unavailable:'Nicht verfügbar', none:'Keiner', ok:'OK',
+  // Saugleistung und Wischen
+  off:'Aus', quiet:'Leise', silent:'Leise', balanced:'Ausgewogen', standard:'Standard', turbo:'Turbo', max:'Max', max_plus:'Max+', custom:'Individuell',
+  gentle:'Sanft', smart_mode:'Smart', low:'Niedrig', mild:'Leicht', medium:'Mittel', moderate:'Mittel', high:'Hoch', intense:'Stark', extreme:'Extrem',
+  deep:'Gründlich', deep_plus:'Gründlich+', fast:'Schnell', vac_followed_by_mop:'Erst saugen, dann wischen', vac_then_mop:'Erst saugen, dann wischen', vacuum:'Saugen', mop:'Wischen', vacuum_and_mop:'Saugen & Wischen',
+  vac_and_mop:'Saugen & Wischen', sweep:'Saugen', sweep_and_mop:'Saugen & Wischen', mop_only:'Nur wischen', vacuum_only:'Nur saugen', smart_plan:'SmartPlan', on:'An',
+  true:'ja', false:'nein'
+};
+const tr = v => DE[norm(v)] ?? String(v);
+const LABEL_DE = {
+  'battery':'Akku', 'status':'Status', 'cleaning area':'Gereinigte Fläche', 'cleaning time':'Reinigungsdauer', 'cleaning progress':'Fortschritt',
+  'total cleaning area':'Fläche gesamt', 'total cleaning time':'Reinigungszeit gesamt', 'total cleaning count':'Reinigungen gesamt',
+  'main brush time left':'Hauptbürste', 'side brush time left':'Seitenbürste', 'filter time left':'Filter', 'sensor time left':'Sensoren',
+  'dock maintenance brush time left':'Stationsbürste', 'dock strainer time left':'Stationssieb', 'mop drying remaining time':'Mopp-Trocknung',
+  'last clean begin':'Letzte Reinigung gestartet', 'last clean end':'Letzte Reinigung beendet', 'vacuum error':'Fehler Sauger',
+  'dock error':'Fehler Station', 'dock status':'Station', 'current room':'Aktueller Raum', 'mop mode':'Wischmodus', 'mop intensity':'Wasserdurchfluss',
+  'selected map':'Karte', 'child lock':'Kindersicherung', 'status indicator light':'Statusleuchte', 'do not disturb':'Nicht stören',
+  'do not disturb begin':'Nicht stören ab', 'do not disturb end':'Nicht stören bis', 'volume':'Lautstärke', 'charging':'Lädt',
+  'mop attached':'Wischmopp eingesetzt', 'water box attached':'Wassertank eingesetzt', 'water shortage':'Wassermangel',
+  'cleaning':'Reinigt', 'dust collection mode':'Absaugmodus', 'wash towel mode':'Mopp-Waschmodus', 'dock clean water box':'Frischwassertank',
+  'dock dirty water box':'Schmutzwassertank', 'strainer time left':'Sieb', 'cleaning route':'Reinigungsroute',
+  'dock dust collection mode':'Absaugmodus', 'dock mop wash mode':'Mopp-Waschmodus', 'mop wash mode':'Mopp-Waschmodus', 'dock wash towel mode':'Mopp-Waschmodus',
+  'mop drying':'Mopp trocknet', 'mop drying status':'Mopp trocknet', 'dock status':'Status', 'dock strainer':'Stationssieb',
+  'clean water box':'Frischwassertank', 'dirty water box':'Schmutzwassertank', 'dust bag':'Staubbeutel', 'empty':'Absaugen', 'dock empty':'Absaugen',
+  'wash mop':'Mopp waschen', 'start mop drying':'Trocknen starten', 'stop mop drying':'Trocknen stoppen'
+};
+
+/* ---------- Hilfen ---------- */
+const dev = () => S.devices.find(d => d.id === S.dev);
+const devName = d => d?.name_by_user || d?.name || 'Saugroboter';
+const dockIds = () => (S.docks?.get(S.dev) || []).map(d => d.id);
+const ents = () => { const ok = new Set([S.dev, ...dockIds()]); return S.entities.filter(e => ok.has(e.device_id) || S.extraImgs?.includes(e)); };
+const isDock = e => dockIds().includes(e.device_id);
+const st = e => e && S.states.get(e.entity_id || e);
+function label(e){
+  const s = st(e);
+  let n = e.name || s?.attributes.friendly_name || e.original_name || e.entity_id;
+  const names = [devName(dev()), ...(S.docks?.get(S.dev) || []).map(devName)].sort((a, b) => b.length - a.length);
+  for (const dn of names) if (n.toLowerCase().startsWith(dn.toLowerCase() + ' ')) { n = n.slice(dn.length + 1); break; }
+  n = n.charAt(0).toUpperCase() + n.slice(1);
+  return LABEL_DE[n.toLowerCase().replace(/[\s_]+/g, ' ').trim()] || n;
+}
+const numOf = s => { const n = parseFloat(s?.state); return Number.isFinite(n) ? n : null; };
+const toH = (n, u) => u === 's' ? n / 3600 : u === 'min' ? n / 60 : u === 'd' ? n * 24 : n;
+function dur(min){
+  min = Math.max(0, Math.round(min)); const h = Math.floor(min / 60), m = min % 60;
+  return h >= 48 ? `${Math.round(h / 24)} Tage` : h ? `${h} Std.${m ? ' ' + m + ' Min.' : ''}` : `${m} Min.`;
+}
+function fmt(s){
+  if (!s) return '–';
+  if (s.state === 'unavailable') return 'nicht verfügbar';
+  if (s.state === 'unknown') return 'unbekannt';
+  const n = numOf(s), u = s.attributes.unit_of_measurement;
+  if (n !== null && /^-?[\d.]+$/.test(s.state)) {
+    if (s.attributes.device_class === 'duration') return dur(toH(n, u) * 60);
+    return nf.format(n) + (u ? ' ' + u : '');
+  }
+  if (/\d{4}-\d{2}-\d{2}T/.test(s.state) && !isNaN(Date.parse(s.state))) return ago(s.state);
+  if (s.entity_id.startsWith('binary_sensor.')) return s.state === 'on' ? 'ja' : 'nein';
+  return tr(s.state) + (u ? ' ' + u : '');
+}
+const find = (dom, re, not) => ents().find(e => e.entity_id.startsWith(dom + '.') && (re.test(e.entity_id) || (e.original_name && re.test(e.original_name.toLowerCase().replace(/\s+/g, '_')))) && !(not && not.test(e.entity_id)));
+
+/* ---------- Räume ---------- */
+async function loadRooms(){
+  const vac = find('vacuum', /./); if (!vac) return;
+  S.roomErr = []; S.rooms = null;
+  const parseRooms = raw => {
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw.map(r => ({id:+(r.id ?? r.segment_id ?? r.segmentId), name:r.name || r.room_name || ('Raum ' + (r.id ?? r.segment_id))})).filter(r => Number.isFinite(r.id));
+    return Object.entries(raw).map(([id, v]) => ({id:+id, name:typeof v === 'string' ? v : (v?.name || 'Raum ' + id)})).filter(r => Number.isFinite(r.id));
+  };
+  // 1. Roborock-Aktion "get_maps"
+  try {
+    const r = await send({type:'call_service', domain:'roborock', service:'get_maps', target:{entity_id:vac.entity_id}, return_response:true});
+    const resp = r?.response || {};
+    const data = resp[vac.entity_id] || resp;
+    const maps = data.maps || (Array.isArray(data) ? data : []);
+    const cur = st(find('select', /selected_map/))?.state;
+    const m = maps.find(x => x.name === cur) || maps.find(x => x.flag === 0) || maps[0];
+    S.rooms = parseRooms(m?.rooms);
+    if (!maps.length) S.roomErr.push('get_maps lieferte keine Karten');
+    else if (!S.rooms.length) S.roomErr.push(`Karte „${m?.name ?? '?'}“ enthält keine Räume`);
+  } catch (err) { S.roomErr.push('roborock.get_maps: ' + err.message); }
+  // 2. Ersatzweise Räume aus Attributen (Sauger oder Kartenbild)
+  if (!S.rooms?.length) {
+    for (const e of ents().filter(e => /^(vacuum|image|select|sensor)\./.test(e.entity_id))) {
+      const a = st(e)?.attributes || {};
+      const raw = a.rooms || a.segments || a.room_mapping;
+      const r = parseRooms(raw);
+      if (r.length) { S.rooms = r; S.roomErr = []; break; }
+    }
+  }
+  S.rooms = (S.rooms || []).sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  render();
+}
+
+/* ---------- Darstellung ---------- */
+let rt; function scheduleRender(){ clearTimeout(rt); rt = setTimeout(render, 250); }
+function showError(msg){ $('#main').innerHTML = `<div class="empty">${esc(msg)}<br><button class="btn primary" onclick="openSettings()">Einstellungen öffnen</button></div>`; }
+const I = {
+  play:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>',
+  pause:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>',
+  home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9h-6v-6H9v6H3z"/></svg>',
+  stop:'<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1.5"/></svg>',
+  find:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 5L6 9H3v6h3l5 4zM16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12"/></svg>'
+};
+const WEAR_MAX = [[/main.?brush/, 300], [/side.?brush/, 200], [/filter/, 150], [/sensor/, 30], [/strainer|sieb/, 150], [/dock.*brush|maintenance.?brush/, 300]];
+
+function render(){
+  if (!S.devices.length) { $('#main').innerHTML = '<div class="empty">Kein Saugroboter gefunden.</div>'; return; }
+  const d = dev(), E = ents();
+  const shown = d?.name_by_user || (/^roborock\.vacuum\./i.test(d?.name || '') ? 'Saugroboter' : devName(d));
+  $('#title').textContent = shown; document.title = shown;
+  const vac = find('vacuum', /./), vs = st(vac), vk = norm(vs?.state);
+  const statusS = st(find('sensor', /_status$|_state$/, /dock|error/));
+  const battS = st(find('sensor', /battery/)); const bat = numOf(battS) ?? vs?.attributes.battery_level ?? null;
+  const charging = /charging|lädt/.test(norm(statusS?.state)) && !/complete|problem/.test(norm(statusS?.state));
+  const errS = [find('sensor', /vacuum_error|_error$/, /dock/), find('sensor', /dock_error/)].map(st).filter(s => s && !/^(none|ok|unknown|unavailable|no_error)$/.test(norm(s.state)));
+  const area = st(find('sensor', /cleaning_area$/, /total/)), time = st(find('sensor', /cleaning_time$/, /total/)), prog = st(find('sensor', /progress/));
+  const room = st(find('sensor', /current_room/));
+  const lastEnd = st(find('sensor', /last_clean_end/));
+  setMeta('on', [d?.manufacturer || 'Roborock', d?.sw_version ? 'Firmware ' + d.sw_version : '', S.via ? 'über ' + S.via : ''].filter(Boolean).join(', '));
+
+  const active = ['cleaning', 'returning'].includes(vk);
+  const stText = statusS && !/unknown|unavailable/.test(statusS.state) ? tr(statusS.state) : vs ? tr(vs.state) : 'Nicht verfügbar';
+  const lines = [];
+  if (active || vk === 'paused') {
+    if (room && room.state !== 'unknown') lines.push(`Raum: ${tr(room.state)}`);
+    const parts = [area && numOf(area) != null ? fmt(area) : '', time && numOf(time) != null ? fmt(time) : '', prog && numOf(prog) != null ? fmt(prog) : ''].filter(Boolean);
+    if (parts.length) lines.push(parts.join(', '));
+  } else if (lastEnd && !isNaN(Date.parse(lastEnd.state))) lines.push(`Zuletzt gereinigt ${ago(lastEnd.state)}`);
+
+  const C = 2 * Math.PI * 60;
+  const cls = bat == null ? '' : bat < 20 ? 'low' : bat < 40 ? 'mid' : '';
+  const na = !vs || vk === 'unavailable';
+  const main = vk === 'cleaning' ? ['pause', 'Pause', I.pause] : vk === 'paused' ? ['start', 'Fortsetzen', I.play] : ['start', 'Starten', I.play];
+
+  // Karte (klein im ersten Block, antippen zum Vergrößern)
+  const imgs = E.filter(e => e.entity_id.startsWith('image.')).map(st).filter(Boolean);
+  const curMap = st(find('select', /selected_map/))?.state;
+  const img = imgs.find(s => curMap && norm(s.attributes.friendly_name || '').includes(norm(curMap))) || imgs[0];
+  const mapSrc = img?.attributes.entity_picture ? cfg.url + img.attributes.entity_picture : '';
+  S.mapInfo = mapSrc ? {src:mapSrc, when:img.state, name:curMap} : null;
+
+  // Reinigungsmodus: eigenes Auswahlfeld, sonst der Wischmodus
+  const modeE = find('select', /clean(ing)?_?mode|reinigungsmodus|sweep_?mode|work_?mode/, /dust|wash/) || find('select', /mop_mode/, /wash/);
+  const modeS = st(modeE);
+  const hasFan = !!vs?.attributes.fan_speed_list?.length;
+  const nBoxes = (hasFan ? 1 : 0) + (modeS ? 1 : 0);
+
+  let html = `<div class="hero ${mapSrc ? 'withmap' : ''}">
+    <div class="ring ${cls} ${charging ? 'charging' : ''}"><svg viewBox="0 0 140 140" aria-hidden="true"><circle class="track" cx="70" cy="70" r="60"/>
+      <circle class="prog" cx="70" cy="70" r="60" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - (bat ?? 0) / 100)}"/></svg>
+      <div class="in"><b>${bat != null ? Math.round(bat) + ' %' : '–'}</b><small>${charging ? 'lädt' : 'Akku'}</small></div></div>
+    <div class="hinfo">
+      <div class="st ${errS.length || vk === 'error' ? 'err' : active ? 'active' : ''}">${esc(stText)}</div>
+      ${lines.map(l => `<div class="line">${esc(l)}</div>`).join('')}
+      ${errS.map(s => `<div class="err">${esc(label(S.entities.find(e => e.entity_id === s.entity_id)))}: ${esc(tr(s.state))}</div>`).join('')}
+    </div>
+    ${mapSrc ? `<button class="hmap" id="mapBtn" aria-label="Karte vergrößern"><img src="${esc(mapSrc)}" alt="Karte von ${esc(devName(d))}"><span>⤢</span></button>` : ''}
+    <div class="acts ${nBoxes ? 'f' + nBoxes : ''}">
+      <button class="btn ${active ? '' : 'primary'}" data-vac="${main[0]}" ${na ? 'disabled' : ''}>${main[2]}${main[1]}</button>
+      <button class="btn" data-vac="return_to_base" ${na || vk === 'docked' ? 'disabled' : ''}>${I.home}Station</button>
+      <button class="btn" data-vac="stop" ${na || !(active || vk === 'paused') ? 'disabled' : ''}>${I.stop}Stopp</button>
+      <button class="btn" data-vac="locate" ${na ? 'disabled' : ''}>${I.find}Orten</button>
+      ${vs?.attributes.fan_speed_list?.length ? `<button class="fanbox" id="fanBtn" ${na ? 'disabled' : ''} aria-label="Saugleistung: ${esc(tr(vs.attributes.fan_speed || ''))}, ändern">
+        <span>Saugleistung</span><b>${esc(tr(vs.attributes.fan_speed || '–'))}</b></button>` : ''}
+      ${modeS ? `<button class="fanbox" id="modeBtn" data-sel="${esc(modeE.entity_id)}" ${na || modeS.state === 'unavailable' ? 'disabled' : ''} aria-label="Reinigungsmodus: ${esc(tr(modeS.state))}, ändern">
+        <span>Reinigungsmodus</span><b>${esc(tr(modeS.state))}</b></button>` : ''}
+    </div>
+  </div>`;
+
+  // Schnellwahl: Saugleistung, Wischmodus, Wasser
+  const quick = [];
+  const quickSel = [find('select', /mop_mode/), find('select', /mop_intensity|water/)].filter(e => e && e.entity_id !== modeE?.entity_id);
+  for (const e of quickSel) { const s = st(e); if (!s) continue;
+    quick.push(`<div class="q"><label for="q_${esc(e.entity_id)}">${esc(label(e))}</label><select id="q_${esc(e.entity_id)}" data-act="select" data-ent="${esc(e.entity_id)}">
+      ${(s.attributes.options || []).map(o => `<option value="${esc(o)}" ${o === s.state ? 'selected' : ''}>${esc(tr(o))}</option>`).join('')}</select></div>`); }
+  if (quick.length) html += `<div class="quick">${quick.join('')}</div>`;
+
+
+  // Hinweis bei fehlender Karte / fehlenden Räumen
+  const noMap = !img?.attributes.entity_picture, noRooms = S.rooms && !S.rooms.length;
+  if (noMap || noRooms) {
+    const tips = [];
+    if (noMap) tips.push(S.disabledImgs?.length
+      ? `Die Karten-Entität ist in Home Assistant deaktiviert (${S.disabledImgs.map(e => e.entity_id).join(', ')}). Aktiviere sie unter Einstellungen → Geräte → Roborock → Entitäten.`
+      : 'Keine Karten-Entität (image.…) gefunden. Die Roborock-Integration liefert Karten nur, wenn der Roboter mindestens einmal eine Karte erstellt hat.');
+    if (noRooms) tips.push('Räume konnten nicht geladen werden' + (S.roomErr?.length ? ': ' + S.roomErr.join('; ') : '.'));
+    html += `<section><h2>Karte & Räume</h2><div class="dock warn"><div class="dsub" style="color:var(--ink)">${tips.map(t => `<p style="margin:0 0 6px">${esc(t)}</p>`).join('')}</div>
+      <div class="dacts"><button class="btn" id="reloadRooms">Erneut laden</button></div></div></section>`;
+  }
+
+  // Räume
+  if (S.rooms?.length) {
+    html += `<section><h2>Räume reinigen</h2><p class="rhint">▶ startet einen Raum sofort. Für mehrere Räume antippen und unten starten.</p>
+      <div class="rooms">${S.rooms.map(r => `<div class="ritem ${S.sel.has(r.id) ? 'on' : ''}">
+        <button class="room" data-room="${r.id}" aria-pressed="${S.sel.has(r.id)}"><span class="box">${S.sel.has(r.id) ? '✓' : ''}</span><span class="nm">${esc(r.name)}</span></button>
+        <button class="rgo" data-go="${r.id}" aria-label="${esc(r.name)} jetzt reinigen" title="${esc(r.name)} jetzt reinigen" ${na ? 'disabled' : ''}>${I.play}</button></div>`).join('')}</div>
+      <div class="roombar"><label class="rep">Durchgänge <select id="rep">${[1, 2, 3].map(n => `<option ${n === S.repeat ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+      ${S.sel.size ? `<button class="btn" id="clearRooms">Auswahl leeren</button>` : ''}
+      <button class="btn primary" id="cleanRooms" ${S.sel.size && !na ? '' : 'disabled'}>${S.sel.size ? `${S.sel.size} ${S.sel.size === 1 ? 'Raum' : 'Räume'} reinigen` : 'Räume auswählen'}</button></div></section>`;
+  }
+
+  // Station
+  const DE_ = E.filter(isDock);
+  let dockUsed = new Set();
+  if (dockIds().length) html += dockHTML(DE_, dockUsed = new Set());
+
+  // Verbrauchsmaterial
+  const wear = E.filter(e => e.entity_id.startsWith('sensor.') && /time_left|remaining/.test(e.entity_id) && !/drying/.test(e.entity_id));
+  if (wear.length) html += `<section><h2>Verschleißteile</h2><div class="wear">${wear.map(e => {
+    const s = st(e), n = numOf(s), h = n != null ? toH(n, s.attributes.unit_of_measurement) : null;
+    const max = WEAR_MAX.find(([re]) => re.test(e.entity_id))?.[1] || 300;
+    const p = h != null ? Math.max(0, Math.min(100, h / max * 100)) : 0;
+    const key = e.entity_id.replace(/^sensor\./, '').replace(/_time_left|_remaining.*$/, '');
+    const reset = E.find(b => b.entity_id.startsWith('button.') && b.entity_id.includes('reset') && key.split('_').slice(-2).every(w => b.entity_id.includes(w)));
+    return `<div class="w ${p < 10 ? 'low' : p < 25 ? 'mid' : ''}"><div class="top"><span>${esc(label(e))}</span><b>${h != null ? (h < 1 && h > 0 ? '< 1 Std.' : h <= 0 ? 'fällig' : Math.round(h) + ' Std.') : '–'}</b></div>
+      <div class="bar"><i style="width:${p}%"></i></div>
+      ${reset ? `<button class="btn" data-reset="${esc(reset.entity_id)}" data-name="${esc(label(e))}">Zurücksetzen</button>` : ''}</div>`;
+  }).join('')}</div></section>`;
+
+  // Einstellungen
+  const used = new Set([vac?.entity_id, ...quickSel.map(e => e.entity_id), ...dockUsed]);
+  const ctls = E.filter(e => /^(switch|select|number|time|button)\./.test(e.entity_id) && !used.has(e.entity_id) && !/reset/.test(e.entity_id))
+    .sort((a, b) => label(a).localeCompare(label(b), 'de'));
+  if (ctls.length) html += `<section><h2>Einstellungen</h2>${grouped(ctls, ctlHTML, 'controls')}</section>`;
+
+  // Alle Werte
+  const sens = E.filter(e => /^(sensor|binary_sensor)\./.test(e.entity_id) && !wear.includes(e) && !dockUsed.has(e.entity_id)).sort((a, b) => label(a).localeCompare(label(b), 'de'));
+  if (sens.length) html += `<section><h2>Alle Werte</h2>${grouped(sens, tileHTML, 'tiles')}</section>`;
+
+  if (document.activeElement?.tagName === 'SELECT' && $('#main').contains(document.activeElement)) return;
+  $('#main').innerHTML = html;
+}
+
+function dockHTML(DE_, used){
+  const dd = S.docks.get(S.dev)[0];
+  const f = re => DE_.find(e => re.test(e.entity_id));
+  const errE = f(/error/), statE = f(/dock_status|_status$|_state$/), dryT = f(/drying.*(remaining|time)|remaining.*drying/), dryB = DE_.find(e => e.entity_id.startsWith('binary_sensor.') && /drying/.test(e.entity_id));
+  [errE, statE, dryT, dryB].forEach(e => e && used.add(e.entity_id));
+  const err = st(errE), errBad = err && !/^(ok|none|no_error|unknown|unavailable|0)$/.test(norm(err.state));
+  const dryS = st(dryT), dryMin = numOf(dryS) != null ? numOf(dryS) * (dryS.attributes.unit_of_measurement === 'h' ? 60 : dryS.attributes.unit_of_measurement === 'min' ? 1 : 1 / 60) : 0;
+  const drying = dryMin > 0 || st(dryB)?.state === 'on';
+  // Weitere Zustände als kleine Hinweise (Tanks, Wassermangel …)
+  const pills = DE_.filter(e => e.entity_id.startsWith('binary_sensor.') && !used.has(e.entity_id)).map(e => {
+    used.add(e.entity_id); const s = st(e); if (!s) return '';
+    const problem = s.attributes.device_class === 'problem' || /shortage|full|error|mangel|voll/.test(e.entity_id);
+    const on = s.state === 'on', bad = problem ? on : false;
+    return `<span class="pill ${bad ? 'bad' : problem ? 'good' : ''}">${esc(label(e))}: ${problem ? (on ? 'Achtung' : 'OK') : (on ? 'ja' : 'nein')}</span>`;
+  }).join('');
+  const anyBad = errBad || /pill bad/.test(pills);
+  const stat = st(statE);
+  const main = errBad ? tr(err.state) : drying ? 'Trocknet Mopp' : stat && !/unknown|unavailable/.test(stat.state) ? tr(stat.state) : 'Bereit';
+  const sub = drying && dryMin > 0 ? `Trocknung noch ${dur(dryMin)}` : errBad ? label(errE) : '';
+  // Knöpfe und Einstellungen der Station
+  const btns = DE_.filter(e => e.entity_id.startsWith('button.') && !/reset/.test(e.entity_id));
+  const ctls = DE_.filter(e => /^(select|switch|number)\./.test(e.entity_id));
+  [...btns, ...ctls].forEach(e => used.add(e.entity_id));
+  // restliche Sensoren der Station (außer Verschleiß) ebenfalls hier
+  const rest = DE_.filter(e => e.entity_id.startsWith('sensor.') && !used.has(e.entity_id) && !/time_left/.test(e.entity_id));
+  rest.forEach(e => used.add(e.entity_id));
+  return `<section><h2>Station<small>${dd?.sw_version ? 'Firmware ' + esc(dd.sw_version) : ''}</small></h2>
+    <div class="dock ${errBad || anyBad ? 'bad' : drying ? 'warn' : ''}">
+      <div class="dtop"><span class="dst">${esc(main)}</span>${sub ? `<span class="dsub">${esc(sub)}</span>` : ''}</div>
+      ${pills || rest.length ? `<div class="pills">${pills}${rest.map(e => `<span class="pill">${esc(label(e))}: ${esc(fmt(st(e)))}</span>`).join('')}</div>` : ''}
+      ${btns.length ? `<div class="dacts">${btns.map(b => `<button class="btn" data-act="button" data-ent="${esc(b.entity_id)}" ${!st(b) || st(b).state === 'unavailable' ? 'disabled' : ''}>${esc(label(b))}</button>`).join('')}</div>` : ''}
+      ${ctls.length ? `<div class="controls">${ctls.map(ctlHTML).join('')}</div>` : ''}
+    </div></section>`;
+}
+
+const GROUPS = [
+  ['clean', 'Reinigung', /clean|reinig|area|fläche|progress|room|raum|route|mop|wisch|fan|saug|status|error|fehler/],
+  ['dock', 'Station', /dock|station|dust|staub|water.?box|tank|wash|mopp|drying|trockn|strainer/],
+  ['battery', 'Akku & Laden', /battery|akku|charg|lad/],
+  ['comfort', 'Komfort & Zeitplan', /do_not_disturb|dnd|nicht stören|volume|laut|light|leucht|child|kinder|sound|voice/],
+  ['system', 'Karte & System', /map|karte|firmware|version|wifi|signal|connect|offline/]
+];
+function grouped(list, itemFn, cls){
+  const map = new Map();
+  for (const e of list) {
+    const s = (e.entity_id + ' ' + label(e)).toLowerCase();
+    const g = GROUPS.find(x => x[2].test(s)) || ['other', 'Sonstiges'];
+    if (!map.has(g[0])) map.set(g[0], {title:g[1], items:[]}); map.get(g[0]).items.push(e);
+  }
+  const order = ['clean', 'dock', 'battery', 'comfort', 'other', 'system'];
+  const keys = [...map.keys()].sort((a, b) => order.indexOf(a) - order.indexOf(b));
+  if (keys.length === 1) return `<div class="${cls}">${list.map(itemFn).join('')}</div>`;
+  return keys.map(k => `<div class="group"><h3>${esc(map.get(k).title)}</h3><div class="${cls}">${map.get(k).items.map(itemFn).join('')}</div></div>`).join('');
+}
+function ctlHTML(e){
+  const id = e.entity_id, dom = id.split('.')[0], s = st(e), na = !s || s.state === 'unavailable', n = esc(label(e));
+  if (dom === 'switch') return `<div class="ctl"><div class="n">${n}</div>
+    <button class="sw" role="switch" aria-checked="${s?.state === 'on'}" aria-label="${n}" data-act="switch" data-ent="${esc(id)}" ${na ? 'disabled' : ''}></button></div>`;
+  if (dom === 'select') return `<div class="ctl"><div class="n">${n}</div><select data-act="select" data-ent="${esc(id)}" aria-label="${n}" ${na ? 'disabled' : ''}>
+    ${(s?.attributes.options || []).map(o => `<option value="${esc(o)}" ${o === s.state ? 'selected' : ''}>${esc(tr(o))}</option>`).join('')}</select></div>`;
+  if (dom === 'number') { const a = s?.attributes || {};
+    return `<div class="ctl"><div class="n">${n}${a.unit_of_measurement ? `<small>${esc(a.unit_of_measurement)}</small>` : ''}</div>
+    <input type="number" data-act="number" data-ent="${esc(id)}" aria-label="${n}" value="${esc(s?.state)}" min="${a.min ?? ''}" max="${a.max ?? ''}" step="${a.step ?? 1}" ${na ? 'disabled' : ''}></div>`; }
+  if (dom === 'time') return `<div class="ctl"><div class="n">${n}</div><input type="time" data-act="time" data-ent="${esc(id)}" aria-label="${n}" value="${esc((s?.state || '').slice(0, 5))}" ${na ? 'disabled' : ''}></div>`;
+  if (dom === 'button') return `<div class="ctl"><div class="n">${n}</div><button class="btn" data-act="button" data-ent="${esc(id)}" ${na ? 'disabled' : ''}>Ausführen</button></div>`;
+  return '';
+}
+function tileHTML(e){
+  const s = st(e), v = fmt(s);
+  const bad = /error|fehler|shortage|mangel/.test(e.entity_id) ? !/^(keiner|ok|nein|none|unbekannt)$/i.test(v) : false;
+  return `<button class="tile" data-ent="${esc(e.entity_id)}"><span>${esc(label(e))}</span>
+    <strong class="${bad ? 'bad' : ''}">${esc(v)}</strong>${s ? `<small>${esc(ago(s.last_changed))}</small>` : ''}</button>`;
+}
+
+/* ---------- Aktionen ---------- */
+async function run(fn, msg){
+  try { await fn(); toast(msg || 'Befehl gesendet'); }
+  catch (err) { toast('Fehlgeschlagen: ' + err.message, true); }
+}
+const VAC_MSG = {start:'Reinigung startet', pause:'Pausiert', return_to_base:'Fährt zur Station', stop:'Gestoppt', locate:'Roboter meldet sich'};
+$('#main').addEventListener('click', e => {
+  const vac = find('vacuum', /./);
+  const v = e.target.closest('[data-vac]');
+  if (v) return run(() => call('vacuum', v.dataset.vac, {entity_id:vac.entity_id}), VAC_MSG[v.dataset.vac]);
+  const r = e.target.closest('[data-room]');
+  if (r) { const id = +r.dataset.room; S.sel.has(id) ? S.sel.delete(id) : S.sel.add(id); render(); return; }
+  if (e.target.closest('#clearRooms')) { S.sel.clear(); render(); return; }
+  if (e.target.closest('#fanBtn')) {
+    const vs = st(vac), cur = vs?.attributes.fan_speed;
+    $('#detail').innerHTML = `<div class="dh"><div style="flex:1"><h2>Saugleistung</h2></div>
+      <button class="btn icon" onclick="$('#detail').close()" aria-label="Schließen">✕</button></div>
+      <div class="db"><div class="opts">${(vs?.attributes.fan_speed_list || []).map(o => `<button class="opt" data-fanopt="${esc(o)}" aria-pressed="${o === cur}">${esc(tr(o))}${o === cur ? '<span>✓</span>' : ''}</button>`).join('')}</div></div>`;
+    $('#detail').showModal(); return;
+  }
+  const mb = e.target.closest('#modeBtn');
+  if (mb) {
+    const ms = st(mb.dataset.sel);
+    $('#detail').innerHTML = `<div class="dh"><div style="flex:1"><h2>Reinigungsmodus</h2></div>
+      <button class="btn icon" onclick="$('#detail').close()" aria-label="Schließen">✕</button></div>
+      <div class="db"><div class="opts">${(ms?.attributes.options || []).map(o => `<button class="opt" data-selopt="${esc(o)}" data-ent="${esc(mb.dataset.sel)}" aria-pressed="${o === ms.state}">${esc(tr(o))}${o === ms.state ? '<span>✓</span>' : ''}</button>`).join('')}</div></div>`;
+    $('#detail').showModal(); return;
+  }
+  if (e.target.closest('#mapBtn') && S.mapInfo) {
+    $('#detail').innerHTML = `<div class="dh"><div style="flex:1"><h2>Karte${S.mapInfo.name ? ': ' + esc(S.mapInfo.name) : ''}</h2>
+      <p>${!isNaN(Date.parse(S.mapInfo.when)) ? 'aktualisiert ' + esc(ago(S.mapInfo.when)) : ''}</p></div>
+      <button class="btn icon" onclick="$('#detail').close()" aria-label="Schließen">✕</button></div>
+      <div class="db"><img class="bigmap" src="${esc(S.mapInfo.src)}" alt="Karte"></div>`;
+    $('#detail').classList.add('wide'); $('#detail').showModal(); return;
+  }
+  if (e.target.closest('#reloadRooms')) { toast('Lade Karte und Räume …'); loadAll(); return; }
+  const go = e.target.closest('[data-go]');
+  if (go) {
+    const id = +go.dataset.go, name = S.rooms.find(x => x.id === id)?.name || 'Raum';
+    return run(() => call('vacuum', 'send_command', {entity_id:vac.entity_id, command:'app_segment_clean', params:[{segments:[id], repeat:S.repeat}]}), `Reinigt: ${name}`);
+  }
+  if (e.target.closest('#cleanRooms')) {
+    const names = S.rooms.filter(x => S.sel.has(x.id)).map(x => x.name).join(', ');
+    return run(() => call('vacuum', 'send_command', {entity_id:vac.entity_id, command:'app_segment_clean', params:[{segments:[...S.sel], repeat:S.repeat}]}), `Reinigt: ${names}`)
+      .then(() => { S.sel.clear(); render(); });
+  }
+  const rs = e.target.closest('[data-reset]');
+  if (rs) { if (confirm(`„${rs.dataset.name}“ wirklich zurücksetzen? Mach das nur nach dem Tausch bzw. der Reinigung.`)) run(() => call('button', 'press', {entity_id:rs.dataset.reset}), 'Zurückgesetzt'); return; }
+  const tile = e.target.closest('.tile'); if (tile) return openDetail(tile.dataset.ent);
+  const b = e.target.closest('[data-act]'); if (!b || b.tagName === 'SELECT' || b.tagName === 'INPUT') return;
+  const id = b.dataset.ent;
+  if (b.dataset.act === 'switch') run(() => call('switch', b.getAttribute('aria-checked') === 'true' ? 'turn_off' : 'turn_on', {entity_id:id}), 'Gespeichert');
+  if (b.dataset.act === 'button') run(() => call('button', 'press', {entity_id:id}));
+});
+$('#main').addEventListener('change', e => {
+  const el = e.target;
+  if (el.id === 'rep') { S.repeat = +el.value; return; }
+  if (el.dataset.fan) { run(() => call('vacuum', 'set_fan_speed', {entity_id:find('vacuum', /./).entity_id, fan_speed:el.value}), 'Saugleistung gespeichert'); el.blur(); return; }
+  const id = el.dataset.ent; if (!id) return;
+  if (el.dataset.act === 'select') run(() => call('select', 'select_option', {entity_id:id, option:el.value}), 'Gespeichert');
+  if (el.dataset.act === 'number') run(() => call('number', 'set_value', {entity_id:id, value:+el.value}), 'Gespeichert');
+  if (el.dataset.act === 'time') run(() => call('time', 'set_value', {entity_id:id, time:el.value + ':00'}), 'Gespeichert');
+  el.blur();
+});
+
+const HIDE_ATTR = new Set(['friendly_name','icon','unit_of_measurement','device_class','state_class','attribution','entity_picture','options','supported_features','restored','editable','assumed_state','access_token']);
+function openDetail(id){
+  const e = S.entities.find(x => x.entity_id === id), s = st(id); if (!e) return;
+  const rows = Object.entries(s?.attributes || {}).filter(([k]) => !HIDE_ATTR.has(k)).map(([k, v]) =>
+    `<dt>${esc(k.replace(/_/g, ' '))}</dt><dd>${esc(typeof v === 'object' ? JSON.stringify(v) : tr(v))}</dd>`).join('');
+  $('#detail').innerHTML = `<div class="dh"><div style="flex:1"><h2>${esc(label(e))}</h2><p>${esc(id)}</p></div>
+    <button class="btn icon" onclick="$('#detail').close()" aria-label="Schließen">✕</button></div>
+    <div class="db"><div class="big">${esc(fmt(s))}</div>
+    <dl class="kv"><dt>Geändert</dt><dd>${s ? esc(new Date(s.last_changed).toLocaleString('de-DE')) : '–'}</dd>${rows}</dl>
+    <a class="btn" href="${esc(cfg.url)}/history?entity_id=${encodeURIComponent(id)}" target="_top">Verlauf in Home Assistant</a></div>`;
+  $('#detail').showModal();
+}
+$('#detail').addEventListener('click', e => { if (e.target.id === 'detail') e.target.close(); });
+$('#detail').addEventListener('close', () => $('#detail').classList.remove('wide'));
+$('#detail').addEventListener('click', e => {
+  const so = e.target.closest('[data-selopt]');
+  if (so) { $('#detail').close(); run(() => call('select', 'select_option', {entity_id:so.dataset.ent, option:so.dataset.selopt}), 'Reinigungsmodus: ' + tr(so.dataset.selopt)); return; }
+  const o = e.target.closest('[data-fanopt]'); if (!o) return;
+  $('#detail').close();
+  run(() => call('vacuum', 'set_fan_speed', {entity_id:find('vacuum', /./).entity_id, fan_speed:o.dataset.fanopt}), 'Saugleistung: ' + tr(o.dataset.fanopt));
+});
+
+function openSettings(){ $('#cfgUrl').value = cfg.url; $('#cfgToken').value = cfg.token || ''; $('#setDlg').showModal(); }
+$('#setBtn').onclick = openSettings;
+$('#setForm').addEventListener('submit', e => {
+  if (e.submitter?.value !== 'ok') return;
+  cfg.url = $('#cfgUrl').value.trim().replace(/\/+$/, ''); cfg.token = $('#cfgToken').value.trim();
+  save('robo:cfg', {url:cfg.url, token:cfg.token}); connect();
+});
+setInterval(() => { if (S.devices.length) render(); }, 60000);
+connect();
+</script>
+</body>
+</html>

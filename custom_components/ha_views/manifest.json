@@ -1,0 +1,19 @@
+{
+  "domain": "ha_views",
+  "name": "Home Assistant Views",
+  "codeowners": [
+    "@vcontag"
+  ],
+  "config_flow": true,
+  "dependencies": [
+    "frontend",
+    "http"
+  ],
+  "documentation": "https://github.com/vcontag/Homeassistant-Views",
+  "integration_type": "service",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/vcontag/Homeassistant-Views/issues",
+  "requirements": [],
+  "single_config_entry": true,
+  "version": "1.0.0"
+}

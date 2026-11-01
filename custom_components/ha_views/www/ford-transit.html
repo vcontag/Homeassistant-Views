@@ -1,0 +1,666 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="pwa/ford.webmanifest">
+<meta name="theme-color" content="#ECEFF4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#10151F" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="pwa/ford-192.png">
+<script src="ha-token.js"></script>
+<title>Transit Custom</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚐</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#ECEFF4; --surface:#FFFFFF; --surface-2:#F4F6FA; --ink:#14213D; --muted:#5A6781; --line:#D5DBE6;
+  --accent:#1B4FA0; --accent-ink:#FFFFFF; --accent-soft:#DCE6F6;
+  --ok:#2E8B57; --warn:#B7790A; --bad:#C23B3B;
+  color-scheme:light; box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#10151F; --surface:#1A2130; --surface-2:#212A3B; --ink:#E5EAF3; --muted:#95A1B8; --line:#2C3749;
+    --accent:#6E9BEA; --accent-ink:#0C1830; --accent-soft:#1E2F4F; --ok:#4CC282; --warn:#E3A93A; --bad:#EF6B6B; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#10151F; --surface:#1A2130; --surface-2:#212A3B; --ink:#E5EAF3; --muted:#95A1B8; --line:#2C3749;
+  --accent:#6E9BEA; --accent-ink:#0C1830; --accent-soft:#1E2F4F; --ok:#4CC282; --warn:#E3A93A; --bad:#EF6B6B; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 Manrope,"Segoe UI",system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1000px;margin:0 auto;padding:20px 16px 48px}
+
+header{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 12px;align-items:start;margin-bottom:18px}
+header .t{min-width:0}
+header h1{overflow-wrap:anywhere}
+.hrow{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap}
+.hrow #carSel{flex:1 1 220px;min-width:0;max-width:100%}
+.hrow #refreshBtn{flex:0 1 auto}
+h1{margin:0;font-size:1.6rem;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.meta{color:var(--muted);font-size:.85rem;display:flex;align-items:center;gap:6px;margin-top:3px}
+.meta i{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.meta.on i{background:var(--ok)} .meta.err i{background:var(--bad)}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;text-decoration:none}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.icon{width:40px;padding:8px}
+.btn:disabled{opacity:.5;cursor:default}
+select.btn{padding-right:28px}
+
+/* Hauptbereich: Schloss */
+.hero{display:grid;grid-template-columns:auto 1fr;gap:28px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:24px;margin-bottom:16px}
+.lock{width:156px;height:156px;border-radius:50%;border:0;cursor:pointer;display:grid;place-items:center;align-content:center;gap:6px;
+  background:var(--surface-2);color:var(--ink);box-shadow:inset 0 0 0 6px var(--line);transition:box-shadow .25s,background .25s}
+.lock svg{width:46px;height:46px}
+.lock b{font-size:1rem;font-weight:800}
+.lock small{font-size:.78rem;color:var(--muted);font-weight:600}
+.lock.locked{box-shadow:inset 0 0 0 6px var(--ok)}
+.lock.locked svg{color:var(--ok)}
+.lock.unlocked{box-shadow:inset 0 0 0 6px var(--warn)}
+.lock.unlocked svg{color:var(--warn)}
+.lock.busy{animation:pulse 1.2s ease-in-out infinite}
+.lock:disabled{cursor:default}
+@keyframes pulse{50%{box-shadow:inset 0 0 0 6px var(--accent)}}
+@media (prefers-reduced-motion:reduce){.lock.busy{animation:none;box-shadow:inset 0 0 0 6px var(--accent)}}
+.figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:18px 24px}
+.fig span{display:block;color:var(--muted);font-size:.82rem;font-weight:600}
+.fig strong{display:block;font-size:1.55rem;font-weight:800;letter-spacing:-.01em;font-variant-numeric:tabular-nums;line-height:1.2}
+.fig .gauge{height:6px;border-radius:3px;background:var(--surface-2);margin-top:6px;overflow:hidden;border:1px solid var(--line)}
+.fig .gauge i{display:block;height:100%;background:var(--accent)}
+.fig .gauge.low i{background:var(--bad)}
+
+@media (max-width:640px){
+  .hero{grid-template-columns:1fr;justify-items:center;text-align:center;padding:20px 16px}
+  .figs{width:100%;grid-template-columns:1fr 1fr}
+  h1{font-size:1.35rem}
+}
+
+section{margin-top:26px}
+.quick{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
+.q{background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;gap:12px;align-items:center;min-width:0}
+.q.good{border-left-color:var(--ok)} .q.bad{border-left-color:var(--bad)} .q.warn{border-left-color:var(--warn)}
+.q > div{flex:1;min-width:0}
+.q span{display:block;color:var(--muted);font-size:.8rem;font-weight:600}
+.q strong{display:block;font-size:1.08rem;font-weight:800;line-height:1.25}
+.q.good strong{color:var(--ok)} .q.bad strong{color:var(--bad)}
+.q small{display:block;color:var(--muted);font-size:.8rem;margin-top:2px}
+.q .sw{width:56px;height:32px;border-radius:16px}
+.q .sw::after{width:26px;height:26px}
+.q .sw[aria-checked="true"]::after{transform:translateX(24px)}
+@media (max-width:760px){.quick{grid-template-columns:1fr}}
+h2{font-size:1.05rem;font-weight:800;margin:0 0 10px}
+.controls{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.ctl{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px;min-height:60px}
+.ctl .n{flex:1;min-width:0;font-weight:600;font-size:.92rem}
+.ctl .n small{display:block;color:var(--muted);font-weight:500;font-size:.8rem}
+.ctl select,.ctl input{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:6px 8px;min-height:36px;max-width:140px}
+.sw{position:relative;width:48px;height:28px;border-radius:14px;border:0;background:var(--line);cursor:pointer;flex:none;transition:background .2s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.sw[aria-checked="true"]{background:var(--accent)}
+.sw[aria-checked="true"]::after{transform:translateX(20px)}
+.sw:disabled{opacity:.5}
+
+.group + .group{margin-top:16px}
+.group h3{margin:0 0 8px;font-size:.88rem;font-weight:700;color:var(--muted);display:flex;align-items:center;gap:8px}
+.group h3::after{content:"";flex:1;height:1px;background:var(--line)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;text-align:left;cursor:pointer;display:grid;gap:2px;min-width:0}
+.tile:hover{border-color:var(--muted)}
+.tile span{color:var(--muted);font-size:.8rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile strong{font-size:1.05rem;font-weight:700;overflow-wrap:anywhere}
+.tile small{color:var(--muted);font-size:.75rem}
+.bad{color:var(--bad)!important} .good{color:var(--ok)!important}
+
+.status{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.box h3{margin:0 0 8px;font-size:.92rem;font-weight:700}
+.kv{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:6px 12px;margin:0;font-size:.88rem}
+.kv dt{color:var(--muted);overflow-wrap:break-word;hyphens:auto} .kv dd{margin:0;text-align:right;font-weight:600;overflow-wrap:break-word}
+.kv dd.muted{color:var(--muted);font-weight:500}
+
+.map{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.map iframe{display:block;width:100%;height:280px;border:0}
+.map .bar{display:flex;gap:8px;padding:10px 12px;align-items:center;flex-wrap:wrap;font-size:.88rem;color:var(--muted)}
+.map .bar span{flex:1}
+
+.empty{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:36px 20px;text-align:center;color:var(--muted)}
+.empty .btn{margin-top:12px}
+
+dialog{border:0;padding:0;background:var(--surface);color:var(--ink);border-radius:14px;width:min(520px,calc(100% - 24px));max-height:calc(100% - 40px)}
+dialog::backdrop{background:rgba(8,14,26,.5)}
+.dh{display:flex;gap:12px;align-items:flex-start;padding:18px 20px 12px;border-bottom:1px solid var(--line)}
+.dh h2{margin:0;flex:1;font-size:1.15rem}
+.dh p{margin:2px 0 0;color:var(--muted);font-size:.85rem}
+.db{padding:16px 20px 20px;display:grid;gap:14px}
+.field{display:grid;gap:5px}
+.field label{font-size:.85rem;font-weight:600}
+.field input{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 12px;min-height:40px;width:100%}
+.hint{font-size:.8rem;color:var(--muted);margin:0}
+
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;font-size:.9rem;box-shadow:0 6px 24px rgba(0,0,0,.25);z-index:50;max-width:calc(100% - 32px)}
+.toast.err{background:var(--bad);color:#fff}
+
+@media (max-width:640px){
+  header{gap:8px;margin-bottom:12px}
+  .hrow #refreshBtn{flex:1 1 100%}
+  .hero{gap:18px;padding:18px 14px;border-radius:16px}
+  .lock{width:136px;height:136px}
+  .lock svg{width:40px;height:40px}
+  .figs{gap:14px 16px;text-align:left}
+  .fig strong{font-size:1.3rem}
+  .quick{gap:8px}
+  .q{padding:12px 14px}
+  section{margin-top:20px}
+  .map iframe{height:230px}
+  .map .bar{flex-direction:column;align-items:stretch}
+  .controls{grid-template-columns:1fr;gap:8px}
+  .ctl{min-height:56px}
+  .ctl select{max-width:58%}
+  .tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .tile{padding:10px 12px}
+  .status{grid-template-columns:1fr}
+  .dh{padding:12px 16px 10px} .db{padding:14px 16px 20px}
+}
+
+/* ===== Mobil-Optimierung ===== */
+[hidden]{display:none!important}
+a.btn{color:var(--ink)} a.btn.primary{color:var(--accent-ink)}
+button,a,select,input{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+html{-webkit-text-size-adjust:100%}
+@media (hover:none){ .btn:hover,.tile:hover,.row:hover,.chip:hover{border-color:var(--line);background:inherit} .btn.primary:hover{background:var(--accent)} }
+@media (max-width:640px){
+  .wrap{padding:12px 12px 32px}
+  input,select,textarea{font-size:16px!important} /* verhindert automatisches Zoomen auf dem iPhone */
+  .btn{min-height:44px} .btn.icon{width:44px;height:44px}
+  dialog{width:100%;max-width:100%;margin:auto 0 0;border-radius:18px 18px 0 0;max-height:92%;padding-bottom:env(safe-area-inset-bottom,0px)}
+  dialog[open]{animation:sheet .22s ease-out}
+  dialog::before{content:"";display:block;width:40px;height:4px;border-radius:2px;background:var(--line);margin:8px auto 0}
+  .kv{font-size:.9rem}
+}
+@keyframes sheet{from{transform:translateY(48px);opacity:.3}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){dialog[open]{animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="t">
+      <h1 id="title">Fahrzeug</h1>
+      <div class="meta" id="meta"><i></i><span>Nicht verbunden</span></div>
+    </div>
+    <button class="btn icon" id="setBtn" aria-label="Einstellungen" title="Einstellungen">⚙</button>
+    <div class="hrow">
+      <select class="btn" id="carSel" aria-label="Fahrzeug wählen" hidden></select>
+      <button class="btn" id="refreshBtn">Daten abrufen</button>
+    </div>
+  </header>
+  <main id="main"></main>
+</div>
+
+<dialog id="detail"></dialog>
+
+<dialog id="setDlg" aria-labelledby="setTitle">
+  <form method="dialog" id="setForm">
+    <div class="dh"><div style="flex:1"><h2 id="setTitle">Verbindung zu Home Assistant</h2><p>Wird nur in diesem Browser gespeichert.</p></div>
+      <button class="btn icon" value="cancel" aria-label="Schließen">✕</button></div>
+    <div class="db">
+      <div class="field"><label for="cfgUrl">Adresse von Home Assistant</label><input id="cfgUrl" type="url" required></div>
+      <div class="field"><label for="cfgToken">Langlebiges Zugriffstoken</label><input id="cfgToken" type="password" autocomplete="off" placeholder="Leer lassen für HA-Anmeldung">
+        <p class="hint">Nur nötig, wenn du in diesem Browser nicht bei Home Assistant angemeldet bist.</p></div>
+      <div style="display:flex;justify-content:flex-end"><button class="btn primary" value="ok">Verbinden</button></div>
+    </div>
+  </form>
+</dialog>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const load = k => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } };
+const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+const nf = new Intl.NumberFormat('de-DE', {maximumFractionDigits:1});
+const rtf = new Intl.RelativeTimeFormat('de', {numeric:'auto'});
+function ago(iso){
+  const t = Date.parse(iso); if (isNaN(t)) return '';
+  const s = (t - Date.now()) / 1000, a = Math.abs(s);
+  if (a < 60) return 'gerade eben';
+  if (a < 3600) return rtf.format(Math.round(s/60), 'minute');
+  if (a < 86400) return rtf.format(Math.round(s/3600), 'hour');
+  return rtf.format(Math.round(s/86400), 'day');
+}
+let tt;
+function toast(msg, err){
+  document.querySelector('.toast')?.remove();
+  const el = Object.assign(document.createElement('div'), {className:'toast' + (err ? ' err' : ''), textContent:msg});
+  el.setAttribute('role', 'status'); document.body.append(el);
+  clearTimeout(tt); tt = setTimeout(() => el.remove(), err ? 6000 : 3500);
+}
+
+/* ---------- Anmeldung ----------
+   Die Seite nutzt automatisch die Anmeldung von Home Assistant aus diesem Browser.
+   Optional kannst du in der Datei ha-token.js ein langlebiges Token eintragen, dann funktionieren
+   alle Seiten auf jedem Gerät ohne Anmeldung (nur im lokalen Netz empfehlenswert). */
+const FIXED_TOKEN = window.HA_FIXED_TOKEN || '';
+
+async function getToken(manual){
+  if (FIXED_TOKEN) return {token: FIXED_TOKEN, via: 'festes Token'};
+  // 1. Als Dashboard in HA eingebettet (Seitenleiste, Companion-App): Anmeldung der HA-Oberfläche mitbenutzen
+  try {
+    const auth = window.parent !== window && window.parent.document.querySelector('home-assistant')?.hass?.auth;
+    if (auth) { if (auth.expired) await auth.refreshAccessToken(); return {token: auth.accessToken, via: 'HA-Anmeldung'}; }
+  } catch {}
+  // 2. Direkt geöffnet: gespeicherte HA-Anmeldung ("Angemeldet bleiben") verwenden und bei Bedarf erneuern
+  try {
+    const t = JSON.parse(localStorage.getItem('hassTokens'));
+    if (t?.refresh_token) {
+      if (!t.expires || t.expires < Date.now() + 60000) {
+        const r = await fetch((t.hassUrl || location.origin) + '/auth/token', {
+          method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: new URLSearchParams({grant_type: 'refresh_token', client_id: t.clientId || location.origin + '/', refresh_token: t.refresh_token})
+        });
+        if (!r.ok) throw new Error('refresh');
+        const n = await r.json();
+        Object.assign(t, {access_token: n.access_token, expires_in: n.expires_in, expires: Date.now() + n.expires_in * 1000});
+        localStorage.setItem('hassTokens', JSON.stringify(t));
+      }
+      return {token: t.access_token, via: 'HA-Anmeldung'};
+    }
+  } catch {}
+  // 3. Token aus den Einstellungen dieser Seite
+  return manual ? {token: manual, via: 'eigenes Token'} : null;
+}
+const NO_LOGIN = 'Keine Anmeldung gefunden. Öffne Home Assistant einmal in diesem Browser und melde dich mit „Angemeldet bleiben“ an, oder trag in den Einstellungen ein Token ein.';
+
+/* Verbindung: übernimmt die Daten der Zigbee-Seite, falls vorhanden */
+const cfg = Object.assign({url:'', token:''}, load('zbm:cfg') || {}, load('car:cfg') || {});
+if (location.protocol.startsWith('http')) cfg.url = location.origin;
+
+const S = {devices:[], entities:[], states:new Map(), carId: load('car:id'), ents:[], busy:new Set()};
+let ws, msgId = 0; const pending = new Map();
+
+function setMeta(kind, text){ const m = $('#meta'); m.className = 'meta ' + kind; m.querySelector('span').textContent = text; }
+
+async function connect(){
+  if (ws) { ws.onclose = null; ws.close(); }
+  setMeta('', 'Verbinde …');
+  const auth = await getToken(cfg.token);
+  if (!cfg.url || !auth) { setMeta('err', 'Nicht angemeldet'); showError(NO_LOGIN); return; }
+  ws = new WebSocket(cfg.url.replace(/^http/i, 'ws').replace(/\/+$/, '') + '/api/websocket');
+  let authed = false;
+  ws.onmessage = async e => {
+    const m = JSON.parse(e.data);
+    if (m.type === 'auth_required') ws.send(JSON.stringify({type:'auth', access_token:auth.token}));
+    else if (m.type === 'auth_invalid') { setMeta('err', 'Token abgelehnt'); showError('Die Anmeldung wurde abgelehnt. Melde dich in Home Assistant neu an oder trag ein neues Token ein.'); }
+    else if (m.type === 'auth_ok') {
+      authed = true;
+      send({type:'subscribe_events', event_type:'state_changed'}).catch(() => {});
+      try { await loadAll(); } catch (err) { showError(err.message); }
+    }
+    else if (m.type === 'result') { const p = pending.get(m.id); if (p) { pending.delete(m.id); m.success ? p.res(m.result) : p.rej(new Error(m.error?.message || 'Fehler')); } }
+    else if (m.type === 'event' && m.event.event_type === 'state_changed') {
+      const {entity_id, new_state} = m.event.data;
+      if (!S.ents.some(x => x.entity_id === entity_id)) return;
+      new_state ? S.states.set(entity_id, new_state) : S.states.delete(entity_id);
+      S.busy.delete(entity_id);
+      scheduleRender();
+    }
+  };
+  ws.onerror = () => { if (!authed) { setMeta('err', 'Nicht verbunden'); showError('Keine Verbindung zu ' + cfg.url + '. Adresse prüfen.'); } };
+  ws.onclose = () => { if (authed) { setMeta('err', 'Verbindung verloren, neuer Versuch …'); setTimeout(connect, 5000); } };
+}
+function send(msg){
+  return new Promise((res, rej) => {
+    if (!ws || ws.readyState !== 1) return rej(new Error('Nicht verbunden'));
+    const id = ++msgId; pending.set(id, {res, rej}); ws.send(JSON.stringify({...msg, id}));
+  });
+}
+const call = (domain, service, data) => send({type:'call_service', domain, service, service_data:data});
+
+async function loadAll(){
+  const [devices, entities, states] = await Promise.all([
+    send({type:'config/device_registry/list'}), send({type:'config/entity_registry/list'}), send({type:'get_states'})]);
+  S.devices = devices.filter(d => (d.identifiers || []).some(([dom]) => dom === 'fordpass') && entities.some(e => e.device_id === d.id && !e.disabled_by));
+  S.entities = entities; S.states = new Map(states.map(s => [s.entity_id, s]));
+  if (!S.devices.find(d => d.id === S.carId)) S.carId = S.devices[0]?.id;
+  const sel = $('#carSel');
+  sel.hidden = S.devices.length < 2;
+  sel.innerHTML = S.devices.map(d => `<option value="${esc(d.id)}">${esc(niceName(d))}${vinOf(d) ? ' (…' + esc(vinOf(d).slice(-6)) + ')' : ''}</option>`).join('');
+  sel.value = S.carId || '';
+  setMeta('on', 'Verbunden');
+  render();
+}
+
+/* ---------- Einordnung der Entitäten ---------- */
+const HIDE_ATTR = new Set(['friendly_name','icon','unit_of_measurement','device_class','state_class','attribution','entity_picture','options','supported_features','restored','editable','assumed_state']);
+const HIDE_KEY = /correlation|^tags$|^value$|^vin$|^id$/i;
+const showAttr = k => !HIDE_ATTR.has(k) && !HIDE_KEY.test(k);
+const KEY_DE = {
+  driverFront:'Fahrertür', passengerFront:'Beifahrertür', driverRear:'Hintere Tür Fahrerseite', passengerRear:'Hintere Tür Beifahrerseite',
+  innerTailgate:'Innere Heckklappe', tailgate:'Heckklappe', allDoors:'Alle Türen', frunk:'Frontkofferraum', hood:'Motorhaube',
+  driver:'Fahrerseite', passenger:'Beifahrerseite', driverWindow:'Fenster Fahrer', passengerWindow:'Fenster Beifahrer',
+  frontLeft:'Vorne links', frontRight:'Vorne rechts', rearLeft:'Hinten links', rearRight:'Hinten rechts',
+  rearLeftInner:'Hinten links innen', rearRightInner:'Hinten rechts innen', rearLeftOuter:'Hinten links außen', rearRightOuter:'Hinten rechts außen',
+  panicAlarmStatus:'Panikalarm', updateTime:'Aktualisiert', systemStatus:'Systemstatus', recommendedFrontTirePressure:'Empfohlen vorne',
+  recommendedRearTirePressure:'Empfohlen hinten', tirePressureSystemStatus:'Reifendruck-System', lowOilPressure:'Öldruck niedrig',
+  oilLife:'Öl-Lebensdauer', oilLifeRemaining:'Öl verbleibend'
+};
+const VAL_DE = {
+  LOCKED:'verriegelt', UNLOCKED:'entriegelt', PARTLY_LOCKED:'teilweise verriegelt', DOUBLE_LOCKED:'doppelt verriegelt',
+  UNKNOWN:'unbekannt', UNDEFINED:'–', CLOSED:'geschlossen', OPEN:'offen', AJAR:'angelehnt', CLOSED_INVALID:'geschlossen',
+  ARMED:'scharf', DISARMED:'unscharf', SET:'scharf', NOT_SET:'unscharf', TRIGGERED:'ausgelöst', ACTIVE:'aktiv', INACTIVE:'inaktiv',
+  NORMAL:'normal', OK:'ok', LOW:'niedrig', HIGH:'hoch', ON:'an', OFF:'aus', TRUE:'ja', FALSE:'nein', NONE:'–',
+  RUN:'läuft', START:'gestartet', STOPPED:'aus', FULLY_OPEN:'ganz offen', PARTIALLY_OPEN:'teilweise offen', FULLY_CLOSED:'geschlossen'
+};
+const keyLabel = k => KEY_DE[k] || k.replace(/_/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, c => c.toUpperCase());
+const tr = v => VAL_DE[String(v).toUpperCase()] ?? String(v);
+function valFmt(v){
+  if (v && typeof v === 'object') {
+    const r = v.doubleRange || v.range;
+    if (r && ('upperBound' in r || 'lowerBound' in r)) {
+      const lo = r.lowerBound ?? 0, hi = r.upperBound ?? 0;
+      return hi === 0 && lo === 0 ? 'geschlossen' : `offen (${lo === hi ? hi : lo + '–' + hi} %)`;
+    }
+    if ('value' in v) return valFmt(v.value) + (v.unit ? ' ' + v.unit : '');
+    return Object.entries(v).map(([k, x]) => `${keyLabel(k)}: ${valFmt(x)}`).join(', ');
+  }
+  if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(v) && !isNaN(Date.parse(v))) return ago(v);
+  if (typeof v === 'number') return nf.format(v);
+  if (typeof v === 'boolean') return v ? 'ja' : 'nein';
+  return tr(v);
+}
+function tone(v){
+  const t = String(v).toLowerCase();
+  if (/^(unbekannt|–|unknown|undefined)$/.test(t)) return 'muted';
+  if (/^(offen|entriegelt|angelehnt|ausgelöst|teilweise)|^offen \(/.test(t)) return 'bad';
+  if (/^(geschlossen|verriegelt|doppelt verriegelt|ok|normal)$/.test(t)) return 'good';
+  return '';
+}
+const PRIORITY = [/fuel|kraftstoff/, /elveh|soc|range|reichweite/, /odometer|kilometer/, /battery|batterie/, /oil/, /tire|reifen/, /door|tuer|tür/, /window|fenster/, /alarm/, /ignition|zuend/, /remote.?start/, /deep.?sleep/, /refresh/];
+const prio = id => { const i = PRIORITY.findIndex(r => r.test(id)); return i < 0 ? 99 : i; };
+const vinOf = d => ((d?.name || '') + ' ' + JSON.stringify(d?.identifiers || [])).match(/\b[A-HJ-NPR-Z0-9]{17}\b/)?.[0] || '';
+function niceName(d){
+  if (!d) return 'Fahrzeug';
+  if (d.name_by_user) return d.name_by_user;
+  if ((!d.name || /^vin\b|^[A-HJ-NPR-Z0-9]{17}$/i.test(d.name)) && d.model) return d.model.replace(/\s*\(.*?\)\s*/g, ' ').replace(/^\d{4}\s+/, '').trim();
+  return d.name || d.model || 'Fahrzeug';
+}
+const carName = () => { const d = S.devices.find(x => x.id === S.carId); return d?.name_by_user || d?.name || 'Fahrzeug'; };
+function label(e){
+  const st = S.states.get(e.entity_id);
+  let n = e.name || st?.attributes.friendly_name || e.original_name || e.entity_id;
+  const cn = carName();
+  if (n.toLowerCase().startsWith(cn.toLowerCase() + ' ')) n = n.slice(cn.length + 1);
+  return n.replace(/^fordpass[ _]/i, '');
+}
+const numOf = st => { const n = parseFloat(st?.state); return Number.isFinite(n) ? n : null; };
+const fmt = st => {
+  if (!st) return '–';
+  if (st.state === 'unavailable') return 'nicht verfügbar';
+  if (st.state === 'unknown') return 'unbekannt';
+  const n = numOf(st), u = st.attributes.unit_of_measurement;
+  if (n !== null && /^-?[\d.]+$/.test(st.state)) return nf.format(n) + (u ? ' ' + u : '');
+  if (!isNaN(Date.parse(st.state)) && /\d{4}-\d{2}-\d{2}T/.test(st.state)) return ago(st.state);
+  return tr(st.state) + (u ? ' ' + u : '');
+};
+const openish = v => tone(tr(v)) === 'bad';
+const find = (dom, re) => S.ents.find(e => e.entity_id.startsWith(dom + '.') && re.test(e.entity_id));
+
+/* ---------- Darstellung ---------- */
+let rt; function scheduleRender(){ clearTimeout(rt); rt = setTimeout(render, 250); }
+
+function showError(msg){
+  $('#main').innerHTML = `<div class="empty">${esc(msg)}<br><button class="btn primary" onclick="openSettings()">Einstellungen öffnen</button></div>`;
+}
+
+function render(){
+  if (!S.carId) { $('#main').innerHTML = '<div class="empty">Kein Fahrzeug der FordPass-Integration gefunden.</div>'; return; }
+  S.ents = S.entities.filter(e => e.device_id === S.carId && !e.disabled_by);
+  const dev = S.devices.find(d => d.id === S.carId);
+  $('#title').textContent = niceName(dev);
+  document.title = niceName(dev);
+
+  const lock = S.ents.find(e => e.entity_id.startsWith('lock.'));
+  const lockSt = lock && S.states.get(lock.entity_id);
+  const tracker = S.ents.find(e => e.entity_id.startsWith('device_tracker.'));
+  const refreshed = S.states.get(find('sensor', /refresh/)?.entity_id);
+  const lastSt = [...S.ents].map(e => S.states.get(e.entity_id)).filter(Boolean).map(s => s.last_updated).sort().pop();
+  $('#meta').querySelector('span').textContent = `${vinOf(dev) ? 'VIN ' + vinOf(dev) : (dev?.model || 'Ford')}, Daten ${refreshed && !isNaN(Date.parse(refreshed.state)) ? ago(refreshed.state) : lastSt ? ago(lastSt) : 'unbekannt'}`;
+
+  // Kennzahlen
+  const figs = [];
+  const fuel = find('sensor', /fuel/), soc = find('sensor', /elveh|soc/), odo = find('sensor', /odometer/), bat = find('sensor', /_battery$|12v|batter/);
+  for (const [e, name, gauge] of [[fuel, 'Tank', true], [soc, 'Akku', true], [odo, 'Kilometerstand'], [bat, '12-V-Batterie']]) {
+    if (!e) continue;
+    const st = S.states.get(e.entity_id), n = numOf(st);
+    const range = st?.attributes.range ?? st?.attributes.distanceToEmpty ?? st?.attributes.fuelRange;
+    figs.push(`<div class="fig"><span>${name}</span><strong>${esc(fmt(st))}</strong>
+      ${gauge && n !== null && st.attributes.unit_of_measurement === '%' ? `<div class="gauge${n < 15 ? ' low' : ''}"><i style="width:${Math.min(100, n)}%"></i></div>` : ''}
+      ${range != null ? `<span>Reichweite ${esc(nf.format(range))} km</span>` : ''}</div>`);
+  }
+  const ls = lockSt?.state;
+  const busy = lock && S.busy.has(lock.entity_id) || ls === 'locking' || ls === 'unlocking';
+  const lockTxt = {locked:'Verriegelt', unlocked:'Entriegelt', locking:'Verriegelt …', unlocking:'Entriegelt …', jammed:'Blockiert', unavailable:'Nicht verfügbar'}[ls] || (ls || '–');
+  const lockHint = busy ? 'Befehl läuft' : ls === 'locked' ? 'Tippen zum Entriegeln' : ls === 'unlocked' ? 'Tippen zum Verriegeln' : '';
+  const lockIcon = ls === 'unlocked'
+    ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg>'
+    : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+
+  let html = `<div class="hero">
+    ${lock ? `<button class="lock ${ls} ${busy ? 'busy' : ''}" id="lockBtn" ${busy || ls === 'unavailable' ? 'disabled' : ''} aria-label="${lockTxt}. ${lockHint}">
+      ${lockIcon}<b>${lockTxt}</b><small>${lockHint}</small></button>` : ''}
+    <div class="figs">${figs.join('') || '<div class="fig"><span>Keine Kennzahlen gefunden</span></div>'}</div>
+  </div>`;
+
+  // Status-Übersicht
+  const rs = remoteSwitch();
+  html += statusHTML(rs);
+
+  // Standort
+  const gps = S.ents.map(e => S.states.get(e.entity_id)).find(st => st && st.attributes.latitude != null && st.attributes.longitude != null && /gps|location|tracker/i.test(st.entity_id));
+  const tSt = (tracker && S.states.get(tracker.entity_id)?.attributes.latitude != null) ? S.states.get(tracker.entity_id) : gps;
+  const lat = +tSt?.attributes.latitude, lon = +tSt?.attributes.longitude;
+  if (tSt && Number.isFinite(lat) && Number.isFinite(lon)) {
+    const d = 0.004, bbox = [lon - d, lat - d * 0.6, lon + d, lat + d * 0.6].join(',');
+    html += `<section><h2>Standort</h2><div class="map">
+      <iframe title="Karte mit Fahrzeugstandort" loading="lazy" src="https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat},${lon}"></iframe>
+      <div class="bar"><span>${esc(tSt.entity_id.startsWith('device_tracker.') ? (tSt.state === 'home' ? 'Zuhause' : tSt.state === 'not_home' ? 'Unterwegs' : tSt.state) : 'Letzte Position')}, aktualisiert ${esc(ago(tSt.last_updated))}</span>
+      <a class="btn" href="https://www.google.com/maps/search/?api=1&query=${lat},${lon}" target="_blank" rel="noopener">In Google Maps öffnen</a></div></div></section>`;
+  }
+
+  // Steuerung
+  const ctls = S.ents.filter(e => /^(switch|button|select|number|lock)\./.test(e.entity_id) && e.entity_id !== lock?.entity_id && e.entity_id !== rs?.entity_id)
+    .sort((a, b) => a.entity_id.split('.')[0].localeCompare(b.entity_id.split('.')[0]) || label(a).localeCompare(label(b), 'de'));
+  if (ctls.length) html += `<section><h2>Steuerung</h2>${grouped(ctls, ctlHTML, 'controls')}</section>`;
+
+  // Türen, Fenster, Reifen: Attribute als Liste
+  const statusEnts = S.ents.filter(e => /^sensor\./.test(e.entity_id) && /door|window|tire|tyre|light|alarm|oil/i.test(e.entity_id))
+    .filter(e => Object.keys(S.states.get(e.entity_id)?.attributes || {}).some(showAttr));
+  if (statusEnts.length) html += `<section><h2>Zustand</h2><div class="status">${statusEnts.sort((a, b) => prio(a.entity_id) - prio(b.entity_id)).map(boxHTML).join('')}</div></section>`;
+
+  // Alle Messwerte
+  const sensors = S.ents.filter(e => /^(sensor|binary_sensor)\./.test(e.entity_id))
+    .sort((a, b) => prio(a.entity_id) - prio(b.entity_id) || label(a).localeCompare(label(b), 'de'));
+  if (sensors.length) html += `<section><h2>Alle Werte</h2>${grouped(sensors, tileHTML, 'tiles')}</section>`;
+
+  $('#main').innerHTML = html;
+  $('#lockBtn')?.addEventListener('click', () => toggleLock(lock.entity_id, ls));
+}
+
+/* Gruppen: erste passende Gruppe gewinnt, daher ist die Reihenfolge wichtig */
+const GROUPS = [
+  ['system',  'Fahrzeugdaten & Aktualisierung', /refresh|update|request|deep.?sleep|firmware|software|message|nachricht|sync|last.?seen|\blog\b|\bvin\b|_vin\b/],
+  ['security','Verriegelung & Sicherheit', /lock|door|tuer|tür|alarm|guard|window|fenster|tailgate|heckklappe|trunk|hood|frunk|panic/],
+  ['engine',  'Motor & Fernstart', /ignition|zuend|zünd|remote.?start|rcc|engine|motor|start|climat|klima|heat|heiz|defrost|seat.?heat|steering|zone/],
+  ['energy',  'Tank, Akku & Laden', /fuel|kraftstoff|tank|elveh|soc|battery|batterie|charg|lade|range|reichweite|plug|evcc|volt/],
+  ['service', 'Reifen & Wartung', /tire|tyre|reifen|oil|öl|service|wartung|maintenance|brake|bremse|coolant|kühl|washer|wasch|adblue|def_|diesel|exhaust|filter|particulate/],
+  ['drive',   'Fahrt & Umgebung', /odometer|kilometer|speed|geschw|trip|fahrt|distance|gear|gang|outside|aussen|außen|temp|consumption|verbrauch|light|licht|belt|gurt|indicator|acceler|pedal|yaw|heading|elevation|gps|location/]
+];
+const OTHER = ['other', 'Sonstiges'];
+function groupOf(e){
+  const s = (e.entity_id + ' ' + label(e)).toLowerCase();
+  return GROUPS.find(g => g[2].test(s)) || OTHER;
+}
+function grouped(list, itemFn, cls){
+  const map = new Map();
+  for (const e of list) { const g = groupOf(e); if (!map.has(g[0])) map.set(g[0], {title:g[1], items:[]}); map.get(g[0]).items.push(e); }
+  const order = [...GROUPS.map(g => g[0]).filter(k => k !== 'system'), 'other', 'system'];
+  const keys = [...map.keys()].sort((a, b) => order.indexOf(a) - order.indexOf(b));
+  if (keys.length === 1) return `<div class="${cls}">${list.map(itemFn).join('')}</div>`;
+  return keys.map(k => `<div class="group"><h3>${esc(map.get(k).title)}</h3><div class="${cls}">${map.get(k).items.map(itemFn).join('')}</div></div>`).join('');
+}
+function tileHTML(e){
+  const st = S.states.get(e.entity_id), v = fmt(st);
+  return `<button class="tile" data-ent="${esc(e.entity_id)}"><span>${esc(label(e))}</span>
+    <strong class="${openish(st?.state) ? 'bad' : ''}">${esc(v)}</strong>
+    ${st ? `<small>${esc(ago(st.last_changed))}</small>` : ''}</button>`;
+}
+
+function remoteSwitch(){
+  return S.ents.find(e => e.entity_id.startsWith('switch.') && /remote.?start|rcc|ignition|engine|motor|fernstart/i.test(e.entity_id + ' ' + label(e)));
+}
+// Fasst die Einzelwerte eines Sensors zusammen (Türen, Fenster …)
+function summarize(e){
+  const st = e && S.states.get(e.entity_id);
+  if (!st) return null;
+  const items = Object.entries(st.attributes).filter(([k]) => showAttr(k) && !/^all/i.test(k) && k !== 'updateTime')
+    .map(([k, v]) => ({name:keyLabel(k), val:valFmt(v)})).map(x => ({...x, t:tone(x.val)}));
+  const bad = items.filter(x => x.t === 'bad'), known = items.filter(x => x.t !== 'muted');
+  return {st, items, bad, known, head:fmt(st), headTone:tone(fmt(st))};
+}
+function card(title, sum, okText, badWord){
+  if (!sum) return '';
+  let cls, main, detail = '';
+  if (sum.st.state === 'unavailable') { cls = ''; main = 'nicht verfügbar'; }
+  else if (sum.bad.length) {
+    cls = 'bad'; main = `${sum.bad.length} ${badWord}`;
+    detail = sum.bad.map(x => x.name).join(', ');
+  } else if (sum.known.length || sum.headTone === 'good') {
+    cls = 'good'; main = okText;
+    const unk = sum.items.length - sum.known.length;
+    if (unk) detail = `${unk} ohne Rückmeldung`;
+  } else if (sum.headTone === 'bad') { cls = 'bad'; main = sum.head; }
+  else { cls = 'warn'; main = sum.head; }
+  return `<div class="q ${cls}"><div><span>${title}</span><strong>${esc(main)}</strong>${detail ? `<small>${esc(detail)}</small>` : ''}</div></div>`;
+}
+function statusHTML(rs){
+  const sensors = S.ents.filter(e => e.entity_id.startsWith('sensor.'));
+  const lockS = sensors.find(e => /lock/i.test(e.entity_id));
+  const doorS = sensors.find(e => /door/i.test(e.entity_id) && !/lock/i.test(e.entity_id));
+  const winS = sensors.find(e => /window/i.test(e.entity_id));
+  let html = '';
+  html += card('Verriegelung', summarize(lockS), 'Alle Türen verriegelt', 'entriegelt');
+  html += card('Türen', summarize(doorS), 'Alle Türen geschlossen', 'offen');
+  html += card('Fenster', summarize(winS), 'Alle Fenster geschlossen', 'offen');
+  if (rs) {
+    const st = S.states.get(rs.entity_id), on = st?.state === 'on', busy = S.busy.has(rs.entity_id);
+    const na = !st || st.state === 'unavailable';
+    const info = S.states.get(sensors.find(e => /remote.?start/i.test(e.entity_id))?.entity_id);
+    const detail = busy ? 'Befehl läuft …' : info && info.state !== 'unknown' ? fmt(info) : '';
+    html += `<div class="q ${on ? 'warn' : ''}"><div><span>Fernstart</span><strong>${na ? 'nicht verfügbar' : on ? 'Motor läuft' : 'Aus'}</strong>${detail ? `<small>${esc(detail)}</small>` : ''}</div>
+      <button class="sw" role="switch" aria-checked="${on}" aria-label="Fernstart" data-act="switch" data-ent="${esc(rs.entity_id)}" ${na || busy ? 'disabled' : ''}></button></div>`;
+  } else {
+    html += `<div class="q"><div><span>Fernstart</span><strong>Nicht gefunden</strong><small>Die Integration bietet keinen Fernstart-Schalter an.</small></div></div>`;
+  }
+  return `<section style="margin-top:0"><div class="quick">${html}</div></section>`;
+}
+
+function ctlHTML(e){
+  const id = e.entity_id, dom = id.split('.')[0], st = S.states.get(id), na = !st || st.state === 'unavailable';
+  const busy = S.busy.has(id), n = esc(label(e));
+  if (dom === 'switch') return `<div class="ctl"><div class="n">${n}${busy ? '<small>Befehl läuft …</small>' : ''}</div>
+    <button class="sw" role="switch" aria-checked="${st?.state === 'on'}" aria-label="${n}" data-act="switch" data-ent="${esc(id)}" ${na || busy ? 'disabled' : ''}></button></div>`;
+  if (dom === 'button') return `<div class="ctl"><div class="n">${n}${st && !isNaN(Date.parse(st.state)) ? `<small>Zuletzt ${esc(ago(st.state))}</small>` : ''}</div>
+    <button class="btn" data-act="button" data-ent="${esc(id)}" ${na || busy ? 'disabled' : ''}>Ausführen</button></div>`;
+  if (dom === 'select') return `<div class="ctl"><div class="n">${n}</div><select data-act="select" data-ent="${esc(id)}" aria-label="${n}" ${na ? 'disabled' : ''}>
+    ${(st?.attributes.options || []).map(o => `<option ${o === st.state ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select></div>`;
+  if (dom === 'number') { const a = st?.attributes || {};
+    return `<div class="ctl"><div class="n">${n}${a.unit_of_measurement ? `<small>${esc(a.unit_of_measurement)}</small>` : ''}</div>
+    <input type="number" data-act="number" data-ent="${esc(id)}" aria-label="${n}" value="${esc(st?.state)}" min="${a.min ?? ''}" max="${a.max ?? ''}" step="${a.step ?? 1}" ${na ? 'disabled' : ''}></div>`; }
+  if (dom === 'lock') return `<div class="ctl"><div class="n">${n}<small>${esc(fmt(st))}</small></div>
+    <button class="btn" data-act="lock" data-ent="${esc(id)}" ${na || busy ? 'disabled' : ''}>${st?.state === 'locked' ? 'Entriegeln' : 'Verriegeln'}</button></div>`;
+  return '';
+}
+
+function boxHTML(e){
+  const st = S.states.get(e.entity_id);
+  const rows = Object.entries(st.attributes).filter(([k]) => showAttr(k)).slice(0, 14).map(([k, v]) => {
+    const val = valFmt(v);
+    return `<dt>${esc(keyLabel(k))}</dt><dd class="${tone(val)}">${esc(val)}</dd>`;
+  }).join('');
+  const head = fmt(st);
+  return `<div class="box"><h3>${esc(label(e))}: <span class="${tone(head) === 'bad' ? 'bad' : ''}">${esc(head)}</span></h3><dl class="kv">${rows}</dl></div>`;
+}
+
+/* ---------- Aktionen ---------- */
+async function run(id, fn, msg){
+  S.busy.add(id); render();
+  try { await fn(); toast(msg || 'Befehl gesendet. Das Fahrzeug braucht oft 30 bis 60 Sekunden.'); }
+  catch (err) { toast('Fehlgeschlagen: ' + err.message, true); S.busy.delete(id); render(); }
+  setTimeout(() => { if (S.busy.delete(id)) render(); }, 90000);
+}
+function toggleLock(id, state){
+  if (state === 'locked') {
+    if (!confirm('Fahrzeug wirklich entriegeln?')) return;
+    run(id, () => call('lock', 'unlock', {entity_id:id}));
+  } else run(id, () => call('lock', 'lock', {entity_id:id}));
+}
+$('#main').addEventListener('click', e => {
+  const b = e.target.closest('[data-act]'); const tile = e.target.closest('.tile');
+  if (tile) return openDetail(tile.dataset.ent);
+  if (!b || b.tagName === 'SELECT' || b.tagName === 'INPUT') return;
+  const id = b.dataset.ent, lbl = label(S.ents.find(x => x.entity_id === id));
+  if (b.dataset.act === 'switch') {
+    const on = b.getAttribute('aria-checked') !== 'true';
+    if (on && /ignition|remote|start|motor|zünd/i.test(id + lbl) && !confirm(`„${lbl}“ wirklich einschalten?`)) return;
+    run(id, () => call('switch', on ? 'turn_on' : 'turn_off', {entity_id:id}));
+  } else if (b.dataset.act === 'button') {
+    run(id, () => call('button', 'press', {entity_id:id}));
+  } else if (b.dataset.act === 'lock') {
+    toggleLock(id, S.states.get(id)?.state);
+  }
+});
+$('#main').addEventListener('change', e => {
+  const el = e.target.closest('[data-act]'); if (!el) return; const id = el.dataset.ent;
+  if (el.dataset.act === 'select') run(id, () => call('select', 'select_option', {entity_id:id, option:el.value}));
+  if (el.dataset.act === 'number') run(id, () => call('number', 'set_value', {entity_id:id, value:+el.value}));
+});
+$('#refreshBtn').onclick = () => {
+  const btn = find('button', /refresh|update|request/) ;
+  if (btn) run(btn.entity_id, () => call('button', 'press', {entity_id:btn.entity_id}), 'Daten werden beim Fahrzeug abgefragt.');
+  else call('homeassistant', 'update_entity', {entity_id:S.ents.map(e => e.entity_id)}).then(() => toast('Daten aktualisiert'), err => toast(err.message, true));
+};
+$('#carSel').onchange = e => { S.carId = e.target.value; save('car:id', S.carId); render(); };
+
+function openDetail(id){
+  const e = S.ents.find(x => x.entity_id === id), st = S.states.get(id); if (!e) return;
+  const rows = Object.entries(st?.attributes || {}).filter(([k]) => showAttr(k)).map(([k, v]) => {
+    const val = valFmt(v); return `<dt>${esc(keyLabel(k))}</dt><dd class="${tone(val)}">${esc(val)}</dd>`; }).join('');
+  $('#detail').innerHTML = `<div class="dh"><div style="flex:1"><h2>${esc(label(e))}</h2><p>${esc(id)}</p></div>
+    <button class="btn icon" onclick="$('#detail').close()" aria-label="Schließen">✕</button></div>
+    <div class="db"><div class="fig"><strong>${esc(fmt(st))}</strong></div>
+    <dl class="kv"><dt>Geändert</dt><dd>${st ? esc(new Date(st.last_changed).toLocaleString('de-DE')) : '–'}</dd>
+    <dt>Aktualisiert</dt><dd>${st ? esc(new Date(st.last_updated).toLocaleString('de-DE')) : '–'}</dd>${rows}</dl>
+    <a class="btn" href="${esc(cfg.url)}/history?entity_id=${encodeURIComponent(id)}" target="_top">Verlauf in Home Assistant</a></div>`;
+  $('#detail').showModal();
+}
+$('#detail').addEventListener('click', e => { if (e.target.id === 'detail') e.target.close(); });
+
+function openSettings(){ $('#cfgUrl').value = cfg.url; $('#cfgToken').value = cfg.token; $('#setDlg').showModal(); }
+$('#setBtn').onclick = openSettings;
+$('#setForm').addEventListener('submit', e => {
+  if (e.submitter?.value !== 'ok') return;
+  cfg.url = $('#cfgUrl').value.trim().replace(/\/+$/, ''); cfg.token = $('#cfgToken').value.trim();
+  save('car:cfg', {url:cfg.url, token:cfg.token}); connect();
+});
+setInterval(() => { if (S.ents.length) render(); }, 60000);
+connect();
+</script>
+</body>
+</html>

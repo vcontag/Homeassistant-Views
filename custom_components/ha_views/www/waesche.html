@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="pwa/waesche.webmanifest">
+<meta name="theme-color" content="#ECEFF4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#10151F" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="pwa/waesche-192.png">
+<script src="ha-token.js"></script>
+<title>Wäsche</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧺</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#ECEFF4; --surface:#FFFFFF; --surface-2:#F4F6FA; --ink:#14213D; --muted:#5A6781; --line:#D5DBE6;
+  --accent:#1B4FA0; --accent-ink:#FFFFFF; --accent-soft:#DCE6F6;
+  --ok:#2E8B57; --warn:#B7790A; --bad:#C23B3B;
+  color-scheme:light; box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#10151F; --surface:#1A2130; --surface-2:#212A3B; --ink:#E5EAF3; --muted:#95A1B8; --line:#2C3749;
+    --accent:#6E9BEA; --accent-ink:#0C1830; --accent-soft:#1E2F4F; --ok:#4CC282; --warn:#E3A93A; --bad:#EF6B6B; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#10151F; --surface:#1A2130; --surface-2:#212A3B; --ink:#E5EAF3; --muted:#95A1B8; --line:#2C3749;
+  --accent:#6E9BEA; --accent-ink:#0C1830; --accent-soft:#1E2F4F; --ok:#4CC282; --warn:#E3A93A; --bad:#EF6B6B; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 Manrope,"Segoe UI",system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1000px;margin:0 auto;padding:20px 16px 48px}
+
+header{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+header .t{flex:1;min-width:0}
+h1{margin:0;font-size:1.6rem;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.meta{color:var(--muted);font-size:.85rem;display:flex;align-items:center;gap:6px;margin-top:3px}
+.meta i{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.meta.on i{background:var(--ok)} .meta.err i{background:var(--bad)}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;text-decoration:none}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.danger{color:var(--bad)}
+.btn.icon{width:40px;padding:8px}
+.btn:disabled{opacity:.5;cursor:default}
+
+/* Geräte-Karten */
+.apps{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:14px}
+.app{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px;display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:center;cursor:pointer;text-align:left}
+.app.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.ring{position:relative;width:132px;height:132px;flex:none}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:9}
+.ring .track{stroke:var(--surface-2)}
+.ring .prog{stroke:var(--muted);stroke-linecap:round;transition:stroke-dashoffset .6s ease}
+.ring .mid{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
+.ring .mid b{font-size:1.45rem;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.1}
+.ring .mid small{font-size:.75rem;color:var(--muted);font-weight:600}
+.app.running .prog{stroke:var(--accent)} .app.done .prog{stroke:var(--ok)} .app.paused .prog,.app.delayed .prog{stroke:var(--warn)} .app.alarm .prog{stroke:var(--bad)}
+.app .info{min-width:0;display:grid;gap:3px}
+.app h2{margin:0;font-size:1.15rem;font-weight:800}
+.app .st{font-size:1.05rem;font-weight:800}
+.app.running .st{color:var(--accent)} .app.done .st{color:var(--ok)} .app.paused .st,.app.delayed .st{color:var(--warn)} .app.alarm .st{color:var(--bad)} .app.off .st{color:var(--muted)}
+.app .line{color:var(--muted);font-size:.88rem;overflow-wrap:anywhere}
+.app .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.app .acts .btn{min-height:38px;padding:6px 14px}
+.app .note{font-size:.8rem;color:var(--warn);margin-top:4px}
+@media (max-width:640px){
+  .apps{grid-template-columns:1fr}
+  .app{grid-template-columns:1fr;justify-items:center;text-align:center;padding:18px 16px}
+  .app .acts{justify-content:center}
+  h1{font-size:1.35rem}
+}
+
+/* Umschalter und Bereiche */
+.tabs{display:inline-flex;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:3px;margin-top:26px;gap:2px;flex-wrap:wrap}
+.tabs button{border:0;background:none;border-radius:8px;padding:7px 16px;font-weight:700;cursor:pointer;color:var(--muted)}
+.tabs button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
+section{margin-top:22px}
+section > h2{font-size:1.05rem;font-weight:800;margin:0 0 10px}
+.group + .group{margin-top:16px}
+.group h3{margin:0 0 8px;font-size:.88rem;font-weight:700;color:var(--muted);display:flex;align-items:center;gap:8px}
+.group h3::after{content:"";flex:1;height:1px;background:var(--line)}
+.controls{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.ctl{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px;min-height:60px}
+.ctl .n{flex:1;min-width:0;font-weight:600;font-size:.92rem}
+.ctl .n small{display:block;color:var(--muted);font-weight:500;font-size:.8rem}
+.ctl select,.ctl input{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:6px 8px;min-height:36px;max-width:150px}
+.sw{position:relative;width:48px;height:28px;border-radius:14px;border:0;background:var(--line);cursor:pointer;flex:none;transition:background .2s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.sw[aria-checked="true"]{background:var(--accent)}
+.sw[aria-checked="true"]::after{transform:translateX(20px)}
+.sw:disabled{opacity:.5}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;text-align:left;cursor:pointer;display:grid;gap:2px;min-width:0}
+.tile:hover{border-color:var(--muted)}
+.tile span{color:var(--muted);font-size:.8rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile strong{font-size:1.05rem;font-weight:700;overflow-wrap:anywhere}
+.tile small{color:var(--muted);font-size:.75rem}
+.bad{color:var(--bad)!important} .good{color:var(--ok)!important}
+.empty{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:36px 20px;text-align:center;color:var(--muted)}
+.empty .btn{margin-top:12px}
+@media (prefers-reduced-motion:reduce){.ring .prog,.sw,.sw::after{transition:none}}
+
+dialog{border:0;padding:0;background:var(--surface);color:var(--ink);border-radius:14px;width:min(520px,calc(100% - 24px));max-height:calc(100% - 40px)}
+dialog::backdrop{background:rgba(8,14,26,.5)}
+.dh{display:flex;gap:12px;align-items:flex-start;padding:18px 20px 12px;border-bottom:1px solid var(--line)}
+.dh h2{margin:0;flex:1;font-size:1.15rem}
+.dh p{margin:2px 0 0;color:var(--muted);font-size:.85rem;overflow-wrap:anywhere}
+.db{padding:16px 20px 20px;display:grid;gap:14px}
+.kv{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:6px 12px;margin:0;font-size:.88rem}
+.kv dt{color:var(--muted);overflow-wrap:break-word} .kv dd{margin:0;text-align:right;font-weight:600;overflow-wrap:break-word}
+.big{font-size:1.55rem;font-weight:800}
+.field{display:grid;gap:5px}
+.field label{font-size:.85rem;font-weight:600}
+.field input{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 12px;min-height:40px;width:100%}
+.hint{font-size:.8rem;color:var(--muted);margin:0}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;font-size:.9rem;box-shadow:0 6px 24px rgba(0,0,0,.25);z-index:50;max-width:calc(100% - 32px)}
+.toast.err{background:var(--bad);color:#fff}
+
+.apps{grid-template-columns:repeat(auto-fit,minmax(min(380px,100%),1fr))}
+@media (max-width:640px){
+  .apps{gap:10px}
+  .app{grid-template-columns:96px minmax(0,1fr);justify-items:stretch;text-align:left;gap:14px;padding:14px;border-radius:16px}
+  .ring{width:96px;height:96px}
+  .ring .mid b{font-size:1.15rem}
+  .ring .mid small{font-size:.68rem}
+  .app h2{font-size:1.05rem}
+  .app .st{font-size:.98rem}
+  .app .acts{justify-content:stretch}
+  .app .acts .btn{flex:1 1 0;min-width:0;min-height:44px;padding:6px 8px}
+  .tabs{display:flex;width:100%;margin-top:18px}
+  .tabs button{flex:1;padding:10px 8px}
+  section{margin-top:18px}
+  .controls{grid-template-columns:1fr;gap:8px}
+  .ctl select{max-width:58%}
+  .tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .tile{padding:10px 12px}
+  .dh{padding:12px 16px 10px} .db{padding:14px 16px 20px}
+}
+
+/* ===== Mobil-Optimierung ===== */
+[hidden]{display:none!important}
+a.btn{color:var(--ink)} a.btn.primary{color:var(--accent-ink)}
+button,a,select,input{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+html{-webkit-text-size-adjust:100%}
+@media (hover:none){ .btn:hover,.tile:hover,.row:hover,.chip:hover{border-color:var(--line);background:inherit} .btn.primary:hover{background:var(--accent)} }
+@media (max-width:640px){
+  .wrap{padding:12px 12px 32px}
+  input,select,textarea{font-size:16px!important} /* verhindert automatisches Zoomen auf dem iPhone */
+  .btn{min-height:44px} .btn.icon{width:44px;height:44px}
+  dialog{width:100%;max-width:100%;margin:auto 0 0;border-radius:18px 18px 0 0;max-height:92%;padding-bottom:env(safe-area-inset-bottom,0px)}
+  dialog[open]{animation:sheet .22s ease-out}
+  dialog::before{content:"";display:block;width:40px;height:4px;border-radius:2px;background:var(--line);margin:8px auto 0}
+  .kv{font-size:.9rem}
+}
+@keyframes sheet{from{transform:translateY(48px);opacity:.3}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){dialog[open]{animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="t"><h1>Wäsche</h1><div class="meta" id="meta"><i></i><span>Nicht verbunden</span></div></div>
+    <button class="btn icon" id="setBtn" aria-label="Einstellungen" title="Einstellungen">⚙</button>
+  </header>
+  <main id="main"></main>
+</div>
+
+<dialog id="detail"></dialog>
+<dialog id="setDlg" aria-labelledby="setTitle">
+  <form method="dialog" id="setForm">
+    <div class="dh"><div style="flex:1"><h2 id="setTitle">Verbindung zu Home Assistant</h2><p>Wird nur in diesem Browser gespeichert.</p></div>
+      <button class="btn icon" value="cancel" aria-label="Schließen">✕</button></div>
+    <div class="db">
+      <div class="field"><label for="cfgUrl">Adresse von Home Assistant</label><input id="cfgUrl" type="url" required></div>
+      <div class="field"><label for="cfgToken">Langlebiges Zugriffstoken</label><input id="cfgToken" type="password" autocomplete="off" placeholder="Leer lassen für HA-Anmeldung">
+        <p class="hint">Nur nötig, wenn du in diesem Browser nicht bei Home Assistant angemeldet bist.</p></div>
+      <div style="display:flex;justify-content:flex-end"><button class="btn primary" value="ok">Verbinden</button></div>
+    </div>
+  </form>
+</dialog>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const load = k => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } };
+const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+const nf = new Intl.NumberFormat('de-DE', {maximumFractionDigits:1});
+const rtf = new Intl.RelativeTimeFormat('de', {numeric:'auto'});
+function ago(iso){
+  const t = Date.parse(iso); if (isNaN(t)) return '';
+  const s = (t - Date.now()) / 1000, a = Math.abs(s);
+  if (a < 60) return 'gerade eben';
+  if (a < 3600) return rtf.format(Math.round(s/60), 'minute');
+  if (a < 86400) return rtf.format(Math.round(s/3600), 'hour');
+  return rtf.format(Math.round(s/86400), 'day');
+}
+let tt;
+function toast(msg, err){
+  document.querySelector('.toast')?.remove();
+  const el = Object.assign(document.createElement('div'), {className:'toast' + (err ? ' err' : ''), textContent:msg});
+  el.setAttribute('role', 'status'); document.body.append(el);
+  clearTimeout(tt); tt = setTimeout(() => el.remove(), err ? 6000 : 3500);
+}
+
+/* ---------- Anmeldung ----------
+   Die Seite nutzt automatisch die Anmeldung von Home Assistant aus diesem Browser.
+   Optional kannst du in der Datei ha-token.js ein langlebiges Token eintragen, dann funktionieren
+   alle Seiten auf jedem Gerät ohne Anmeldung (nur im lokalen Netz empfehlenswert). */
+const FIXED_TOKEN = window.HA_FIXED_TOKEN || '';
+
+async function getToken(manual){
+  if (FIXED_TOKEN) return {token: FIXED_TOKEN, via: 'festes Token'};
+  // 1. Als Dashboard in HA eingebettet (Seitenleiste, Companion-App): Anmeldung der HA-Oberfläche mitbenutzen
+  try {
+    const auth = window.parent !== window && window.parent.document.querySelector('home-assistant')?.hass?.auth;
+    if (auth) { if (auth.expired) await auth.refreshAccessToken(); return {token: auth.accessToken, via: 'HA-Anmeldung'}; }
+  } catch {}
+  // 2. Direkt geöffnet: gespeicherte HA-Anmeldung ("Angemeldet bleiben") verwenden und bei Bedarf erneuern
+  try {
+    const t = JSON.parse(localStorage.getItem('hassTokens'));
+    if (t?.refresh_token) {
+      if (!t.expires || t.expires < Date.now() + 60000) {
+        const r = await fetch((t.hassUrl || location.origin) + '/auth/token', {
+          method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: new URLSearchParams({grant_type: 'refresh_token', client_id: t.clientId || location.origin + '/', refresh_token: t.refresh_token})
+        });
+        if (!r.ok) throw new Error('refresh');
+        const n = await r.json();
+        Object.assign(t, {access_token: n.access_token, expires_in: n.expires_in, expires: Date.now() + n.expires_in * 1000});
+        localStorage.setItem('hassTokens', JSON.stringify(t));
+      }
+      return {token: t.access_token, via: 'HA-Anmeldung'};
+    }
+  } catch {}
+  // 3. Token aus den Einstellungen dieser Seite
+  return manual ? {token: manual, via: 'eigenes Token'} : null;
+}
+const NO_LOGIN = 'Keine Anmeldung gefunden. Öffne Home Assistant einmal in diesem Browser und melde dich mit „Angemeldet bleiben“ an, oder trag in den Einstellungen ein Token ein.';
+
+const cfg = Object.assign({url:'', token:''}, load('zbm:cfg') || {}, load('car:cfg') || {}, load('wash:cfg') || {});
+if (location.protocol.startsWith('http')) cfg.url = location.origin;
+
+const S = {devices:[], entities:[], states:new Map(), tab: load('wash:tab'), busy:new Set()};
+let ws, msgId = 0; const pending = new Map();
+function setMeta(kind, text){ const m = $('#meta'); m.className = 'meta ' + kind; m.querySelector('span').textContent = text; }
+
+async function connect(){
+  if (ws) { ws.onclose = null; ws.close(); }
+  setMeta('', 'Verbinde …');
+  const auth = await getToken(cfg.token);
+  if (!cfg.url || !auth) { setMeta('err', 'Nicht angemeldet'); showError(NO_LOGIN); return; }
+  ws = new WebSocket(cfg.url.replace(/^http/i, 'ws').replace(/\/+$/, '') + '/api/websocket');
+  let authed = false;
+  ws.onmessage = async e => {
+    const m = JSON.parse(e.data);
+    if (m.type === 'auth_required') ws.send(JSON.stringify({type:'auth', access_token:auth.token}));
+    else if (m.type === 'auth_invalid') { setMeta('err', 'Anmeldung abgelehnt'); showError('Die Anmeldung wurde abgelehnt. Melde dich in Home Assistant neu an oder trag ein neues Token ein.'); }
+    else if (m.type === 'auth_ok') {
+      authed = true; setMeta('on', 'Verbunden über ' + auth.via);
+      send({type:'subscribe_events', event_type:'state_changed'}).catch(() => {});
+      try { await loadAll(); } catch (err) { showError(err.message); }
+    }
+    else if (m.type === 'result') { const p = pending.get(m.id); if (p) { pending.delete(m.id); m.success ? p.res(m.result) : p.rej(new Error(m.error?.message || 'Fehler')); } }
+    else if (m.type === 'event' && m.event.event_type === 'state_changed') {
+      const {entity_id, new_state} = m.event.data;
+      if (!S.mine?.has(entity_id)) return;
+      new_state ? S.states.set(entity_id, new_state) : S.states.delete(entity_id);
+      S.busy.delete(entity_id); scheduleRender();
+    }
+  };
+  ws.onerror = () => { if (!authed) { setMeta('err', 'Nicht verbunden'); showError('Keine Verbindung zu ' + cfg.url + '.'); } };
+  ws.onclose = () => { if (authed) { setMeta('err', 'Verbindung verloren, neuer Versuch …'); setTimeout(connect, 5000); } };
+}
+function send(msg){
+  return new Promise((res, rej) => {
+    if (!ws || ws.readyState !== 1) return rej(new Error('Nicht verbunden'));
+    const id = ++msgId; pending.set(id, {res, rej}); ws.send(JSON.stringify({...msg, id}));
+  });
+}
+const call = (domain, service, data) => send({type:'call_service', domain, service, service_data:data});
+
+async function loadAll(){
+  const [devices, entities, states] = await Promise.all([
+    send({type:'config/device_registry/list'}), send({type:'config/entity_registry/list'}), send({type:'get_states'})]);
+  S.devices = devices.filter(d => (d.identifiers || []).some(([dom]) => dom === 'electrolux_status'));
+  S.entities = entities.filter(e => !e.disabled_by && S.devices.some(d => d.id === e.device_id));
+  S.mine = new Set(S.entities.map(e => e.entity_id));
+  S.states = new Map(states.filter(s => S.mine.has(s.entity_id)).map(s => [s.entity_id, s]));
+  S.devices.sort((a, b) => devName(a).localeCompare(devName(b), 'de'));
+  if (!S.devices.some(d => d.id === S.tab)) S.tab = S.devices[0]?.id;
+  render();
+}
+
+/* ---------- Texte ---------- */
+const norm = v => String(v ?? '').trim().toUpperCase().replace(/[\s-]+/g, '_');
+const STATE_DE = {
+  RUNNING:'Läuft', READY_TO_START:'Startbereit', END_OF_CYCLE:'Fertig', OFF:'Aus', IDLE:'Bereit', PAUSED:'Pausiert',
+  DELAYED_START:'Startvorwahl', ALARM:'Störung', STOPPED:'Gestoppt', UNAVAILABLE:'Nicht verfügbar', UNKNOWN:'Unbekannt',
+  WASH:'Waschen', MAIN_WASH:'Hauptwäsche', PREWASH:'Vorwäsche', PRE_WASH:'Vorwäsche', RINSE:'Spülen', SPIN:'Schleudern',
+  DRY:'Trocknen', DRYING:'Trocknen', COOLDOWN:'Abkühlen', COOL_DOWN:'Abkühlen', COOLING:'Abkühlen', ANTICREASE:'Knitterschutz',
+  ANTI_CREASE:'Knitterschutz', STEAM:'Dampf', SOAK:'Einweichen', HEATING:'Aufheizen', WEIGHING:'Beladung wird erkannt',
+  DRAIN:'Abpumpen', END:'Ende', NONE:'–', UNAVAILABLE_PHASE:'–',
+  ENABLED:'aktiv', DISABLED:'inaktiv', NOT_SAFETY_RELEVANT_ENABLED:'aktiv', TEMPORARY_LOCKED:'vorübergehend gesperrt',
+  OPEN:'offen', CLOSED:'geschlossen', LOCKED:'verriegelt', UNLOCKED:'entriegelt', CONNECTED:'verbunden', DISCONNECTED:'getrennt',
+  ON:'an', TRUE:'ja', FALSE:'nein'
+};
+const WORD_DE = {
+  COTTON:'Baumwolle', COTTONS:'Baumwolle', SYNTHETIC:'Pflegeleicht', SYNTHETICS:'Pflegeleicht', WOOL:'Wolle', WOOLMARK:'Wolle',
+  DELICATE:'Fein', DELICATES:'Feinwäsche', MIX:'Mix', MIXED:'Mix', QUICK:'Schnell', RAPID:'Schnell', ECO:'Eco', DUVET:'Bettdecken',
+  SPORT:'Sport', SILK:'Seide', DENIM:'Jeans', OUTDOOR:'Outdoor', REFRESH:'Auffrischen', RINSE:'Spülen', SPIN:'Schleudern',
+  DRAIN:'Abpumpen', SHIRT:'Hemden', SHIRTS:'Hemden', TOWEL:'Handtücher', TOWELS:'Handtücher', BED:'Bett', LINEN:'Wäsche',
+  STEAM:'Dampf', ALLERGY:'Allergie', HYGIENE:'Hygiene', EXTRA:'Extra', DRY:'Trocken', CUPBOARD:'Schranktrocken',
+  IRON:'Bügel', TIME:'Zeit', TIMED:'Zeitprogramm', MACHINE:'Maschine', CLEAN:'Reinigung', NONE:'Keine', NORMAL:'Normal',
+  HIGH:'Hoch', LOW:'Niedrig', MEDIUM:'Mittel', RPM:'U/min', C:'°C', COLD:'Kalt', ON:'An', OFF:'Aus', AND:'&', PLUS:'Plus'
+};
+function pretty(v){
+  const s = String(v ?? '');
+  if (STATE_DE[norm(s)]) return STATE_DE[norm(s)];
+  if (!/^[A-Z0-9_ ]+$/.test(s) || !/[A-Z]/.test(s)) return s;
+  const out = [];
+  for (const w of s.split(/[_ ]+/).filter(w => w && !/^(PR|PGM|PROG|PROGRAM)$/.test(w))) {
+    const d = WORD_DE[w] ?? (/^\d/.test(w) ? w : w[0] + w.slice(1).toLowerCase());
+    if (!out.includes(d)) out.push(d);
+  }
+  return out.join(' ');
+}
+const devName = d => d?.name_by_user || d?.name || 'Gerät';
+const entsOf = d => S.entities.filter(e => e.device_id === d.id);
+function label(e, d){
+  const st = S.states.get(e.entity_id);
+  let n = e.name || st?.attributes.friendly_name || e.original_name || e.entity_id;
+  const dn = devName(d || S.devices.find(x => x.id === e.device_id));
+  if (n.toLowerCase().startsWith(dn.toLowerCase() + ' ')) n = n.slice(dn.length + 1);
+  n = n.charAt(0).toUpperCase() + n.slice(1);
+  return LABEL_DE[n.toLowerCase().replace(/[\s_]+/g, ' ').trim()] || n;
+}
+const LABEL_DE = {
+  'appliance state':'Gerätestatus', 'cycle phase':'Programmphase', 'time to end':'Restzeit', 'door state':'Tür',
+  'door lock':'Türverriegelung', 'child lock':'Kindersicherung', 'remote control':'Fernsteuerung', 'program':'Programm',
+  'program uid':'Programm', 'start time':'Startvorwahl', 'delay start':'Startvorwahl', 'total cycles':'Programme gesamt',
+  'total cycle counter':'Programme gesamt', 'anticrease':'Knitterschutz', 'anti crease':'Knitterschutz',
+  'dryness level':'Trocknungsgrad', 'dry level':'Trocknungsgrad', 'humidity target':'Zielfeuchte', 'condenser filter':'Kondensatorfilter',
+  'fluff drawer':'Flusensieb', 'lint filter':'Flusensieb', 'water tank':'Wassertank', 'spin speed':'Schleuderdrehzahl',
+  'temperature':'Temperatur', 'steam':'Dampf', 'steam value':'Dampf', 'extra rinse':'Extra Spülen', 'eco':'Eco',
+  'water usage':'Wasserverbrauch', 'energy consumption':'Energieverbrauch', 'water consumption':'Wasserverbrauch',
+  'connection state':'Verbindung', 'connectivity':'Verbindung', 'time manager':'Zeitmanager', 'soil level':'Verschmutzungsgrad',
+  'auto dosing':'Automatische Dosierung', 'detergent':'Waschmittel', 'softener':'Weichspüler', 'night mode':'Nachtmodus',
+  'drum light':'Trommellicht', 'end of cycle sound':'Signal bei Programmende', 'execute command':'Befehl', 'alerts':'Meldungen'
+};
+const numOf = st => { const n = parseFloat(st?.state); return Number.isFinite(n) ? n : null; };
+function fmt(st){
+  if (!st) return '–';
+  if (st.state === 'unavailable') return 'nicht verfügbar';
+  if (st.state === 'unknown') return 'unbekannt';
+  const n = numOf(st), u = st.attributes.unit_of_measurement;
+  if (n !== null && /^-?[\d.]+$/.test(st.state)) {
+    if (st.attributes.device_class === 'duration') return dur(toMin(n, u));
+    return nf.format(n) + (u ? ' ' + u : '');
+  }
+  if (/\d{4}-\d{2}-\d{2}T/.test(st.state) && !isNaN(Date.parse(st.state))) return ago(st.state);
+  return pretty(st.state) + (u ? ' ' + u : '');
+}
+const toMin = (n, u) => u === 's' ? n / 60 : u === 'h' ? n * 60 : u === 'ms' ? n / 60000 : n;
+function dur(min){
+  min = Math.max(0, Math.round(min));
+  const h = Math.floor(min / 60), m = min % 60;
+  return h ? `${h} Std. ${m} Min.` : `${m} Min.`;
+}
+const clock = d => d.toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'});
+const bad = v => /offen|störung|alarm|fehler|error|leer|empty|voll|full|clean|reinig/i.test(v) && !/geschlossen|kein|none|^ok/i.test(v);
+
+/* ---------- Gerätezustand auswerten ---------- */
+const findE = (ents, dom, re, not) => ents.find(e => e.entity_id.startsWith(dom + '.') && (re.test(e.entity_id) || (e.original_name && re.test(e.original_name.toLowerCase().replace(/\s+/g, '_')))) && !(not && not.test(e.entity_id)));
+function analyze(d){
+  const ents = entsOf(d), st = id => id && S.states.get(id.entity_id);
+  const stateE = findE(ents, 'sensor', /appliance.?state/i) || findE(ents, 'sensor', /_state$/i, /door|remote|connect|lock/i);
+  const phaseE = findE(ents, 'sensor', /cycle.?phase|_phase/i);
+  const timeE = findE(ents, 'sensor', /time.?to.?end|remaining|restzeit/i);
+  const startE = findE(ents, 'sensor', /start.?time|delay/i);
+  const progE = findE(ents, 'select', /program/i) || findE(ents, 'sensor', /program/i);
+  const doorE = findE(ents, 'sensor', /door/i) || findE(ents, 'binary_sensor', /door/i);
+  const remoteE = findE(ents, 'sensor', /remote.?control/i) || findE(ents, 'binary_sensor', /remote.?control/i);
+  const cmdSel = findE(ents, 'select', /execute.?command|command/i);
+  const s = st(stateE), k = norm(s?.state);
+  const kind = !s || k === 'UNAVAILABLE' || k === 'OFF' ? 'off'
+    : k === 'RUNNING' ? 'running' : k === 'PAUSED' ? 'paused' : k === 'DELAYED_START' ? 'delayed'
+    : k === 'END_OF_CYCLE' ? 'done' : k === 'ALARM' ? 'alarm' : 'ready';
+  const ts = st(timeE), remain = numOf(ts) != null ? toMin(numOf(ts), ts.attributes.unit_of_measurement) : null;
+  const ss = st(startE), startIn = numOf(ss) != null ? toMin(numOf(ss), ss.attributes.unit_of_measurement) : null;
+  // Fortschritt: höchste Restzeit des laufenden Programms merken
+  const key = 'wash:max:' + d.id;
+  let max = load(key) || 0;
+  if (['running', 'paused'].includes(kind) && remain != null) { if (remain > max) { max = remain; save(key, max); } }
+  else if (kind !== 'done' && max) { max = 0; save(key, 0); }
+  const progress = kind === 'done' ? 1 : max && remain != null ? Math.min(1, Math.max(0, 1 - remain / max)) : 0;
+  const remoteSt = st(remoteE), remoteOff = remoteSt && /DISABLED|OFF|FALSE/.test(norm(remoteSt.state)) && !/ENABLED/.test(norm(remoteSt.state).replace('DISABLED', ''));
+  // Befehle: Knöpfe oder Auswahlfeld
+  const cmds = [];
+  for (const b of ents.filter(e => e.entity_id.startsWith('button.'))) {
+    const id = b.entity_id + ' ' + (b.original_name || '');
+    const c = /resume|fortsetz/i.test(id) ? 'resume' : /pause/i.test(id) ? 'pause' : /stop|reset|cancel|abbrech/i.test(id) ? 'stop' : /start/i.test(id) ? 'start' : null;
+    if (c) cmds.push({c, run: () => call('button', 'press', {entity_id:b.entity_id}), id:b.entity_id});
+  }
+  const sel = st(cmdSel);
+  if (sel) for (const o of sel.attributes.options || []) {
+    const n = norm(o); const c = /RESUME/.test(n) ? 'resume' : /PAUSE/.test(n) ? 'pause' : /STOP|RESET|CANCEL/.test(n) ? 'stop' : /START/.test(n) ? 'start' : null;
+    if (c && !cmds.some(x => x.c === c)) cmds.push({c, run: () => call('select', 'select_option', {entity_id:cmdSel.entity_id, option:o}), id:cmdSel.entity_id});
+  }
+  return {d, ents, kind, stateText: s ? fmt(s) : 'Nicht verfügbar', phase: st(phaseE) ? fmt(st(phaseE)) : '', remain, startIn,
+    progress, program: st(progE) ? fmt(st(progE)) : '', door: st(doorE) ? fmt(st(doorE)) : '', remoteOff, cmds,
+    skip: new Set([cmdSel?.entity_id].filter(Boolean)), isDryer: /dry|trock|TD\d/i.test(devName(d) + ' ' + (d.model || ''))};
+}
+
+/* ---------- Darstellung ---------- */
+let rt; function scheduleRender(){ clearTimeout(rt); rt = setTimeout(render, 250); }
+function showError(msg){ $('#main').innerHTML = `<div class="empty">${esc(msg)}<br><button class="btn primary" onclick="openSettings()">Einstellungen öffnen</button></div>`; }
+
+const CMD = {start:'Starten', resume:'Fortsetzen', pause:'Pausieren', stop:'Stoppen'};
+function appHTML(a){
+  const C = 2 * Math.PI * 58;
+  let big = '–', small = '';
+  if (a.kind === 'done') { big = '✓'; small = 'Fertig'; }
+  else if (a.kind === 'delayed' && a.startIn != null) { big = dur(a.startIn).replace(' Std. ', ':').replace(' Min.', ''); small = 'bis Start'; }
+  else if (a.remain != null && a.kind !== 'off') { big = a.remain >= 60 ? `${Math.floor(a.remain / 60)}:${String(Math.round(a.remain % 60)).padStart(2, '0')}` : `${Math.round(a.remain)}`; small = a.remain >= 60 ? 'Std. übrig' : 'Min. übrig'; }
+  else if (a.kind === 'off') small = 'Aus';
+  const end = ['running', 'paused'].includes(a.kind) && a.remain ? `Fertig um ${clock(new Date(Date.now() + a.remain * 60000))}` : '';
+  const want = {running:['pause', 'stop'], paused:['resume', 'start', 'stop'], delayed:['stop'], ready:['start'], done:[], alarm:['stop'], off:[]}[a.kind];
+  const acts = [];
+  for (const w of want) { const c = a.cmds.find(x => x.c === w); if (c && !acts.some(x => x.c === 'resume' && w === 'start')) acts.push(c); }
+  const busy = acts.some(c => S.busy.has(c.id + c.c));
+  return `<article class="app ${a.kind} ${a.d.id === S.tab ? 'sel' : ''}" data-dev="${esc(a.d.id)}" tabindex="0" aria-label="${esc(devName(a.d))} Details anzeigen">
+    <div class="ring"><svg viewBox="0 0 132 132" aria-hidden="true"><circle class="track" cx="66" cy="66" r="58"/>
+      <circle class="prog" cx="66" cy="66" r="58" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - a.progress)}"/></svg>
+      <div class="mid"><b>${esc(big)}</b><small>${esc(small)}</small></div></div>
+    <div class="info">
+      <h2>${esc(devName(a.d))}</h2>
+      <div class="st">${esc(a.stateText)}${a.phase && a.phase !== '–' && a.kind !== 'off' ? `, ${esc(a.phase)}` : ''}</div>
+      ${a.program ? `<div class="line">Programm: ${esc(a.program)}</div>` : ''}
+      ${end ? `<div class="line">${esc(end)}</div>` : ''}
+      ${a.door ? `<div class="line">Tür ${esc(a.door)}</div>` : ''}
+      ${acts.length ? `<div class="acts">${acts.map(c => `<button class="btn ${c.c === 'start' || c.c === 'resume' ? 'primary' : c.c === 'stop' ? 'danger' : ''}" data-cmd="${c.c}" data-dev="${esc(a.d.id)}" ${busy ? 'disabled' : ''}>${CMD[c.c]}</button>`).join('')}</div>` : ''}
+      ${a.remoteOff && ['ready', 'paused'].includes(a.kind) ? `<div class="note">Fernstart ist am Gerät nicht aktiviert.</div>` : ''}
+    </div></article>`;
+}
+
+const GROUPS = [
+  ['state', 'Status & Programm', /state|status|phase|program|door|tür|lock|child|kinder|remote|alarm|alert|error|fehler/],
+  ['time', 'Zeiten', /time|zeit|delay|duration|end|start|dauer/],
+  ['usage', 'Verbrauch & Statistik', /energy|energie|power|leistung|water.?usage|consumption|verbrauch|total|count|cycles|anzahl|kwh|liter/],
+  ['care', 'Wartung & Füllstände', /filter|lint|flusen|condens|kondens|tank|detergent|waschmittel|softener|weichspül|dose|dosing|auto.?dose|clean|reinig|drum|trommel|maintenance|descal/],
+  ['options', 'Optionen', /temp|spin|schleuder|dry|trock|humid|steam|dampf|anti|crease|knitter|rinse|spül|soil|stain|extra|option|eco|night|nacht|silent|leise|level|stufe|load/],
+  ['system', 'Verbindung & System', /connect|verbind|network|wifi|rssi|signal|firmware|software|version|link|ota|serial|pnc/]
+];
+const OTHER = ['other', 'Sonstiges'];
+function grouped(list, d, itemFn, cls){
+  const map = new Map();
+  for (const e of list) {
+    const s = (e.entity_id + ' ' + label(e, d)).toLowerCase();
+    const g = GROUPS.find(x => x[2].test(s)) || OTHER;
+    if (!map.has(g[0])) map.set(g[0], {title:g[1], items:[]}); map.get(g[0]).items.push(e);
+  }
+  const order = [...GROUPS.map(g => g[0]).filter(k => k !== 'system'), 'other', 'system'];
+  const keys = [...map.keys()].sort((a, b) => order.indexOf(a) - order.indexOf(b));
+  if (keys.length === 1) return `<div class="${cls}">${list.map(e => itemFn(e, d)).join('')}</div>`;
+  return keys.map(k => `<div class="group"><h3>${esc(map.get(k).title)}</h3><div class="${cls}">${map.get(k).items.map(e => itemFn(e, d)).join('')}</div></div>`).join('');
+}
+function ctlHTML(e, d){
+  const id = e.entity_id, dom = id.split('.')[0], st = S.states.get(id), na = !st || st.state === 'unavailable';
+  const busy = S.busy.has(id), n = esc(label(e, d));
+  if (dom === 'switch') return `<div class="ctl"><div class="n">${n}${busy ? '<small>Wird gesendet …</small>' : ''}</div>
+    <button class="sw" role="switch" aria-checked="${st?.state === 'on'}" aria-label="${n}" data-act="switch" data-ent="${esc(id)}" ${na || busy ? 'disabled' : ''}></button></div>`;
+  if (dom === 'select') return `<div class="ctl"><div class="n">${n}</div><select data-act="select" data-ent="${esc(id)}" aria-label="${n}" ${na ? 'disabled' : ''}>
+    ${(st?.attributes.options || []).map(o => `<option value="${esc(o)}" ${o === st.state ? 'selected' : ''}>${esc(pretty(o))}</option>`).join('')}</select></div>`;
+  if (dom === 'number') { const a = st?.attributes || {};
+    return `<div class="ctl"><div class="n">${n}${a.unit_of_measurement ? `<small>${esc(a.unit_of_measurement)}</small>` : ''}</div>
+    <input type="number" data-act="number" data-ent="${esc(id)}" aria-label="${n}" value="${esc(st?.state)}" min="${a.min ?? ''}" max="${a.max ?? ''}" step="${a.step ?? 1}" ${na ? 'disabled' : ''}></div>`; }
+  if (dom === 'button') return `<div class="ctl"><div class="n">${n}</div><button class="btn" data-act="button" data-ent="${esc(id)}" ${na || busy ? 'disabled' : ''}>Ausführen</button></div>`;
+  return '';
+}
+function tileHTML(e, d){
+  const st = S.states.get(e.entity_id), v = fmt(st);
+  return `<button class="tile" data-ent="${esc(e.entity_id)}"><span>${esc(label(e, d))}</span>
+    <strong class="${bad(v) ? 'bad' : ''}">${esc(v)}</strong>${st ? `<small>${esc(ago(st.last_changed))}</small>` : ''}</button>`;
+}
+
+function render(){
+  if (!S.devices.length) { $('#main').innerHTML = '<div class="empty">Keine Geräte der Electrolux-Integration gefunden.</div>'; return; }
+  const all = S.devices.map(analyze);
+  S.an = new Map(all.map(a => [a.d.id, a]));
+  let html = `<div class="apps">${all.map(appHTML).join('')}</div>`;
+  const a = S.an.get(S.tab);
+  if (all.length > 1) html += `<div class="tabs" role="tablist">${all.map(x => `<button role="tab" data-tab="${esc(x.d.id)}" aria-selected="${x.d.id === S.tab}">${esc(devName(x.d))}</button>`).join('')}</div>`;
+  if (a) {
+    const ctls = a.ents.filter(e => /^(switch|select|number)\./.test(e.entity_id) && !a.skip.has(e.entity_id))
+      .sort((x, y) => label(x, a.d).localeCompare(label(y, a.d), 'de'));
+    const sens = a.ents.filter(e => /^(sensor|binary_sensor)\./.test(e.entity_id)).sort((x, y) => label(x, a.d).localeCompare(label(y, a.d), 'de'));
+    if (ctls.length) html += `<section><h2>Programm & Einstellungen</h2>${grouped(ctls, a.d, ctlHTML, 'controls')}</section>`;
+    if (sens.length) html += `<section><h2>Alle Werte</h2>${grouped(sens, a.d, tileHTML, 'tiles')}</section>`;
+  }
+  const focus = document.activeElement?.dataset?.ent;
+  if (focus && document.activeElement.tagName === 'SELECT') return; // nicht neu zeichnen, während eine Auswahl offen ist
+  $('#main').innerHTML = html;
+}
+
+/* ---------- Aktionen ---------- */
+async function run(key, fn, msg){
+  S.busy.add(key); render();
+  try { await fn(); toast(msg || 'Befehl gesendet'); }
+  catch (err) { toast('Fehlgeschlagen: ' + err.message, true); }
+  setTimeout(() => { S.busy.delete(key); render(); }, 4000);
+}
+$('#main').addEventListener('click', e => {
+  const cmd = e.target.closest('[data-cmd]');
+  if (cmd) {
+    const a = S.an.get(cmd.dataset.dev), c = a?.cmds.find(x => x.c === cmd.dataset.cmd); if (!c) return;
+    if (c.c === 'stop' && !confirm(`Programm von „${devName(a.d)}“ wirklich abbrechen?`)) return;
+    run(c.id + c.c, c.run, `${devName(a.d)}: ${{start:'Start', resume:'Fortsetzen', pause:'Pause', stop:'Stopp'}[c.c]}-Befehl gesendet`);
+    return;
+  }
+  const tab = e.target.closest('[data-tab]') || (!e.target.closest('button,select,input') && e.target.closest('.app'));
+  if (tab) { S.tab = tab.dataset.tab || tab.dataset.dev; save('wash:tab', S.tab); render(); return; }
+  const tile = e.target.closest('.tile'); if (tile) return openDetail(tile.dataset.ent);
+  const b = e.target.closest('[data-act]'); if (!b || b.tagName === 'SELECT' || b.tagName === 'INPUT') return;
+  const id = b.dataset.ent;
+  if (b.dataset.act === 'switch') run(id, () => call('switch', b.getAttribute('aria-checked') === 'true' ? 'turn_off' : 'turn_on', {entity_id:id}), 'Gespeichert');
+  if (b.dataset.act === 'button') run(id, () => call('button', 'press', {entity_id:id}));
+});
+$('#main').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('app')) { e.preventDefault(); e.target.click(); } });
+$('#main').addEventListener('change', e => {
+  const el = e.target.closest('[data-act]'); if (!el) return; const id = el.dataset.ent;
+  if (el.dataset.act === 'select') run(id, () => call('select', 'select_option', {entity_id:id, option:el.value}), 'Gespeichert');
+  if (el.dataset.act === 'number') run(id, () => call('number', 'set_value', {entity_id:id, value:+el.value}), 'Gespeichert');
+  el.blur();
+});
+
+const HIDE_ATTR = new Set(['friendly_name','icon','unit_of_measurement','device_class','state_class','attribution','entity_picture','options','supported_features','restored','editable','assumed_state']);
+function openDetail(id){
+  const e = S.entities.find(x => x.entity_id === id), st = S.states.get(id); if (!e) return;
+  const rows = Object.entries(st?.attributes || {}).filter(([k]) => !HIDE_ATTR.has(k)).map(([k, v]) =>
+    `<dt>${esc(k.replace(/_/g, ' '))}</dt><dd>${esc(typeof v === 'object' ? JSON.stringify(v) : pretty(v))}</dd>`).join('');
+  $('#detail').innerHTML = `<div class="dh"><div style="flex:1"><h2>${esc(label(e))}</h2><p>${esc(id)}</p></div>
+    <button class="btn icon" onclick="$('#detail').close()" aria-label="Schließen">✕</button></div>
+    <div class="db"><div class="big">${esc(fmt(st))}</div>
+    <dl class="kv"><dt>Geändert</dt><dd>${st ? esc(new Date(st.last_changed).toLocaleString('de-DE')) : '–'}</dd>${rows}</dl>
+    <a class="btn" href="${esc(cfg.url)}/history?entity_id=${encodeURIComponent(id)}" target="_top">Verlauf in Home Assistant</a></div>`;
+  $('#detail').showModal();
+}
+$('#detail').addEventListener('click', e => { if (e.target.id === 'detail') e.target.close(); });
+
+function openSettings(){ $('#cfgUrl').value = cfg.url; $('#cfgToken').value = cfg.token || ''; $('#setDlg').showModal(); }
+$('#setBtn').onclick = openSettings;
+$('#setForm').addEventListener('submit', e => {
+  if (e.submitter?.value !== 'ok') return;
+  cfg.url = $('#cfgUrl').value.trim().replace(/\/+$/, ''); cfg.token = $('#cfgToken').value.trim();
+  save('wash:cfg', {url:cfg.url, token:cfg.token}); connect();
+});
+setInterval(() => { if (S.devices.length) render(); }, 30000);
+connect();
+</script>
+</body>
+</html>

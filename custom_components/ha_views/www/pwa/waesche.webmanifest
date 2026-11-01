@@ -1,0 +1,31 @@
+{
+  "id": "/ha_views/waesche.html",
+  "name": "Wäsche",
+  "short_name": "Wäsche",
+  "lang": "de",
+  "start_url": "../waesche.html",
+  "scope": "../waesche.html",
+  "display": "standalone",
+  "background_color": "#ECEFF4",
+  "theme_color": "#ECEFF4",
+  "icons": [
+    {
+      "src": "waesche-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "waesche-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "waesche-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

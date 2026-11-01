@@ -1,0 +1,36 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Home Assistant Views",
+        "description": "Control pages for your devices. Each view appears automatically once the matching integration is set up and disappears again when it is removed.",
+        "data": {
+          "sidebar": "Show in sidebar",
+          "token": "Long-lived access token (optional)"
+        },
+        "data_description": {
+          "sidebar": "Unselected views stay reachable via the 'Smart Home' overview.",
+          "token": "Only needed for phone shortcuts outside the HA frontend. Note: the token is readable on your local network without login."
+        }
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Home Assistant Views is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Home Assistant Views",
+        "data": {
+          "sidebar": "Show in sidebar",
+          "token": "Long-lived access token (optional)"
+        },
+        "data_description": {
+          "sidebar": "Only views whose integration is set up are shown.",
+          "token": "Only for phone shortcuts outside the HA frontend. Leave empty to remove it."
+        }
+      }
+    }
+  }
+}

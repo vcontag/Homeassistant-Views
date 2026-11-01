@@ -1,0 +1,31 @@
+{
+  "id": "/ha_views/zigbee-manager.html",
+  "name": "Zigbee-Geräte",
+  "short_name": "Zigbee",
+  "lang": "de",
+  "start_url": "../zigbee-manager.html",
+  "scope": "../zigbee-manager.html",
+  "display": "standalone",
+  "background_color": "#EEF1F4",
+  "theme_color": "#EEF1F4",
+  "icons": [
+    {
+      "src": "zigbee-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "zigbee-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "zigbee-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

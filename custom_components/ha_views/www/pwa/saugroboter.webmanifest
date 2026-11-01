@@ -1,0 +1,31 @@
+{
+  "id": "/ha_views/saugroboter.html",
+  "name": "Saugroboter",
+  "short_name": "Sauger",
+  "lang": "de",
+  "start_url": "../saugroboter.html",
+  "scope": "../saugroboter.html",
+  "display": "standalone",
+  "background_color": "#ECEFF4",
+  "theme_color": "#ECEFF4",
+  "icons": [
+    {
+      "src": "saugroboter-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "saugroboter-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "saugroboter-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
