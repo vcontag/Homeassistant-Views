@@ -14,6 +14,7 @@ eingerichtet ist, und verschwindet wieder, wenn du sie entfernst.
 | Echo | Alexa Devices oder Alexa Media Player eingerichtet ist |
 | Transit | FordPass eingerichtet ist |
 | Wasser (Grünbeck) | Grünbeck Cloud (`gruenbeck_cloud`) eingerichtet ist |
+| Abfall | Waste Collection Schedule (`waste_collection_schedule`) eingerichtet ist – über die Oberfläche oder per YAML |
 | Zigbee | ZHA eingerichtet ist oder Zigbee2MQTT-Geräte vorhanden sind |
 
 Die Seiten passen sich hellem und dunklem Design an, sind für das Handy optimiert und
@@ -71,3 +72,17 @@ Darunter Salzreichweite, Durchfluss, Wasserhärte, Regenerationen, ein Verbrauch
 (7 oder 30 Tage), Wartung, Installateur und Meldungen. Alle weiteren Einstellungen der Anlage
 (Regenerationszeiten, Härte, Benachrichtigungen …) sind unter „Einstellungen“ eingeklappt.
 Voraussetzung ist die Integration [Grünbeck Cloud](https://github.com/p0l0/hagruenbeck_cloud).
+
+## Abfall (Waste Collection Schedule)
+
+Oben die **nächste Abholung** mit Kalenderblatt, Abfallarten als farbige Tonnen und dem Hinweis
+„Heute Abend rausstellen“ bzw. „Heute ist Abholung“. Darunter je Abfallart der nächste Termin – ein Tipp
+darauf filtert die Terminliste auf diese Art. Die **Termine** gibt es als Liste (nach Monaten) oder als
+Monatskalender. Über ↻ werden die Termine bei der Abfallwirtschaft neu abgerufen. Die Sensoren der
+Integration sind unter „Sensoren“ eingeklappt.
+
+Die Termine kommen aus den Kalendern der Integration; gibt es keinen, aus den Attributen der Sensoren.
+Die Farben werden am Namen erkannt (Restmüll, Bio, Papier, Gelber Sack/Wertstoff, Glas, Grünschnitt,
+Sperrmüll, Schadstoffe), alle anderen Arten bekommen eine feste eigene Farbe.
+Bei mehreren Adressen lässt sich oben zwischen ihnen umschalten.
+Voraussetzung ist die Integration [Waste Collection Schedule](https://github.com/mampfes/hacs_waste_collection_schedule).

@@ -26,6 +26,8 @@ class View:
     domains: tuple[str, ...] = ()
     # … oder eine Entität dieser Art existiert (z. B. irgendein Saugroboter) …
     entity_domains: tuple[str, ...] = ()
+    # … oder eine dieser Integrationen per YAML geladen ist …
+    components: tuple[str, ...] = ()
     # … oder Zigbee2MQTT-Geräte vorhanden sind.
     zigbee2mqtt: bool = False
     # Immer verfügbar (Übersicht).
@@ -64,6 +66,14 @@ VIEWS: tuple[View, ...] = (
         "Wasser",
         "mdi:water-opacity",
         domains=("gruenbeck_cloud",),
+    ),
+    View(
+        "abfall",
+        "abfall.html",
+        "Abfall",
+        "mdi:trash-can",
+        domains=("waste_collection_schedule",),
+        components=("waste_collection_schedule",),
     ),
     View(
         "zigbee",
