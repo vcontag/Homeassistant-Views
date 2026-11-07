@@ -22,7 +22,17 @@ from homeassistant.helpers.debounce import Debouncer
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.loader import async_get_integration
 
-from .const import CONF_SIDEBAR, CONF_TOKEN, DEFAULT_SIDEBAR, DOMAIN, URL_BASE, VIEWS, View
+from .const import (
+    CONF_KNOWN,
+    CONF_SIDEBAR,
+    CONF_TOKEN,
+    DEFAULT_SIDEBAR,
+    DOMAIN,
+    URL_BASE,
+    VIEWS,
+    VIEWS_V1,
+    View,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -94,6 +104,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         """Seitenleiste und views.json an die vorhandenen Integrationen anpassen."""
         available = [v.key for v in VIEWS if _is_available(hass, v)]
         sidebar = set(entry.options.get(CONF_SIDEBAR, DEFAULT_SIDEBAR))
+        # Neue Ansichten (beim Speichern der Optionen noch unbekannt) standardmäßig einblenden
+        if CONF_SIDEBAR in entry.options:
+            known = set(entry.options.get(CONF_KNOWN, VIEWS_V1))
+            sidebar |= {v.key for v in VIEWS if v.key not in known and v.key in DEFAULT_SIDEBAR}
         wanted = {v.key for v in VIEWS if v.key in available and v.key in sidebar}
 
         for view in VIEWS:

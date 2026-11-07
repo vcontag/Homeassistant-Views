@@ -13,6 +13,7 @@ eingerichtet ist, und verschwindet wieder, wenn du sie entfernst.
 | Receiver | Denon AVR eingerichtet ist |
 | Echo | Alexa Devices oder Alexa Media Player eingerichtet ist |
 | Transit | FordPass eingerichtet ist |
+| Wasser (Grünbeck) | Grünbeck Cloud (`gruenbeck_cloud`) eingerichtet ist |
 | Zigbee | ZHA eingerichtet ist oder Zigbee2MQTT-Geräte vorhanden sind |
 
 Die Seiten passen sich hellem und dunklem Design an, sind für das Handy optimiert und
@@ -35,6 +36,7 @@ Fertig – die passenden Ansichten stehen danach in der Seitenleiste.
 - **In der Seitenleiste anzeigen** – welche Ansichten einen eigenen Eintrag bekommen.
   Es erscheinen trotzdem nur die, deren Integration vorhanden ist. Abgewählte Ansichten
   bleiben über die Übersicht „Smart Home“ erreichbar.
+  Neu hinzugekommene Ansichten (nach einem Update) werden automatisch eingeblendet und lassen sich hier abwählen.
 - **Festes Zugriffstoken (optional)** – nur nötig für Handy-Verknüpfungen außerhalb der
   HA-Oberfläche (z. B. angeheftete Verknüpfungen der Companion-App oder als Chrome-App).
   In der Seitenleiste nutzen die Seiten automatisch deine normale Anmeldung.
@@ -60,3 +62,12 @@ löschen und Verknüpfungen von `/local/…` auf `/ha_views/…` ändern.
 
 HACS meldet neue Versionen. Nach dem Update Home Assistant neu starten.
 Die Seiten werden ohne langes Caching ausgeliefert, Änderungen sind also sofort sichtbar.
+
+## Wasser (Grünbeck)
+
+Angelehnt an die Grünbeck-App: großer Kreis mit der Restkapazität, Status (betriebsbereit, Regeneration mit
+aktuellem Schritt, Störung), Betriebsart (Eco/Comfort/Power/Individuell) und **Regeneration starten**.
+Darunter Salzreichweite, Durchfluss, Wasserhärte, Regenerationen, ein Verbrauchsdiagramm für Wasser und Salz
+(7 oder 30 Tage), Wartung, Installateur und Meldungen. Alle weiteren Einstellungen der Anlage
+(Regenerationszeiten, Härte, Benachrichtigungen …) sind unter „Einstellungen“ eingeklappt.
+Voraussetzung ist die Integration [Grünbeck Cloud](https://github.com/p0l0/hagruenbeck_cloud).
