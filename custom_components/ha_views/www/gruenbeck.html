@@ -1,0 +1,683 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="pwa/gruenbeck.webmanifest">
+<meta name="theme-color" content="#ECEFF4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#10151F" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="pwa/gruenbeck-192.png">
+<link rel="icon" href="pwa/gruenbeck-192.png">
+<script src="ha-token.js"></script>
+<title>Wasser</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#ECEFF4; --surface:#FFFFFF; --surface-2:#F4F6FA; --ink:#14213D; --muted:#5A6781; --line:#D5DBE6;
+  --accent:#0A7FBF; --accent-ink:#FFFFFF; --accent-soft:#DDEEF8; --salt:#7A8699;
+  --ok:#2E8B57; --warn:#B7790A; --bad:#C23B3B;
+  color-scheme:light; box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#10151F; --surface:#1A2130; --surface-2:#212A3B; --ink:#E5EAF3; --muted:#95A1B8; --line:#2C3749;
+    --accent:#4FB3E8; --accent-ink:#06203A; --accent-soft:#17324A; --salt:#A9B4C6; --ok:#4CC282; --warn:#E3A93A; --bad:#EF6B6B; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#10151F; --surface:#1A2130; --surface-2:#212A3B; --ink:#E5EAF3; --muted:#95A1B8; --line:#2C3749;
+  --accent:#4FB3E8; --accent-ink:#06203A; --accent-soft:#17324A; --salt:#A9B4C6; --ok:#4CC282; --warn:#E3A93A; --bad:#EF6B6B; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 Manrope,"Segoe UI",system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+button,a,select,input{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+[hidden]{display:none!important}
+.wrap{max-width:1000px;margin:0 auto;padding:20px 16px 48px}
+
+header{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+header .t{flex:1;min-width:0}
+h1{margin:0;font-size:1.6rem;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.meta{color:var(--muted);font-size:.85rem;display:flex;align-items:center;gap:6px;margin-top:3px}
+.meta i{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.meta.on i{background:var(--ok)} .meta.err i{background:var(--bad)}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;text-decoration:none;color:var(--ink)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.icon{width:40px;padding:8px}
+.btn:disabled{opacity:.5;cursor:default}
+@media (hover:hover){.btn:hover{border-color:var(--muted)} .btn.primary:hover{filter:brightness(1.08)}}
+
+/* Hauptkarte wie in der App: Kreis mit Restkapazität + Status */
+.hero{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:22px;display:grid;grid-template-columns:auto 1fr;gap:26px;align-items:center}
+.ring{position:relative;width:180px;height:180px;flex:none}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:12}
+.ring .track{stroke:var(--accent-soft)}
+.ring .prog{stroke:var(--accent);stroke-linecap:round;transition:stroke-dashoffset .8s ease,stroke .3s}
+.hero.low .ring .prog{stroke:var(--warn)}
+.ring .mid{position:absolute;inset:0;display:grid;place-content:center;text-align:center;gap:1px}
+.ring .mid b{font-size:2.6rem;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1}
+.ring .mid b sup{font-size:1rem;font-weight:700;vertical-align:top;margin-left:2px;line-height:1.6}
+.ring .mid small{font-size:.78rem;color:var(--muted);font-weight:700}
+.ring .mid em{font-style:normal;font-size:.85rem;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+.hero .info{min-width:0;display:grid;gap:10px}
+.hero h2{margin:0;font-size:1.25rem;font-weight:800;line-height:1.2}
+.hero .model{color:var(--muted);font-size:.85rem;font-weight:600;margin-top:2px}
+.state{display:inline-flex;align-items:center;gap:8px;font-weight:800;font-size:1.02rem}
+.state::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--ok);flex:none}
+.hero.regen .state{color:var(--accent)} .hero.regen .state::before{background:var(--accent);animation:pulse 1.4s ease-in-out infinite}
+.hero.alarm .state{color:var(--bad)} .hero.alarm .state::before{background:var(--bad)}
+.hero.off .state{color:var(--muted)} .hero.off .state::before{background:var(--muted)}
+@keyframes pulse{50%{opacity:.35}}
+.steps{display:flex;gap:4px;margin-top:-2px}
+.steps i{height:4px;flex:1;border-radius:2px;background:var(--accent-soft)}
+.steps i.done{background:var(--accent)}
+.line{color:var(--muted);font-size:.88rem}
+.line b{color:var(--ink);font-weight:700}
+.seg{display:flex;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:3px;gap:2px}
+.seg button{flex:1;border:0;background:none;border-radius:8px;padding:8px 6px;font-weight:700;font-size:.88rem;cursor:pointer;color:var(--muted);min-width:0;white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.seg button:disabled{cursor:default}
+.label{font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:-4px}
+
+/* Meldungen */
+.alerts{margin-top:14px;display:grid;gap:8px}
+.alert{background:var(--surface);border:1px solid var(--bad);border-left-width:5px;border-radius:12px;padding:12px 14px}
+.alert b{color:var(--bad);display:block}
+.alert small{color:var(--muted)}
+.alert.old{border-color:var(--line);border-left-color:var(--muted)} .alert.old b{color:var(--ink)}
+
+/* Kennzahlen */
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:14px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px;display:grid;gap:4px;align-content:start;text-align:left;cursor:pointer;min-width:0}
+.stat span{color:var(--muted);font-size:.8rem;font-weight:700}
+.stat strong{font-size:1.45rem;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.15;overflow-wrap:anywhere}
+.stat strong small{font-size:.85rem;font-weight:700;color:var(--muted);margin-left:3px}
+.stat em{font-style:normal;color:var(--muted);font-size:.8rem}
+.stat .bar{height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden;margin-top:4px}
+.stat .bar i{display:block;height:100%;background:var(--salt);border-radius:3px}
+.stat.warn strong{color:var(--warn)} .stat.warn .bar i{background:var(--warn)}
+.stat.bad strong{color:var(--bad)} .stat.bad .bar i{background:var(--bad)}
+@media (hover:hover){.stat:hover{border-color:var(--muted)}}
+
+/* Verbrauch */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin-top:14px}
+.card-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.card-h h2{margin:0;font-size:1.05rem;font-weight:800;flex:1}
+.card-h .seg{flex:none}
+.card-h .seg button{padding:6px 14px;flex:none}
+.sum{display:flex;gap:22px;flex-wrap:wrap;margin-bottom:6px}
+.sum div{display:grid}
+.sum span{color:var(--muted);font-size:.78rem;font-weight:700}
+.sum b{font-size:1.15rem;font-weight:800;font-variant-numeric:tabular-nums}
+.chart{width:100%;height:auto;display:block}
+.chart .bar{fill:var(--accent)} .chart.salt .bar{fill:var(--salt)}
+.chart .bar.today{opacity:.55}
+.chart .grid{stroke:var(--line);stroke-width:1}
+.chart text{fill:var(--muted);font-size:11px;font-family:inherit;font-weight:600}
+.chart .avg{stroke:var(--ink);stroke-width:1;stroke-dasharray:3 3;opacity:.5}
+.nodata{color:var(--muted);text-align:center;padding:40px 0}
+
+/* Wartung */
+.kv{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:8px 12px;margin:0;font-size:.92rem}
+.kv dt{color:var(--muted)} .kv dd{margin:0;text-align:right;font-weight:700;overflow-wrap:anywhere}
+.two{display:grid;grid-template-columns:1fr 1fr;column-gap:14px}
+.two .card{margin-top:14px}
+
+/* Einstellungen / alle Werte */
+details.more{margin-top:14px;background:var(--surface);border:1px solid var(--line);border-radius:16px}
+details.more summary{list-style:none;cursor:pointer;padding:16px 18px;font-weight:800;font-size:1.05rem;display:flex;align-items:center;gap:10px}
+details.more summary::-webkit-details-marker{display:none}
+details.more summary::after{content:"›";margin-left:auto;font-size:1.4rem;color:var(--muted);transition:transform .2s}
+details.more[open] summary::after{transform:rotate(90deg)}
+details.more summary small{color:var(--muted);font-weight:600;font-size:.82rem}
+details.more .body{padding:0 18px 18px}
+.group + .group{margin-top:16px}
+.group h3{margin:0 0 8px;font-size:.88rem;font-weight:700;color:var(--muted);display:flex;align-items:center;gap:8px}
+.group h3::after{content:"";flex:1;height:1px;background:var(--line)}
+.controls{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.ctl{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;align-items:center;gap:12px;min-height:56px}
+.ctl .n{flex:1;min-width:0;font-weight:600;font-size:.9rem}
+.ctl .n small{display:block;color:var(--muted);font-weight:500;font-size:.78rem}
+.ctl select,.ctl input{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 8px;min-height:36px;max-width:150px}
+.ctl input[type=number]{width:90px} .ctl input[type=time]{width:110px} .ctl input[type=text]{width:150px}
+.sw{position:relative;width:48px;height:28px;border-radius:14px;border:0;background:var(--line);cursor:pointer;flex:none;transition:background .2s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.sw[aria-checked="true"]{background:var(--accent)}
+.sw[aria-checked="true"]::after{transform:translateX(20px)}
+.sw:disabled{opacity:.5}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+.tile{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;text-align:left;cursor:pointer;display:grid;gap:2px;min-width:0}
+.tile span{color:var(--muted);font-size:.78rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile strong{font-size:1rem;font-weight:700;overflow-wrap:anywhere}
+.empty{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:36px 20px;text-align:center;color:var(--muted)}
+.empty .btn{margin-top:12px}
+
+dialog{border:0;padding:0;background:var(--surface);color:var(--ink);border-radius:14px;width:min(520px,calc(100% - 24px));max-height:calc(100% - 40px)}
+dialog::backdrop{background:rgba(8,14,26,.5)}
+.dh{display:flex;gap:12px;align-items:flex-start;padding:18px 20px 12px;border-bottom:1px solid var(--line)}
+.dh h2{margin:0;flex:1;font-size:1.15rem}
+.dh p{margin:2px 0 0;color:var(--muted);font-size:.85rem;overflow-wrap:anywhere}
+.db{padding:16px 20px 20px;display:grid;gap:14px}
+.big{font-size:1.55rem;font-weight:800}
+.field{display:grid;gap:5px}
+.field label{font-size:.85rem;font-weight:600}
+.field input{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 12px;min-height:40px;width:100%}
+.hint{font-size:.8rem;color:var(--muted);margin:0}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;font-size:.9rem;box-shadow:0 6px 24px rgba(0,0,0,.25);z-index:50;max-width:calc(100% - 32px)}
+.toast.err{background:var(--bad);color:#fff}
+
+@media (max-width:760px){ .stats{grid-template-columns:repeat(2,minmax(0,1fr))} .two{grid-template-columns:1fr;gap:0} }
+@media (max-width:640px){
+  .wrap{padding:12px 12px 32px}
+  h1{font-size:1.35rem}
+  .hero{grid-template-columns:1fr;justify-items:center;padding:18px 16px;gap:16px}
+  .hero .info{width:100%;justify-items:stretch}
+  .hero .head{text-align:center}
+  .hero .state{justify-content:center;width:100%}
+  .ring{width:200px;height:200px}
+  .stats{gap:10px;margin-top:10px}
+  .stat{padding:12px 14px}
+  .stat strong{font-size:1.25rem}
+  .card{padding:14px;margin-top:10px}
+  .card-h h2{flex-basis:100%}
+  .card-h .seg{flex:1 1 0}
+  .card-h .seg button{padding:7px 4px;flex:1}
+  .controls{grid-template-columns:1fr;gap:8px}
+  .ctl select{max-width:58%}
+  .tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  input,select,textarea{font-size:16px!important}
+  .btn{min-height:44px} .btn.icon{width:44px;height:44px}
+  .hero .btn.primary{width:100%}
+  dialog{width:100%;max-width:100%;margin:auto 0 0;border-radius:18px 18px 0 0;max-height:92%;padding-bottom:env(safe-area-inset-bottom,0px)}
+  dialog[open]{animation:sheet .22s ease-out}
+  dialog::before{content:"";display:block;width:40px;height:4px;border-radius:2px;background:var(--line);margin:8px auto 0}
+}
+@keyframes sheet{from{transform:translateY(48px);opacity:.3}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.ring .prog,.sw,.sw::after,dialog[open],.hero.regen .state::before{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="t"><h1>Wasser</h1><div class="meta" id="meta"><i></i><span>Nicht verbunden</span></div></div>
+    <button class="btn icon" id="setBtn" aria-label="Einstellungen" title="Einstellungen">⚙</button>
+  </header>
+  <main id="main"></main>
+</div>
+
+<dialog id="detail"></dialog>
+<dialog id="setDlg" aria-labelledby="setTitle">
+  <form method="dialog" id="setForm">
+    <div class="dh"><div style="flex:1"><h2 id="setTitle">Verbindung zu Home Assistant</h2><p>Wird nur in diesem Browser gespeichert.</p></div>
+      <button class="btn icon" value="cancel" aria-label="Schließen">✕</button></div>
+    <div class="db">
+      <div class="field"><label for="cfgUrl">Adresse von Home Assistant</label><input id="cfgUrl" type="url" required></div>
+      <div class="field"><label for="cfgToken">Langlebiges Zugriffstoken</label><input id="cfgToken" type="password" autocomplete="off" placeholder="Leer lassen für HA-Anmeldung">
+        <p class="hint">Nur nötig, wenn du in diesem Browser nicht bei Home Assistant angemeldet bist.</p></div>
+      <div style="display:flex;justify-content:flex-end"><button class="btn primary" value="ok">Verbinden</button></div>
+    </div>
+  </form>
+</dialog>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const load = k => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } };
+const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+const nf = (v, d = 1) => new Intl.NumberFormat('de-DE', {maximumFractionDigits:d}).format(v);
+const rtf = new Intl.RelativeTimeFormat('de', {numeric:'auto'});
+function ago(iso){
+  const t = Date.parse(iso); if (isNaN(t)) return '';
+  const s = (t - Date.now()) / 1000, a = Math.abs(s);
+  if (a < 60) return 'gerade eben';
+  if (a < 3600) return rtf.format(Math.round(s/60), 'minute');
+  if (a < 86400) return rtf.format(Math.round(s/3600), 'hour');
+  return rtf.format(Math.round(s/86400), 'day');
+}
+let tt;
+function toast(msg, err){
+  document.querySelector('.toast')?.remove();
+  const el = Object.assign(document.createElement('div'), {className:'toast' + (err ? ' err' : ''), textContent:msg});
+  el.setAttribute('role', 'status'); document.body.append(el);
+  clearTimeout(tt); tt = setTimeout(() => el.remove(), err ? 6000 : 3500);
+}
+
+/* ---------- Anmeldung (wie bei den anderen Seiten) ---------- */
+const FIXED_TOKEN = window.HA_FIXED_TOKEN || '';
+async function getToken(manual){
+  if (FIXED_TOKEN) return {token: FIXED_TOKEN, via: 'festes Token'};
+  try {
+    const auth = window.parent !== window && window.parent.document.querySelector('home-assistant')?.hass?.auth;
+    if (auth) { if (auth.expired) await auth.refreshAccessToken(); return {token: auth.accessToken, via: 'HA-Anmeldung'}; }
+  } catch {}
+  try {
+    const t = JSON.parse(localStorage.getItem('hassTokens'));
+    if (t?.refresh_token) {
+      if (!t.expires || t.expires < Date.now() + 60000) {
+        const r = await fetch((t.hassUrl || location.origin) + '/auth/token', {
+          method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: new URLSearchParams({grant_type: 'refresh_token', client_id: t.clientId || location.origin + '/', refresh_token: t.refresh_token})
+        });
+        if (!r.ok) throw new Error('refresh');
+        const n = await r.json();
+        Object.assign(t, {access_token: n.access_token, expires_in: n.expires_in, expires: Date.now() + n.expires_in * 1000});
+        localStorage.setItem('hassTokens', JSON.stringify(t));
+      }
+      return {token: t.access_token, via: 'HA-Anmeldung'};
+    }
+  } catch {}
+  return manual ? {token: manual, via: 'eigenes Token'} : null;
+}
+const NO_LOGIN = 'Keine Anmeldung gefunden. Öffne Home Assistant einmal in diesem Browser und melde dich mit „Angemeldet bleiben“ an, oder trag in den Einstellungen ein Token ein.';
+
+const cfg = Object.assign({url:'', token:''}, load('zbm:cfg') || {}, load('wash:cfg') || {}, load('gb:cfg') || {});
+if (location.protocol.startsWith('http')) cfg.url = location.origin;
+
+const S = {devices:[], entities:[], states:new Map(), dev: load('gb:dev'), busy:new Set(),
+  chart: load('gb:chart') || {kind:'water', days:7}, series:{}, fetched:new Set()};
+let ws, msgId = 0; const pending = new Map();
+function setMeta(kind, text){ const m = $('#meta'); m.className = 'meta ' + kind; m.querySelector('span').textContent = text; }
+
+async function connect(){
+  if (ws) { ws.onclose = null; ws.close(); }
+  setMeta('', 'Verbinde …');
+  const auth = await getToken(cfg.token);
+  if (!cfg.url || !auth) { setMeta('err', 'Nicht angemeldet'); showError(NO_LOGIN); return; }
+  ws = new WebSocket(cfg.url.replace(/^http/i, 'ws').replace(/\/+$/, '') + '/api/websocket');
+  let authed = false;
+  ws.onmessage = async e => {
+    const m = JSON.parse(e.data);
+    if (m.type === 'auth_required') ws.send(JSON.stringify({type:'auth', access_token:auth.token}));
+    else if (m.type === 'auth_invalid') { setMeta('err', 'Anmeldung abgelehnt'); showError('Die Anmeldung wurde abgelehnt. Melde dich in Home Assistant neu an oder trag ein neues Token ein.'); }
+    else if (m.type === 'auth_ok') {
+      authed = true; setMeta('on', 'Verbunden über ' + auth.via);
+      send({type:'subscribe_events', event_type:'state_changed'}).catch(() => {});
+      try { await loadAll(); } catch (err) { showError(err.message); }
+    }
+    else if (m.type === 'result') { const p = pending.get(m.id); if (p) { pending.delete(m.id); m.success ? p.res(m.result) : p.rej(new Error(m.error?.message || 'Fehler')); } }
+    else if (m.type === 'event' && m.event.event_type === 'state_changed') {
+      const {entity_id, new_state} = m.event.data;
+      if (!S.mine?.has(entity_id)) return;
+      new_state ? S.states.set(entity_id, new_state) : S.states.delete(entity_id);
+      S.busy.delete(entity_id); scheduleRender();
+    }
+  };
+  ws.onerror = () => { if (!authed) { setMeta('err', 'Nicht verbunden'); showError('Keine Verbindung zu ' + cfg.url + '.'); } };
+  ws.onclose = () => { if (authed) { setMeta('err', 'Verbindung verloren, neuer Versuch …'); setTimeout(connect, 5000); } };
+}
+function send(msg){
+  return new Promise((res, rej) => {
+    if (!ws || ws.readyState !== 1) return rej(new Error('Nicht verbunden'));
+    const id = ++msgId; pending.set(id, {res, rej}); ws.send(JSON.stringify({...msg, id}));
+  });
+}
+const call = (domain, service, data, ret) => send({type:'call_service', domain, service, service_data:data, ...(ret ? {return_response:true} : {})});
+
+const DOMAIN = 'gruenbeck_cloud';
+async function loadAll(){
+  const [devices, entities, states] = await Promise.all([
+    send({type:'config/device_registry/list'}), send({type:'config/entity_registry/list'}), send({type:'get_states'})]);
+  S.devices = devices.filter(d => (d.identifiers || []).some(([dom]) => dom === DOMAIN));
+  S.entities = entities.filter(e => !e.disabled_by && (e.platform === DOMAIN || S.devices.some(d => d.id === e.device_id)));
+  S.mine = new Set(S.entities.map(e => e.entity_id));
+  S.states = new Map(states.filter(s => S.mine.has(s.entity_id)).map(s => [s.entity_id, s]));
+  S.devices.sort((a, b) => devName(a).localeCompare(devName(b), 'de'));
+  if (!S.devices.some(d => d.id === S.dev)) S.dev = S.devices[0]?.id;
+  render();
+}
+
+/* ---------- Zuordnung der Entitäten über ihren Schlüssel ----------
+   Die Integration bildet die unique_id als <Seriennummer>_<Schlüssel>, z.B. BS123_salt_range. */
+const devName = d => d?.name_by_user || d?.name || 'Enthärtungsanlage';
+const serialOf = d => (d.identifiers || []).find(([dom]) => dom === DOMAIN)?.[1] || d.serial_number || '';
+function keyOf(e, d){
+  if (e.translation_key) return e.translation_key;
+  const s = serialOf(d), u = String(e.unique_id || '');
+  return s && u.startsWith(s + '_') ? u.slice(s.length + 1) : u.replace(/^[^_]+_/, '');
+}
+function entMap(d){
+  const m = new Map();
+  for (const e of S.entities.filter(x => x.device_id === d.id)) m.set(keyOf(e, d), e);
+  return m;
+}
+const stOf = e => e && S.states.get(e.entity_id);
+const usable = st => st && !['unavailable', 'unknown', ''].includes(st.state);
+const num = st => { const n = parseFloat(st?.state); return usable(st) && Number.isFinite(n) ? n : null; };
+
+/* ---------- Texte ---------- */
+const STEP = [['Fill salt tank', 'Salzbehälter füllen'], ['Salting', 'Salzen'], ['Displacement', 'Verdrängen'],
+  ['Backwashing', 'Rückspülen'], ['Washing out', 'Auswaschen']];
+const OPT_DE = {
+  Eco:'Eco', Comfort:'Comfort', Power:'Power', Individual:'Individuell', Automatic:'Automatisch', Fixed:'Feste Zeiten',
+  Inactive:'Inaktiv', Deactivated:'Aus', 'Permanent lightning':'Dauerhaft an', 'In case of failure':'Bei Störung',
+  'In case of operation by user + failure':'Bei Bedienung + Störung',
+  'In case of water treatment + operation by user + failure':'Bei Wasseraufbereitung, Bedienung + Störung',
+  German:'Deutsch', English:'Englisch', French:'Französisch', Italian:'Italienisch', Dutch:'Niederländisch',
+  Spanish:'Spanisch', Russian:'Russisch', Danish:'Dänisch', on:'an', off:'aus', ...Object.fromEntries(STEP)
+};
+const opt = v => OPT_DE[v] ?? v;
+const LABEL_DE = {
+  next_regeneration:'Nächste Regeneration', startup:'Inbetriebnahme', last_service:'Letzte Wartung', raw_water:'Rohwasserhärte',
+  soft_water:'Weichwasserhärte', soft_water_quantity:'Weichwasser gesamt', regeneration_counter:'Regenerationen',
+  current_flow_rate:'Durchfluss', remaining_capacity_volume:'Restkapazität', remaining_capacity_percentage:'Restkapazität',
+  salt_range:'Salzreichweite', salt_consumption:'Salzverbrauch gesamt', regeneration_step:'Regenerationsschritt',
+  next_service:'Nächste Wartung', has_error:'Störung', mode:'Betriebsart', regeneration_mode:'Regenerationsmodus',
+  raw_water_hardness:'Rohwasserhärte', soft_water_hardness:'Weichwasserhärte', water_hardness_unit:'Einheit der Härte',
+  maintenance_interval:'Wartungsintervall', buzzer:'Signalton', push_notification:'Push-Benachrichtigung',
+  email_notification:'E-Mail-Benachrichtigung', led_ring_mode:'LED-Ring', led_ring_brightness:'LED-Ring Helligkeit',
+  led_ring_flash_on_signal:'LED-Ring blinkt bei Meldung', dlst:'Sommerzeit', ntp_sync:'Zeit automatisch stellen', language:'Sprache',
+  installer_name:'Name', installer_phone:'Telefon', installer_email:'E-Mail'
+};
+const DAYS = {monday:'Mo', tuesday:'Di', wednesday:'Mi', thursday:'Do', friday:'Fr', saturday:'Sa', sunday:'So'};
+function label(e, d){
+  const k = keyOf(e, d);
+  if (LABEL_DE[k]) return LABEL_DE[k];
+  let m = k.match(/^regeneration_time_(\w+?)_(\d)$/); if (m && DAYS[m[1]]) return `Regeneration ${DAYS[m[1]]} ${m[2]}`;
+  m = k.match(/^mode_individual_(\w+)$/); if (m && DAYS[m[1]]) return `Betriebsart ${DAYS[m[1]]}`;
+  m = k.match(/^capacity_figure_(\w+)$/); if (m && DAYS[m[1]]) return `Kapazitätszahl ${DAYS[m[1]]}`;
+  const st = stOf(e);
+  let n = e.name || st?.attributes.friendly_name || e.original_name || e.entity_id;
+  const dn = devName(d);
+  if (n.toLowerCase().startsWith(dn.toLowerCase() + ' ')) n = n.slice(dn.length + 1);
+  return n.charAt(0).toUpperCase() + n.slice(1);
+}
+const dateDe = (v, withTime) => { const t = new Date(v); return isNaN(t) ? String(v) : withTime
+  ? t.toLocaleString('de-DE', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'})
+  : t.toLocaleDateString('de-DE', {day:'2-digit', month:'2-digit', year:'numeric'}); };
+function whenDe(iso){
+  const t = new Date(iso); if (isNaN(t)) return '';
+  const day = new Date(t); day.setHours(0, 0, 0, 0); const today = new Date(); today.setHours(0, 0, 0, 0);
+  const diff = Math.round((day - today) / 86400000), time = t.toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'});
+  if (diff === 0) return `heute ${time}`; if (diff === 1) return `morgen ${time}`; if (diff === -1) return `gestern ${time}`;
+  return t.toLocaleDateString('de-DE', {weekday:'short', day:'2-digit', month:'2-digit'}) + ' ' + time;
+}
+function fmt(st){
+  if (!st) return '–';
+  if (st.state === 'unavailable') return 'nicht verfügbar';
+  if (st.state === 'unknown' || st.state === '') return 'unbekannt';
+  const n = parseFloat(st.state), u = st.attributes.unit_of_measurement;
+  if (Number.isFinite(n) && /^-?[\d.]+$/.test(st.state)) return nf(n, 2) + (u ? ' ' + u : '');
+  if (st.attributes.device_class === 'timestamp') return whenDe(st.state);
+  if (st.attributes.device_class === 'date' || /^\d{4}-\d{2}-\d{2}$/.test(st.state)) return dateDe(st.state);
+  return opt(st.state) + (u ? ' ' + u : '');
+}
+
+/* ---------- Zustand einer Anlage ---------- */
+function analyze(d){
+  const E = entMap(d), g = k => stOf(E.get(k));
+  const pct = num(g('remaining_capacity_percentage'));
+  const vol = num(g('remaining_capacity_volume'));
+  const stepSt = g('regeneration_step'), step = usable(stepSt) ? stepSt.state : '';
+  const stepIdx = STEP.findIndex(([en]) => en === step);
+  const regen = !!step && step !== 'Inactive' && step !== '0';
+  const errSt = g('has_error'), errors = (errSt?.attributes.errors || []).slice().sort((a, b) => Date.parse(b.date) - Date.parse(a.date));
+  const alarm = errSt?.state === 'on';
+  const anyState = [...E.values()].some(e => usable(stOf(e)));
+  const kind = !anyState ? 'off' : alarm ? 'alarm' : regen ? 'regen' : 'ok';
+  const stateText = {off:'Keine Verbindung zur Anlage', alarm:'Störung', regen:'Regeneration läuft', ok:'Betriebsbereit'}[kind];
+  return {d, E, g, pct, vol, regen, step, stepIdx, alarm, errors, kind, stateText};
+}
+
+/* ---------- Verbrauch: aus den Attributen daily_usage, sonst über die Aktion der Integration ---------- */
+function series(a, kind){
+  const e = a.E.get(kind === 'water' ? 'soft_water_quantity' : 'salt_consumption');
+  const list = stOf(e)?.attributes.daily_usage;
+  if (Array.isArray(list) && list.length) return list;
+  if (S.series[kind]) return S.series[kind];
+  if (!S.fetched.has(kind)) {
+    S.fetched.add(kind);
+    call(DOMAIN, kind === 'water' ? 'get_device_water_measurements' : 'get_device_salt_measurements', {}, true)
+      .then(r => { S.series[kind] = r?.response?.entries || []; render(); })
+      .catch(() => { S.series[kind] = []; render(); });
+  }
+  return null;
+}
+function chartHTML(a){
+  const kind = S.chart.kind, days = S.chart.days;
+  const raw = series(a, kind);
+  const head = `<div class="card-h"><h2>Verbrauch</h2>
+    <div class="seg" role="group" aria-label="Art">${[['water', 'Wasser'], ['salt', 'Salz']].map(([k, t]) =>
+      `<button data-chart-kind="${k}" aria-pressed="${kind === k}">${t}</button>`).join('')}</div>
+    <div class="seg" role="group" aria-label="Zeitraum">${[7, 30].map(n =>
+      `<button data-chart-days="${n}" aria-pressed="${days === n}">${n} Tage</button>`).join('')}</div></div>`;
+  if (raw === null) return `<div class="card">${head}<div class="nodata">Lade Verbrauchsdaten …</div></div>`;
+  // nach Datum sortieren, fehlende Tage mit 0 auffüllen
+  const byDate = new Map(raw.map(x => [String(x.date).slice(0, 10), +x.value || 0]));
+  const today = new Date(); today.setHours(12, 0, 0, 0);
+  const pts = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const t = new Date(today); t.setDate(t.getDate() - i);
+    const k = t.toISOString().slice(0, 10);
+    pts.push({k, t, v: byDate.get(k) ?? null});
+  }
+  const have = pts.filter(p => p.v !== null);
+  if (!have.length) return `<div class="card">${head}<div class="nodata">Für diesen Zeitraum liegen keine Verbrauchsdaten vor.</div></div>`;
+  // Salz liefert die Cloud je Tag in Gramm, Wasser in Litern
+  const unit = kind === 'water' ? 'l' : 'g';
+  const vals = have.map(p => p.v), total = vals.reduce((s, v) => s + v, 0), avg = total / vals.length;
+  const todayV = pts[pts.length - 1].v;
+  const show = (v, u) => u === 'g' && v >= 1000 ? `${nf(v / 1000, 2)} kg` : u === 'l' && v >= 1000 ? `${nf(v / 1000, 2)} m³` : `${nf(v, 0)} ${u}`;
+  const W = Math.max(280, Math.round(($('#main').clientWidth || 600) - 38)), H = 190, pl = 34, pb = 20, pt = 8, max = Math.max(...vals, 1) * 1.1;
+  const bw = (W - pl) / days, y = v => pt + (H - pt - pb) * (1 - v / max);
+  const ticks = [0, max / 2, max].map(v => `<line class="grid" x1="${pl}" x2="${W}" y1="${y(v)}" y2="${y(v)}"/><text x="${pl - 4}" y="${y(v) + 3}" text-anchor="end">${nf(v >= 1000 ? v / 1000 : v, v >= 1000 ? 1 : 0)}${v >= 1000 ? 'k' : ''}</text>`).join('');
+  const bars = pts.map((p, i) => {
+    const x = pl + i * bw + bw * .18, w = bw * .64, h = p.v ? (H - pt - pb) * (p.v / max) : 0;
+    const lbl = days <= 7 ? p.t.toLocaleDateString('de-DE', {weekday:'short'}) : (i % 5 === 4 || i === days - 1 ? p.t.getDate() + '.' : '');
+    return `<rect class="bar ${i === days - 1 ? 'today' : ''}" x="${x}" y="${H - pb - h}" width="${w}" height="${h}" rx="${Math.min(4, w / 2)}"><title>${p.t.toLocaleDateString('de-DE')}: ${p.v === null ? 'keine Daten' : show(p.v, unit)}</title></rect>
+      ${lbl ? `<text x="${pl + i * bw + bw / 2}" y="${H - 5}" text-anchor="middle">${lbl}</text>` : ''}`;
+  }).join('');
+  return `<div class="card">${head}
+    <div class="sum"><div><span>Heute</span><b>${todayV === null ? '–' : show(todayV, unit)}</b></div>
+      <div><span>Ø pro Tag</span><b>${show(avg, unit)}</b></div><div><span>${days} Tage</span><b>${show(total, unit)}</b></div></div>
+    <svg class="chart ${kind}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${kind === 'water' ? 'Wasserverbrauch' : 'Salzverbrauch'} der letzten ${days} Tage">
+      ${ticks}${bars}<line class="avg" x1="${pl}" x2="${W}" y1="${y(avg)}" y2="${y(avg)}"/></svg>
+    <p class="hint">Der heutige Tag ist hell dargestellt, weil er noch nicht abgeschlossen ist. Die gestrichelte Linie zeigt den Durchschnitt.</p></div>`;
+}
+
+/* ---------- Darstellung ---------- */
+let rt; function scheduleRender(){ clearTimeout(rt); rt = setTimeout(render, 250); }
+function showError(msg){ $('#main').innerHTML = `<div class="empty">${esc(msg)}<br><button class="btn primary" onclick="openSettings()">Einstellungen öffnen</button></div>`; }
+
+function heroHTML(a){
+  const C = 2 * Math.PI * 80, p = a.pct == null ? 0 : Math.max(0, Math.min(100, a.pct));
+  const low = a.pct != null && a.pct < 15;
+  const modeE = a.E.get('mode'), modeSt = stOf(modeE);
+  const next = a.g('next_regeneration');
+  const busyRegen = S.busy.has('regen:' + a.d.id);
+  let sub = '';
+  if (a.kind === 'regen') sub = `<div class="line">Schritt: <b>${esc(opt(a.step))}</b></div>
+    <div class="steps" aria-hidden="true">${STEP.map((_, i) => `<i class="${i <= a.stepIdx ? 'done' : ''}"></i>`).join('')}</div>`;
+  else if (usable(next)) sub = `<div class="line">Nächste Regeneration: <b>${esc(whenDe(next.state))}</b></div>`;
+  return `<article class="hero ${a.kind} ${low && a.kind === 'ok' ? 'low' : ''}">
+    <div class="ring" role="img" aria-label="Restkapazität ${a.pct == null ? 'unbekannt' : nf(a.pct, 0) + ' Prozent'}">
+      <svg viewBox="0 0 180 180" aria-hidden="true"><circle class="track" cx="90" cy="90" r="80"/>
+        <circle class="prog" cx="90" cy="90" r="80" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - p / 100)}"/></svg>
+      <div class="mid"><small>Restkapazität</small><b>${a.pct == null ? '–' : nf(a.pct, 0)}<sup>%</sup></b>
+        ${a.vol != null ? `<em>${nf(a.vol, 2)} m³</em>` : ''}</div></div>
+    <div class="info">
+      <div class="head"><h2>${esc(devName(a.d))}</h2>${a.d.model ? `<div class="model">${esc(a.d.model)}</div>` : ''}</div>
+      <div class="state">${esc(a.stateText)}</div>
+      ${sub}
+      ${modeSt ? `<div class="label">Betriebsart</div>
+        <div class="seg" role="group" aria-label="Betriebsart">${(modeSt.attributes.options || []).map(o =>
+          `<button data-mode="${esc(o)}" data-ent="${esc(modeE.entity_id)}" aria-pressed="${o === modeSt.state}" ${!usable(modeSt) || S.busy.has(modeE.entity_id) ? 'disabled' : ''}>${esc(opt(o))}</button>`).join('')}</div>` : ''}
+      <button class="btn primary" data-regen="${esc(a.d.id)}" ${a.kind === 'regen' || a.kind === 'off' || busyRegen ? 'disabled' : ''}>
+        ${a.kind === 'regen' ? 'Regeneration läuft …' : busyRegen ? 'Wird gestartet …' : 'Regeneration starten'}</button>
+    </div></article>`;
+}
+
+function alertsHTML(a){
+  const open = a.errors.filter(x => !x.is_resolved);
+  if (!a.alarm && !open.length) return '';
+  const list = open.length ? open : [{message:'Die Anlage meldet eine Störung.', date:null}];
+  return `<div class="alerts">${list.slice(0, 5).map(x => `<div class="alert"><b>${esc(x.message || 'Störung')}${x.error_code ? ` (Code ${esc(x.error_code)})` : ''}</b>
+    ${x.date ? `<small>${esc(dateDe(x.date, true))}</small>` : ''}</div>`).join('')}</div>`;
+}
+
+function statsHTML(a){
+  const salt = num(a.g('salt_range')), flow = num(a.g('current_flow_rate'));
+  const raw = num(a.g('raw_water')), soft = num(a.g('soft_water'));
+  const hu = a.g('raw_water')?.attributes.unit_of_measurement || '°dH';
+  const saltCls = salt == null ? '' : salt <= 7 ? 'bad' : salt <= 14 ? 'warn' : '';
+  const flowLm = flow == null ? null : flow * 1000 / 60;   // m³/h → l/min
+  const regs = num(a.g('regeneration_counter'));
+  const tile = (key, cls, label, value, unit, extra) => `<button class="stat ${cls}" data-ent="${esc(a.E.get(key)?.entity_id || '')}">
+    <span>${label}</span><strong>${value}${unit ? `<small>${unit}</small>` : ''}</strong>${extra || ''}</button>`;
+  return `<div class="stats">
+    ${tile('salt_range', saltCls, 'Salzreichweite', salt == null ? '–' : nf(salt, 0), salt == null ? '' : salt === 1 ? 'Tag' : 'Tage',
+      `<div class="bar"><i style="width:${salt == null ? 0 : Math.min(100, salt / 90 * 100)}%"></i></div>${saltCls ? `<em>${salt <= 7 ? 'Bitte bald Salz nachfüllen' : 'Salz demnächst nachfüllen'}</em>` : ''}`)}
+    ${tile('current_flow_rate', '', 'Durchfluss', flowLm == null ? '–' : nf(flowLm, 1), flowLm == null ? '' : 'l/min',
+      `<em>${flowLm == null ? '' : flowLm > 0 ? 'Wasser wird entnommen' : 'Kein Wasserfluss'}</em>`)}
+    ${tile('soft_water', '', 'Wasserhärte', soft == null ? '–' : nf(soft, 1), soft == null ? '' : hu, raw != null ? `<em>Rohwasser ${nf(raw, 1)} ${esc(hu)}</em>` : '')}
+    ${tile('regeneration_counter', '', 'Regenerationen', regs == null ? '–' : nf(regs, 0), '', usable(a.g('last_regeneration_exchanger')) ? `<em>zuletzt ${esc(fmt(a.g('last_regeneration_exchanger')))}</em>` : '')}
+  </div>`;
+}
+
+function serviceHTML(a){
+  const rows = [];
+  const add = (k, l) => { const st = a.g(k); if (usable(st)) rows.push(`<dt>${l}</dt><dd>${esc(fmt(st))}</dd>`); };
+  add('last_service', 'Letzte Wartung');
+  const ns = num(a.g('next_service')); if (ns != null) rows.push(`<dt>Nächste Wartung</dt><dd class="${ns <= 14 ? 'bad' : ''}">in ${nf(ns, 0)} Tagen</dd>`);
+  add('startup', 'Inbetriebnahme');
+  const sq = num(a.g('soft_water_quantity')); if (sq != null) rows.push(`<dt>Weichwasser gesamt</dt><dd>${nf(sq / 1000, 1)} m³</dd>`);
+  add('salt_consumption', 'Salzverbrauch gesamt');
+  const inst = ['installer_name', 'installer_phone', 'installer_email'].map(k => a.g(k)).filter(usable);
+  const left = rows.length ? `<div class="card"><div class="card-h"><h2>Wartung</h2></div><dl class="kv">${rows.join('')}</dl></div>` : '';
+  const right = inst.length ? `<div class="card"><div class="card-h"><h2>Installateur</h2></div><dl class="kv">${inst.map(st => {
+    const v = esc(st.state); const href = /@/.test(st.state) ? `mailto:${v}` : /^[+\d][\d\s/-]+$/.test(st.state) ? `tel:${v.replace(/[\s/-]/g, '')}` : '';
+    return `<dt>${esc(label(S.entities.find(e => e.entity_id === st.entity_id), a.d))}</dt><dd>${href ? `<a href="${href}">${v}</a>` : v}</dd>`; }).join('')}</dl></div>` : '';
+  const old = a.errors.filter(x => x.is_resolved).slice(0, 5);
+  const hist = old.length ? `<div class="card"><div class="card-h"><h2>Frühere Meldungen</h2></div><div class="alerts" style="margin:0">${old.map(x =>
+    `<div class="alert old"><b>${esc(x.message)}</b><small>${esc(dateDe(x.date, true))} · behoben</small></div>`).join('')}</div></div>` : '';
+  const cards = [left, right, hist].filter(Boolean);
+  return cards.length ? `<div class="two">${cards.join('')}</div>` : '';
+}
+
+const GROUPS = [
+  ['regen', 'Regeneration', /regeneration|mode_individual|capacity_figure|residual_capacity|forced|treatment_volume/],
+  ['water', 'Wasserhärte', /hardness|water_hardness_unit|setpoint|charge/],
+  ['notify', 'Meldungen', /notification|buzzer|fault_signal|led/],
+  ['service', 'Wartung', /maintenance|installer/],
+  ['system', 'System', /language|dlst|ntp|knx/]
+];
+const SKIP = new Set(['mode']);
+function ctlHTML(e, d){
+  const id = e.entity_id, dom = id.split('.')[0], st = stOf(e), na = !usable(st) && dom !== 'text';
+  const busy = S.busy.has(id), n = esc(label(e, d)), u = st?.attributes.unit_of_measurement;
+  const name = `<div class="n">${n}${busy ? '<small>Wird gesendet …</small>' : u ? `<small>${esc(u)}</small>` : ''}</div>`;
+  if (dom === 'switch') return `<div class="ctl">${name}<button class="sw" role="switch" aria-checked="${st?.state === 'on'}" aria-label="${n}" data-act="switch" data-ent="${esc(id)}" ${na || busy ? 'disabled' : ''}></button></div>`;
+  if (dom === 'select') return `<div class="ctl">${name}<select data-act="select" data-ent="${esc(id)}" aria-label="${n}" ${na ? 'disabled' : ''}>
+    ${(st?.attributes.options || []).map(o => `<option value="${esc(o)}" ${o === st.state ? 'selected' : ''}>${esc(opt(o))}</option>`).join('')}</select></div>`;
+  if (dom === 'number') { const a = st?.attributes || {};
+    return `<div class="ctl">${name}<input type="number" data-act="number" data-ent="${esc(id)}" aria-label="${n}" value="${esc(st?.state)}" min="${a.min ?? ''}" max="${a.max ?? ''}" step="${a.step ?? 1}" ${na ? 'disabled' : ''}></div>`; }
+  if (dom === 'time') return `<div class="ctl">${name}<input type="time" data-act="time" data-ent="${esc(id)}" aria-label="${n}" value="${esc(String(st?.state || '').slice(0, 5))}" ${na ? 'disabled' : ''}></div>`;
+  if (dom === 'text') return `<div class="ctl">${name}<input type="text" data-act="text" data-ent="${esc(id)}" aria-label="${n}" value="${esc(usable(st) ? st.state : '')}" ${!st || st.state === 'unavailable' ? 'disabled' : ''}></div>`;
+  return '';
+}
+function tileHTML(e, d){
+  return `<button class="tile" data-ent="${esc(e.entity_id)}"><span>${esc(label(e, d))}</span><strong>${esc(fmt(stOf(e)))}</strong></button>`;
+}
+function grouped(list, d, fn, cls){
+  const map = new Map();
+  for (const e of list) {
+    const g = GROUPS.find(x => x[2].test(keyOf(e, d))) || ['other', 'Weitere'];
+    if (!map.has(g[0])) map.set(g[0], {title:g[1], items:[]}); map.get(g[0]).items.push(e);
+  }
+  const order = [...GROUPS.map(g => g[0]), 'other'];
+  return [...map.keys()].sort((x, y) => order.indexOf(x) - order.indexOf(y)).map(k =>
+    `<div class="group"><h3>${esc(map.get(k).title)}</h3><div class="${cls}">${map.get(k).items.map(e => fn(e, d)).join('')}</div></div>`).join('');
+}
+
+function render(){
+  if (!S.devices.length) { $('#main').innerHTML = '<div class="empty">Keine Anlage der Grünbeck-Cloud-Integration gefunden.</div>'; return; }
+  const ae = document.activeElement;
+  if (ae && ['SELECT', 'INPUT'].includes(ae.tagName) && $('#main').contains(ae)) return; // nicht stören, während etwas eingegeben wird
+  const openMore = [...document.querySelectorAll('details.more[open]')].map(x => x.dataset.k);
+  S.an = new Map(S.devices.map(d => [d.id, analyze(d)]));
+  const a = S.an.get(S.dev);
+  let html = '';
+  if (S.devices.length > 1) html += `<div class="seg" style="margin-bottom:14px" role="group" aria-label="Anlage">${S.devices.map(d =>
+    `<button data-dev="${esc(d.id)}" aria-pressed="${d.id === S.dev}">${esc(devName(d))}</button>`).join('')}</div>`;
+  html += heroHTML(a) + alertsHTML(a) + statsHTML(a) + chartHTML(a) + serviceHTML(a);
+  const ents = [...a.E.entries()].filter(([k]) => !SKIP.has(k)).map(([, e]) => e);
+  const ctls = ents.filter(e => /^(switch|select|number|time|text)\./.test(e.entity_id)).sort((x, y) => label(x, a.d).localeCompare(label(y, a.d), 'de', {numeric:true}));
+  const sens = ents.filter(e => /^(sensor|binary_sensor)\./.test(e.entity_id)).sort((x, y) => label(x, a.d).localeCompare(label(y, a.d), 'de'));
+  if (ctls.length) html += `<details class="more" data-k="set" ${openMore.includes('set') ? 'open' : ''}><summary>Einstellungen <small>${ctls.length}</small></summary>
+    <div class="body">${grouped(ctls, a.d, ctlHTML, 'controls')}</div></details>`;
+  if (sens.length) html += `<details class="more" data-k="all" ${openMore.includes('all') ? 'open' : ''}><summary>Alle Werte <small>${sens.length}</small></summary>
+    <div class="body"><div class="tiles">${sens.map(e => tileHTML(e, a.d)).join('')}</div></div></details>`;
+  $('#main').innerHTML = html;
+}
+
+/* ---------- Aktionen ---------- */
+async function run(key, fn, msg){
+  S.busy.add(key); render();
+  try { await fn(); toast(msg || 'Gespeichert'); }
+  catch (err) { toast('Fehlgeschlagen: ' + err.message, true); }
+  setTimeout(() => { S.busy.delete(key); render(); }, 4000);
+}
+$('#main').addEventListener('click', e => {
+  const t = e.target.closest('button,summary'); if (!t) return;
+  if (t.dataset.dev) { S.dev = t.dataset.dev; save('gb:dev', S.dev); render(); return; }
+  if (t.dataset.chartKind) { S.chart.kind = t.dataset.chartKind; save('gb:chart', S.chart); render(); return; }
+  if (t.dataset.chartDays) { S.chart.days = +t.dataset.chartDays; save('gb:chart', S.chart); render(); return; }
+  if (t.dataset.mode) {
+    const id = t.dataset.ent; if (t.getAttribute('aria-pressed') === 'true') return;
+    run(id, () => call('select', 'select_option', {entity_id:id, option:t.dataset.mode}), `Betriebsart ${opt(t.dataset.mode)} gespeichert`);
+    return;
+  }
+  if (t.dataset.regen) {
+    if (!confirm('Regeneration jetzt starten? Während der Regeneration steht kurzzeitig nur unbehandeltes Wasser zur Verfügung.')) return;
+    run('regen:' + t.dataset.regen, () => call(DOMAIN, 'regenerate', {}), 'Regeneration wird gestartet');
+    return;
+  }
+  if (t.dataset.act === 'switch') { const id = t.dataset.ent; run(id, () => call('switch', t.getAttribute('aria-checked') === 'true' ? 'turn_off' : 'turn_on', {entity_id:id})); return; }
+  if ((t.classList.contains('tile') || t.classList.contains('stat')) && t.dataset.ent) openDetail(t.dataset.ent);
+});
+$('#main').addEventListener('change', e => {
+  const el = e.target.closest('[data-act]'); if (!el) return; const id = el.dataset.ent, act = el.dataset.act;
+  // unveränderte Werte nicht erneut senden (z.B. doppeltes change-Ereignis beim Verlassen des Feldes)
+  const cur = String(S.states.get(id)?.state ?? ''), v = el.value;
+  if (v === cur || (act === 'time' && v + ':00' === cur) || (act === 'number' && +v === +cur)) return;
+  el.blur();
+  if (act === 'select') run(id, () => call('select', 'select_option', {entity_id:id, option:v}));
+  if (act === 'number') run(id, () => call('number', 'set_value', {entity_id:id, value:+v}));
+  if (act === 'time' && v) run(id, () => call('time', 'set_value', {entity_id:id, time:v + ':00'}));
+  if (act === 'text') run(id, () => call('text', 'set_value', {entity_id:id, value:v}));
+});
+
+const HIDE_ATTR = new Set(['friendly_name','icon','unit_of_measurement','device_class','state_class','attribution','entity_picture','options','supported_features','restored','editable','assumed_state','daily_usage','errors']);
+function openDetail(id){
+  const e = S.entities.find(x => x.entity_id === id), st = stOf(e); if (!e) return;
+  const d = S.devices.find(x => x.id === e.device_id);
+  const rows = Object.entries(st?.attributes || {}).filter(([k]) => !HIDE_ATTR.has(k)).map(([k, v]) =>
+    `<dt>${esc(k.replace(/_/g, ' '))}</dt><dd>${esc(typeof v === 'object' ? JSON.stringify(v) : opt(v))}</dd>`).join('');
+  $('#detail').innerHTML = `<div class="dh"><div style="flex:1"><h2>${esc(label(e, d))}</h2><p>${esc(id)}</p></div>
+    <button class="btn icon" onclick="$('#detail').close()" aria-label="Schließen">✕</button></div>
+    <div class="db"><div class="big">${esc(fmt(st))}</div>
+    <dl class="kv"><dt>Geändert</dt><dd>${st ? esc(new Date(st.last_changed).toLocaleString('de-DE')) : '–'}</dd>${rows}</dl>
+    <a class="btn" href="${esc(cfg.url)}/history?entity_id=${encodeURIComponent(id)}" target="_top">Verlauf in Home Assistant</a></div>`;
+  $('#detail').showModal();
+}
+$('#detail').addEventListener('click', e => { if (e.target.id === 'detail') e.target.close(); });
+
+function openSettings(){ $('#cfgUrl').value = cfg.url; $('#cfgToken').value = cfg.token || ''; $('#setDlg').showModal(); }
+$('#setBtn').onclick = openSettings;
+$('#setForm').addEventListener('submit', e => {
+  if (e.submitter?.value !== 'ok') return;
+  cfg.url = $('#cfgUrl').value.trim().replace(/\/+$/, ''); cfg.token = $('#cfgToken').value.trim();
+  save('gb:cfg', {url:cfg.url, token:cfg.token}); connect();
+});
+setInterval(() => { if (S.devices.length) render(); }, 60000);
+let rw = 0; addEventListener('resize', () => { if (Math.abs(innerWidth - rw) > 40) { rw = innerWidth; scheduleRender(); } });
+connect();
+</script>
+</body>
+</html>

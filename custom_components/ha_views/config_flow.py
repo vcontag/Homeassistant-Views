@@ -12,14 +12,28 @@ from homeassistant.core import callback
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.selector import TextSelector, TextSelectorConfig, TextSelectorType
 
-from .const import CONF_SIDEBAR, CONF_TOKEN, DEFAULT_SIDEBAR, DOMAIN, VIEWS
+from .const import CONF_KNOWN, CONF_SIDEBAR, CONF_TOKEN, DEFAULT_SIDEBAR, DOMAIN, VIEWS, VIEWS_V1
+
+
+def _with_known(user_input: dict[str, Any]) -> dict[str, Any]:
+    """Merken, welche Ansichten es beim Speichern gab (neue werden später automatisch eingeblendet)."""
+    return {**user_input, CONF_KNOWN: [v.key for v in VIEWS]}
+
+
+def _sidebar_default(options: Mapping[str, Any]) -> list[str]:
+    """Gespeicherte Auswahl plus neu hinzugekommene Ansichten (wie in der Seitenleiste)."""
+    if CONF_SIDEBAR not in options:
+        return list(DEFAULT_SIDEBAR)
+    known = set(options.get(CONF_KNOWN, VIEWS_V1))
+    new = [v.key for v in VIEWS if v.key not in known and v.key in DEFAULT_SIDEBAR]
+    return list(dict.fromkeys([*options[CONF_SIDEBAR], *new]))
 
 
 def _schema(options: Mapping[str, Any]) -> vol.Schema:
     return vol.Schema(
         {
             vol.Optional(
-                CONF_SIDEBAR, default=list(options.get(CONF_SIDEBAR, DEFAULT_SIDEBAR))
+                CONF_SIDEBAR, default=_sidebar_default(options)
             ): cv.multi_select({v.key: v.title for v in VIEWS}),
             vol.Optional(
                 CONF_TOKEN, description={"suggested_value": options.get(CONF_TOKEN, "")}
@@ -37,7 +51,7 @@ class HaViewsConfigFlow(ConfigFlow, domain=DOMAIN):
         if self._async_current_entries():
             return self.async_abort(reason="single_instance_allowed")
         if user_input is not None:
-            return self.async_create_entry(title="Home Assistant Views", data={}, options=user_input)
+            return self.async_create_entry(title="Home Assistant Views", data={}, options=_with_known(user_input))
         return self.async_show_form(step_id="user", data_schema=_schema({}))
 
     @staticmethod
@@ -51,5 +65,5 @@ class HaViewsOptionsFlow(OptionsFlow):
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         if user_input is not None:
-            return self.async_create_entry(data=user_input)
+            return self.async_create_entry(data=_with_known(user_input))
         return self.async_show_form(step_id="init", data_schema=_schema(self.config_entry.options))

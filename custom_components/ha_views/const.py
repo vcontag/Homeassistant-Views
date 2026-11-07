@@ -9,6 +9,9 @@ URL_BASE = "/ha_views"
 
 CONF_SIDEBAR = "sidebar"
 CONF_TOKEN = "token"
+# Ansichten, die beim letzten Speichern der Optionen bekannt waren. Neu hinzugekommene
+# Ansichten erscheinen dadurch automatisch in der Seitenleiste, bis man sie abwählt.
+CONF_KNOWN = "known_views"
 
 
 @dataclass(frozen=True)
@@ -56,6 +59,13 @@ VIEWS: tuple[View, ...] = (
     ),
     View("ford", "ford-transit.html", "Transit", "mdi:van-utility", domains=("fordpass",)),
     View(
+        "gruenbeck",
+        "gruenbeck.html",
+        "Wasser",
+        "mdi:water-opacity",
+        domains=("gruenbeck_cloud",),
+    ),
+    View(
         "zigbee",
         "zigbee-manager.html",
         "Zigbee",
@@ -67,3 +77,6 @@ VIEWS: tuple[View, ...] = (
 
 # Standard: alle Ansichten in der Seitenleiste, außer der Übersicht.
 DEFAULT_SIDEBAR: list[str] = [v.key for v in VIEWS if v.key != "start"]
+
+# Ansichten der Version 1.0.0 – für Optionen, die noch ohne CONF_KNOWN gespeichert wurden.
+VIEWS_V1: frozenset[str] = frozenset({"start", "saugroboter", "waesche", "fernseher", "receiver", "echo", "ford", "zigbee"})
