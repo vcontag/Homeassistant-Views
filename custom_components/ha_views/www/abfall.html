@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="pwa/abfall.webmanifest">
+<meta name="theme-color" content="#ECEFF4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#10151F" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="pwa/abfall-192.png">
+<link rel="icon" href="pwa/abfall-192.png">
+<script src="ha-token.js"></script>
+<title>Abfall</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#ECEFF4; --surface:#FFFFFF; --surface-2:#F4F6FA; --ink:#14213D; --muted:#5A6781; --line:#D5DBE6;
+  --accent:#2E7D4F; --accent-ink:#FFFFFF; --accent-soft:#DDF0E4;
+  --ok:#2E8B57; --warn:#B7790A; --bad:#C23B3B;
+  color-scheme:light; box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#10151F; --surface:#1A2130; --surface-2:#212A3B; --ink:#E5EAF3; --muted:#95A1B8; --line:#2C3749;
+    --accent:#5CC48A; --accent-ink:#06210F; --accent-soft:#183A28; --ok:#4CC282; --warn:#E3A93A; --bad:#EF6B6B; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#10151F; --surface:#1A2130; --surface-2:#212A3B; --ink:#E5EAF3; --muted:#95A1B8; --line:#2C3749;
+  --accent:#5CC48A; --accent-ink:#06210F; --accent-soft:#183A28; --ok:#4CC282; --warn:#E3A93A; --bad:#EF6B6B; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 Manrope,"Segoe UI",system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+button,a,select,input{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+[hidden]{display:none!important}
+.wrap{max-width:1000px;margin:0 auto;padding:20px 16px 48px}
+
+header{display:flex;align-items:center;gap:10px;margin-bottom:18px}
+header .t{flex:1;min-width:0}
+h1{margin:0;font-size:1.6rem;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.meta{color:var(--muted);font-size:.85rem;display:flex;align-items:center;gap:6px;margin-top:3px}
+.meta i{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
+.meta.on i{background:var(--ok)} .meta.err i{background:var(--bad)}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;text-decoration:none;color:var(--ink)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.icon{width:40px;padding:8px}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.spin svg{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (hover:hover){.btn:hover{border-color:var(--muted)} .btn.primary:hover{filter:brightness(1.08)}}
+
+.seg{display:flex;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:3px;gap:2px}
+.seg button{flex:1;border:0;background:none;border-radius:8px;padding:7px 12px;font-weight:700;font-size:.88rem;cursor:pointer;color:var(--muted);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+
+/* Nächste Abholung */
+.hero{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:22px;display:grid;grid-template-columns:auto 1fr;gap:24px;align-items:center;position:relative;overflow:hidden}
+.hero::before{content:"";position:absolute;inset:0 auto 0 0;width:6px;background:var(--c1,var(--accent))}
+.cal{width:118px;border-radius:16px;overflow:hidden;border:1px solid var(--line);text-align:center;background:var(--surface-2);flex:none}
+.cal .m{background:var(--c1,var(--accent));color:var(--c1-ink,#fff);font-weight:800;font-size:.82rem;padding:5px 0;text-transform:uppercase;letter-spacing:.06em}
+.cal .d{font-size:3rem;font-weight:800;line-height:1.1;padding:6px 0 0;font-variant-numeric:tabular-nums;letter-spacing:-.03em}
+.cal .w{color:var(--muted);font-weight:700;font-size:.85rem;padding-bottom:8px}
+.hero .info{min-width:0;display:grid;gap:10px}
+.label{font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.when{font-size:2rem;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.date{color:var(--muted);font-weight:600;margin-top:2px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:6px 14px 6px 8px;font-weight:800;font-size:.95rem;background:var(--c);color:var(--ci)}
+.chip svg{width:20px;height:20px;flex:none}
+.note{display:flex;align-items:center;gap:10px;background:var(--accent-soft);border-radius:12px;padding:10px 12px;font-weight:700;font-size:.92rem}
+.note.today{background:color-mix(in srgb,var(--warn) 18%,transparent)}
+.note::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none}
+.note.today::before{background:var(--warn);animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.35}}
+.also{color:var(--muted);font-size:.9rem}
+.also b{color:var(--ink)}
+
+/* Je Abfallart */
+.types{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-top:14px}
+.type{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px 14px 14px;display:grid;grid-template-columns:auto 1fr;gap:4px 12px;align-items:center;text-align:left;cursor:pointer;min-width:0;position:relative}
+.type[aria-pressed="true"]{border-color:var(--c);box-shadow:0 0 0 1px var(--c)}
+.type .ico{grid-row:span 2;width:44px;height:44px;border-radius:12px;background:var(--c);color:var(--ci);display:grid;place-items:center}
+.type .ico svg{width:26px;height:26px}
+.type b{font-weight:800;font-size:.98rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.type span{color:var(--muted);font-size:.85rem;font-weight:600;min-width:0}
+.type span strong{color:var(--ink);font-weight:800}
+.type.soon span strong{color:var(--warn)}
+@media (hover:hover){.type:hover{border-color:var(--muted)}}
+
+/* Termine */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin-top:14px}
+.card-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.card-h h2{margin:0;font-size:1.05rem;font-weight:800;flex:1}
+.card-h .seg{flex:none}
+.card-h .seg button{flex:none;padding:6px 16px}
+.filter{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface-2);border-radius:999px;padding:4px 6px 4px 12px;font-weight:700;font-size:.85rem;cursor:pointer}
+.filter i{font-style:normal;color:var(--muted);font-size:1rem;line-height:1;padding:0 4px}
+.month + .month{margin-top:16px}
+.month h3{margin:0 0 8px;font-size:.88rem;font-weight:700;color:var(--muted);display:flex;align-items:center;gap:8px}
+.month h3::after{content:"";flex:1;height:1px;background:var(--line)}
+.row{display:flex;align-items:center;gap:14px;padding:8px 0}
+.row + .row{border-top:1px solid var(--line)}
+.row .dt{width:52px;flex:none;text-align:center;line-height:1.1}
+.row .dt b{display:block;font-size:1.3rem;font-weight:800;font-variant-numeric:tabular-nums}
+.row .dt small{color:var(--muted);font-weight:700;font-size:.78rem;text-transform:uppercase}
+.row .ev{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:6px 14px}
+.row .ev span{display:inline-flex;align-items:center;gap:7px;font-weight:700}
+.row .ev span::before{content:"";width:12px;height:12px;border-radius:4px;background:var(--c);flex:none}
+.row .rel{color:var(--muted);font-size:.82rem;font-weight:700;white-space:nowrap}
+.row.near .rel{color:var(--warn)}
+.more-btn{margin-top:12px;width:100%}
+
+/* Monat */
+.mnav{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.mnav b{flex:1;text-align:center;font-weight:800}
+.grid7{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.grid7 .wd{text-align:center;color:var(--muted);font-weight:700;font-size:.75rem;padding:2px 0}
+.day{min-height:62px;border-radius:10px;background:var(--surface-2);padding:5px;display:flex;flex-direction:column;gap:3px;min-width:0}
+.day.out{background:none}
+.day.past .n{opacity:.45}
+.day .n{font-weight:700;font-size:.82rem;font-variant-numeric:tabular-nums}
+.day.today{box-shadow:inset 0 0 0 2px var(--accent)}
+.day .bars{display:flex;flex-direction:column;gap:2px}
+.day .bars i{display:block;height:6px;border-radius:3px;background:var(--c)}
+.day .bars i span{display:none}
+@media (min-width:641px){
+  .day{min-height:78px}
+  .day .bars i{height:auto;padding:1px 6px;font-style:normal;font-size:.72rem;font-weight:700;color:var(--ci);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .day .bars i span{display:inline}
+}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:12px;font-size:.85rem;font-weight:600;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend span::before{content:"";width:10px;height:10px;border-radius:3px;background:var(--c)}
+
+/* Sensoren */
+details.more{margin-top:14px;background:var(--surface);border:1px solid var(--line);border-radius:16px}
+details.more summary{list-style:none;cursor:pointer;padding:16px 18px;font-weight:800;font-size:1.05rem;display:flex;align-items:center;gap:10px}
+details.more summary::-webkit-details-marker{display:none}
+details.more summary::after{content:"›";margin-left:auto;font-size:1.4rem;color:var(--muted);transition:transform .2s}
+details.more[open] summary::after{transform:rotate(90deg)}
+details.more summary small{color:var(--muted);font-weight:600;font-size:.82rem}
+details.more .body{padding:0 18px 18px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.tile{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;text-align:left;cursor:pointer;display:grid;gap:2px;min-width:0}
+.tile span{color:var(--muted);font-size:.78rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile strong{font-size:1rem;font-weight:700;overflow-wrap:anywhere}
+.hint{font-size:.8rem;color:var(--muted);margin:10px 0 0}
+.empty{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:36px 20px;text-align:center;color:var(--muted)}
+.empty .btn{margin-top:12px}
+
+dialog{border:0;padding:0;background:var(--surface);color:var(--ink);border-radius:14px;width:min(520px,calc(100% - 24px));max-height:calc(100% - 40px)}
+dialog::backdrop{background:rgba(8,14,26,.5)}
+.dh{display:flex;gap:12px;align-items:flex-start;padding:18px 20px 12px;border-bottom:1px solid var(--line)}
+.dh h2{margin:0;flex:1;font-size:1.15rem}
+.dh p{margin:2px 0 0;color:var(--muted);font-size:.85rem;overflow-wrap:anywhere}
+.db{padding:16px 20px 20px;display:grid;gap:14px}
+.big{font-size:1.4rem;font-weight:800}
+.kv{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:8px 12px;margin:0;font-size:.92rem}
+.kv dt{color:var(--muted);overflow-wrap:anywhere} .kv dd{margin:0;text-align:right;font-weight:700;overflow-wrap:anywhere}
+.field{display:grid;gap:5px}
+.field label{font-size:.85rem;font-weight:600}
+.field input{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 12px;min-height:40px;width:100%}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;font-size:.9rem;box-shadow:0 6px 24px rgba(0,0,0,.25);z-index:50;max-width:calc(100% - 32px)}
+.toast.err{background:var(--bad);color:#fff}
+
+@media (max-width:640px){
+  .wrap{padding:12px 12px 32px}
+  h1{font-size:1.35rem}
+  .hero{grid-template-columns:auto 1fr;padding:16px 16px 16px 20px;gap:16px}
+  .cal{width:84px;border-radius:12px}
+  .cal .d{font-size:2.2rem}
+  .when{font-size:1.5rem}
+  .hero .chips,.hero .note,.hero .also{grid-column:1 / -1}
+  .hero .info{display:contents}
+  .hero .head{min-width:0}
+  .types{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px}
+  .type{grid-template-columns:1fr;padding:12px}
+  .type .ico{grid-row:auto;width:38px;height:38px;border-radius:10px}
+  .type .ico svg{width:22px;height:22px}
+  .card{padding:14px;margin-top:10px}
+  .card-h h2{flex-basis:100%}
+  .card-h .seg{flex:1 1 0}
+  .card-h .seg button{flex:1}
+  .day{min-height:48px;padding:4px}
+  .grid7{gap:3px}
+  .tiles{grid-template-columns:1fr;gap:8px}
+  input,select,textarea{font-size:16px!important}
+  .btn{min-height:44px} .btn.icon{width:44px;height:44px}
+  dialog{width:100%;max-width:100%;margin:auto 0 0;border-radius:18px 18px 0 0;max-height:92%;padding-bottom:env(safe-area-inset-bottom,0px)}
+  dialog[open]{animation:sheet .22s ease-out}
+  dialog::before{content:"";display:block;width:40px;height:4px;border-radius:2px;background:var(--line);margin:8px auto 0}
+}
+@keyframes sheet{from{transform:translateY(48px);opacity:.3}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){dialog[open],.note.today::before,.btn.spin svg{animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="t"><h1>Abfall</h1><div class="meta" id="meta"><i></i><span>Nicht verbunden</span></div></div>
+    <button class="btn icon" id="refreshBtn" aria-label="Abfuhrtermine neu abrufen" title="Abfuhrtermine neu abrufen" hidden>
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M17.65 6.35A7.96 7.96 0 0 0 12 4a8 8 0 1 0 7.73 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg></button>
+    <button class="btn icon" id="setBtn" aria-label="Einstellungen" title="Einstellungen">⚙</button>
+  </header>
+  <main id="main"></main>
+</div>
+
+<dialog id="detail"></dialog>
+<dialog id="setDlg" aria-labelledby="setTitle">
+  <form method="dialog" id="setForm">
+    <div class="dh"><div style="flex:1"><h2 id="setTitle">Verbindung zu Home Assistant</h2><p>Wird nur in diesem Browser gespeichert.</p></div>
+      <button class="btn icon" value="cancel" aria-label="Schließen">✕</button></div>
+    <div class="db">
+      <div class="field"><label for="cfgUrl">Adresse von Home Assistant</label><input id="cfgUrl" type="url" required></div>
+      <div class="field"><label for="cfgToken">Langlebiges Zugriffstoken</label><input id="cfgToken" type="password" autocomplete="off" placeholder="Leer lassen für HA-Anmeldung">
+        <p class="hint" style="margin:0">Nur nötig, wenn du in diesem Browser nicht bei Home Assistant angemeldet bist.</p></div>
+      <div style="display:flex;justify-content:flex-end"><button class="btn primary" value="ok">Verbinden</button></div>
+    </div>
+  </form>
+</dialog>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const load = k => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } };
+const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+let tt;
+function toast(msg, err){
+  document.querySelector('.toast')?.remove();
+  const el = Object.assign(document.createElement('div'), {className:'toast' + (err ? ' err' : ''), textContent:msg});
+  el.setAttribute('role', 'status'); document.body.append(el);
+  clearTimeout(tt); tt = setTimeout(() => el.remove(), err ? 6000 : 3500);
+}
+
+/* ---------- Anmeldung (wie bei den anderen Seiten) ---------- */
+const FIXED_TOKEN = window.HA_FIXED_TOKEN || '';
+async function getToken(manual){
+  if (FIXED_TOKEN) return {token: FIXED_TOKEN, via: 'festes Token'};
+  try {
+    const auth = window.parent !== window && window.parent.document.querySelector('home-assistant')?.hass?.auth;
+    if (auth) { if (auth.expired) await auth.refreshAccessToken(); return {token: auth.accessToken, via: 'HA-Anmeldung'}; }
+  } catch {}
+  try {
+    const t = JSON.parse(localStorage.getItem('hassTokens'));
+    if (t?.refresh_token) {
+      if (!t.expires || t.expires < Date.now() + 60000) {
+        const r = await fetch((t.hassUrl || location.origin) + '/auth/token', {
+          method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: new URLSearchParams({grant_type: 'refresh_token', client_id: t.clientId || location.origin + '/', refresh_token: t.refresh_token})
+        });
+        if (!r.ok) throw new Error('refresh');
+        const n = await r.json();
+        Object.assign(t, {access_token: n.access_token, expires_in: n.expires_in, expires: Date.now() + n.expires_in * 1000});
+        localStorage.setItem('hassTokens', JSON.stringify(t));
+      }
+      return {token: t.access_token, via: 'HA-Anmeldung'};
+    }
+  } catch {}
+  return manual ? {token: manual, via: 'eigenes Token'} : null;
+}
+const NO_LOGIN = 'Keine Anmeldung gefunden. Öffne Home Assistant einmal in diesem Browser und melde dich mit „Angemeldet bleiben“ an, oder trag in den Einstellungen ein Token ein.';
+
+const cfg = Object.assign({url:'', token:''}, load('zbm:cfg') || {}, load('wash:cfg') || {}, load('gb:cfg') || {}, load('wcs:cfg') || {});
+if (location.protocol.startsWith('http')) cfg.url = location.origin;
+
+const S = {entities:[], devices:[], states:new Map(), events:null, src: load('wcs:src') || 'all',
+  view: load('wcs:view') || 'list', filter:null, month:0, showAll:false, refreshing:false};
+let ws, msgId = 0; const pending = new Map();
+function setMeta(kind, text){ const m = $('#meta'); m.className = 'meta ' + kind; m.querySelector('span').textContent = text; }
+
+async function connect(){
+  if (ws) { ws.onclose = null; ws.close(); }
+  setMeta('', 'Verbinde …');
+  const auth = await getToken(cfg.token);
+  if (!cfg.url || !auth) { setMeta('err', 'Nicht angemeldet'); showError(NO_LOGIN); return; }
+  ws = new WebSocket(cfg.url.replace(/^http/i, 'ws').replace(/\/+$/, '') + '/api/websocket');
+  let authed = false;
+  ws.onmessage = async e => {
+    const m = JSON.parse(e.data);
+    if (m.type === 'auth_required') ws.send(JSON.stringify({type:'auth', access_token:auth.token}));
+    else if (m.type === 'auth_invalid') { setMeta('err', 'Anmeldung abgelehnt'); showError('Die Anmeldung wurde abgelehnt. Melde dich in Home Assistant neu an oder trag ein neues Token ein.'); }
+    else if (m.type === 'auth_ok') {
+      authed = true; setMeta('on', 'Verbunden über ' + auth.via);
+      send({type:'subscribe_events', event_type:'state_changed'}).catch(() => {});
+      try { await loadAll(); } catch (err) { showError(err.message); }
+    }
+    else if (m.type === 'result') { const p = pending.get(m.id); if (p) { pending.delete(m.id); m.success ? p.res(m.result) : p.rej(new Error(m.error?.message || 'Fehler')); } }
+    else if (m.type === 'event' && m.event.event_type === 'state_changed') {
+      const {entity_id, new_state} = m.event.data;
+      if (!S.mine?.has(entity_id)) return;
+      new_state ? S.states.set(entity_id, new_state) : S.states.delete(entity_id);
+      // Neue Daten der Integration: Termine neu lesen (Kalender/Sensoren werden beim Abruf aktualisiert)
+      scheduleEvents();
+    }
+  };
+  ws.onerror = () => { if (!authed) { setMeta('err', 'Nicht verbunden'); showError('Keine Verbindung zu ' + cfg.url + '.'); } };
+  ws.onclose = () => { if (authed) { setMeta('err', 'Verbindung verloren, neuer Versuch …'); setTimeout(connect, 5000); } };
+}
+function send(msg){
+  return new Promise((res, rej) => {
+    if (!ws || ws.readyState !== 1) return rej(new Error('Nicht verbunden'));
+    const id = ++msgId; pending.set(id, {res, rej}); ws.send(JSON.stringify({...msg, id}));
+  });
+}
+const call = (domain, service, data, ret) => send({type:'call_service', domain, service, service_data:data, ...(ret ? {return_response:true} : {})});
+
+const DOMAIN = 'waste_collection_schedule';
+async function loadAll(){
+  const [devices, entities, states] = await Promise.all([
+    send({type:'config/device_registry/list'}), send({type:'config/entity_registry/list'}), send({type:'get_states'})]);
+  S.entities = entities.filter(e => !e.disabled_by && e.platform === DOMAIN);
+  S.devices = devices.filter(d => S.entities.some(e => e.device_id === d.id));
+  S.mine = new Set(S.entities.map(e => e.entity_id));
+  S.states = new Map(states.filter(s => S.mine.has(s.entity_id)).map(s => [s.entity_id, s]));
+  $('#refreshBtn').hidden = !S.entities.length;
+  await loadEvents();
+}
+
+/* ---------- Termine laden ----------
+   Bevorzugt aus den Kalendern der Integration (alle Termine, je Abfallart ein Eintrag);
+   ohne Kalender aus den Attributen der Sensoren (upcoming / appointment_types / generic). */
+const ymd = t => `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+const parseDay = s => { const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? new Date(+m[1], m[2] - 1, +m[3]) : null; };
+const today0 = () => { const t = new Date(); t.setHours(0, 0, 0, 0); return t; };
+const srcOf = e => e.device_id || 'yaml';
+
+async function loadEvents(){
+  const cals = S.entities.filter(e => e.entity_id.startsWith('calendar.'));
+  const out = [];
+  if (cals.length) {
+    const start = today0(), end = new Date(start); end.setDate(end.getDate() + 400);
+    try {
+      const r = await call('calendar', 'get_events', {entity_id: cals.map(e => e.entity_id),
+        start_date_time: ymd(start) + ' 00:00:00', end_date_time: ymd(end) + ' 00:00:00'}, true);
+      for (const e of cals) for (const ev of r?.response?.[e.entity_id]?.events || []) {
+        const day = parseDay(typeof ev.start === 'object' ? (ev.start.date || ev.start.dateTime) : ev.start);
+        if (day && ev.summary) out.push({day, type: String(ev.summary).trim(), src: srcOf(e), desc: ev.description || ''});
+      }
+    } catch (err) { console.warn('calendar.get_events', err); }
+  }
+  if (!out.length) {
+    for (const e of S.entities.filter(x => x.entity_id.startsWith('sensor.'))) {
+      const a = S.states.get(e.entity_id)?.attributes || {}, src = srcOf(e);
+      for (const [k, v] of Object.entries(a)) {
+        if (k === 'upcoming' && Array.isArray(v)) {
+          for (const c of v) { const day = parseDay(c?.date); if (day && c.type) out.push({day, type: String(c.type), src}); }
+        } else if (/^\d{4}-\d{2}-\d{2}$/.test(k) && typeof v === 'string') {
+          for (const t of v.split(/\s*[,;]\s*/).filter(Boolean)) out.push({day: parseDay(k), type: t, src});
+        } else if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) {
+          out.push({day: parseDay(v), type: k, src});
+        }
+      }
+    }
+  }
+  // doppelte Einträge (z. B. gleiche Abfallart aus mehreren Sensoren) zusammenfassen
+  const seen = new Set();
+  S.events = out.filter(x => { const k = ymd(x.day) + '|' + x.type + '|' + x.src; if (seen.has(k)) return false; seen.add(k); return true; })
+    .sort((a, b) => a.day - b.day || a.type.localeCompare(b.type, 'de'));
+  render();
+}
+let et; function scheduleEvents(){ clearTimeout(et); et = setTimeout(() => loadEvents().catch(() => {}), 1500); }
+
+/* ---------- Farben je Abfallart ---------- */
+const COLORS = [
+  [/rest|grau|schwarz|hausm(ü|ue)ll|general|residual|black/i, '#4F5866'],
+  [/bio|organ|kompost|braun|food|brown/i, '#8A5A2E'],
+  [/papier|pappe|karton|blau|paper|ppk|cardboard|blue/i, '#1F6FD1'],
+  [/gelb|wertstoff|verpack|lvp|plast|recycl|yellow/i, '#E2B100'],
+  [/glas|glass/i, '#1A9C9C'],
+  [/gr(ü|ue)n|garten|baum|laub|strauch|garden|green|tree/i, '#3E9B3E'],
+  [/sperr|bulky/i, '#D9772B'],
+  [/schadstoff|problem|sonder|gift|hazard|elektro|batter/i, '#C23B3B']
+];
+const SPARE = ['#7B5CC4', '#C2508A', '#2B8FB3', '#9C7A1E', '#5D7A2E', '#B8562E'];
+const colorCache = new Map();
+function colorOf(type){
+  if (colorCache.has(type)) return colorCache.get(type);
+  let c = COLORS.find(([re]) => re.test(type))?.[1];
+  if (!c) { let h = 0; for (const ch of type) h = (h * 31 + ch.charCodeAt(0)) >>> 0; c = SPARE[h % SPARE.length]; }
+  const [r, g, b] = [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16) / 255).map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4);
+  const ink = .2126 * r + .7152 * g + .0722 * b > .3 ? '#1B1B1B' : '#FFFFFF';
+  const res = {c, ink}; colorCache.set(type, res); return res;
+}
+const cv = type => { const {c, ink} = colorOf(type); return `--c:${c};--ci:${ink}`; };
+const BIN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9 3v1H4v2h1v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V6h1V4h-5V3H9zm-2 3h10v13H7V6zm2 2v9h2V8H9zm4 0v9h2V8h-2z"/></svg>';
+
+/* ---------- Datum ---------- */
+const daysTo = d => Math.round((d - today0()) / 86400000);
+function relDe(d){
+  const n = daysTo(d);
+  if (n === 0) return 'Heute'; if (n === 1) return 'Morgen'; if (n === 2) return 'Übermorgen';
+  return n < 0 ? `vor ${-n} Tagen` : `in ${n} Tagen`;
+}
+const longDe = d => d.toLocaleDateString('de-DE', {weekday:'long', day:'numeric', month:'long'});
+const monthDe = d => d.toLocaleDateString('de-DE', {month:'long', year:'numeric'});
+
+/* ---------- Darstellung ---------- */
+function showError(msg){ $('#main').innerHTML = `<div class="empty">${esc(msg)}<br><button class="btn primary" onclick="openSettings()">Einstellungen öffnen</button></div>`; }
+const srcName = id => { const d = S.devices.find(x => x.id === id); return d?.name_by_user || d?.name || 'Abfallkalender'; };
+
+function groupByDay(list){
+  const m = new Map();
+  for (const e of list) { const k = ymd(e.day); if (!m.has(k)) m.set(k, {day: e.day, types: []}); if (!m.get(k).types.includes(e.type)) m.get(k).types.push(e.type); }
+  return [...m.values()];
+}
+
+function heroHTML(days){
+  const next = days[0];
+  if (!next) return `<div class="empty">Keine anstehenden Abholtermine gefunden.</div>`;
+  const n = daysTo(next.day), {c, ink} = colorOf(next.types[0]);
+  const after = days[1];
+  let note = '';
+  if (n === 0) note = `<div class="note today">Heute ist Abholung – Tonne${next.types.length > 1 ? 'n' : ''} rausgestellt?</div>`;
+  else if (n === 1) note = `<div class="note">Heute Abend rausstellen</div>`;
+  return `<article class="hero" style="--c1:${c};--c1-ink:${ink}">
+    <div class="cal" aria-hidden="true"><div class="m">${esc(next.day.toLocaleDateString('de-DE', {month:'short'}).replace('.', ''))}</div>
+      <div class="d">${next.day.getDate()}</div><div class="w">${esc(next.day.toLocaleDateString('de-DE', {weekday:'short'}).replace('.', ''))}</div></div>
+    <div class="info">
+      <div class="head"><div class="label">Nächste Abholung</div><div class="when">${esc(relDe(next.day))}</div><div class="date">${esc(longDe(next.day))}</div></div>
+      <div class="chips">${next.types.map(t => `<span class="chip" style="${cv(t)}">${BIN}${esc(t)}</span>`).join('')}</div>
+      ${note}
+      ${after ? `<div class="also">Danach: <b>${esc(after.types.join(', '))}</b> · ${esc(relDe(after.day).replace(/^(Heute|Morgen|Übermorgen)$/, w => w.toLowerCase()))}, ${esc(after.day.toLocaleDateString('de-DE', {weekday:'short', day:'2-digit', month:'2-digit'}))}</div>` : ''}
+    </div></article>`;
+}
+
+function typesHTML(list){
+  const by = new Map();
+  for (const e of list) { if (!by.has(e.type)) by.set(e.type, []); by.get(e.type).push(e); }
+  const items = [...by.entries()].sort((a, b) => a[1][0].day - b[1][0].day);
+  return `<div class="types">${items.map(([t, evs]) => {
+    const n = daysTo(evs[0].day);
+    return `<button class="type ${n <= 1 ? 'soon' : ''}" style="${cv(t)}" data-type="${esc(t)}" aria-pressed="${S.filter === t}" title="Nur ${esc(t)} anzeigen">
+      <div class="ico">${BIN}</div><b>${esc(t)}</b>
+      <span><strong>${esc(relDe(evs[0].day))}</strong> · ${esc(evs[0].day.toLocaleDateString('de-DE', {weekday:'short', day:'2-digit', month:'2-digit'}))}</span></button>`;
+  }).join('')}</div>`;
+}
+
+function listHTML(days){
+  const LIMIT = 20, shown = S.showAll ? days : days.slice(0, LIMIT);
+  if (!shown.length) return '<div class="hint" style="text-align:center;padding:20px 0">Keine Termine.</div>';
+  const months = new Map();
+  for (const d of shown) { const k = monthDe(d.day); if (!months.has(k)) months.set(k, []); months.get(k).push(d); }
+  return [...months.entries()].map(([m, ds]) => `<div class="month"><h3>${esc(m)}</h3>${ds.map(d => {
+    const n = daysTo(d.day);
+    return `<div class="row ${n <= 1 ? 'near' : ''}"><div class="dt"><small>${esc(d.day.toLocaleDateString('de-DE', {weekday:'short'}).replace('.', ''))}</small><b>${d.day.getDate()}.</b></div>
+      <div class="ev">${d.types.map(t => `<span style="${cv(t)}">${esc(t)}</span>`).join('')}</div><div class="rel">${esc(relDe(d.day))}</div></div>`;
+  }).join('')}</div>`).join('') + (days.length > LIMIT ? `<button class="btn more-btn" data-showall="1">${S.showAll ? 'Weniger anzeigen' : `Alle ${days.length} Termine anzeigen`}</button>` : '');
+}
+
+function monthHTML(days){
+  const base = today0(); base.setDate(1); base.setMonth(base.getMonth() + S.month);
+  const map = new Map(days.map(d => [ymd(d.day), d.types]));
+  const first = new Date(base), start = new Date(first); start.setDate(1 - ((first.getDay() + 6) % 7));
+  const last = new Date(base.getFullYear(), base.getMonth() + 1, 0);
+  const cells = [], t0 = today0();
+  for (let d = new Date(start); d <= last || cells.length % 7; d.setDate(d.getDate() + 1)) {
+    const k = ymd(d), types = map.get(k) || [], out = d.getMonth() !== base.getMonth();
+    cells.push(`<div class="day ${out ? 'out' : ''} ${d < t0 ? 'past' : ''} ${k === ymd(t0) ? 'today' : ''}" ${types.length && !out ? `title="${esc(types.join(', '))}"` : ''}>
+      <span class="n">${out ? '' : d.getDate()}</span>${out ? '' : `<div class="bars">${types.map(t => `<i style="${cv(t)}"><span>${esc(t)}</span></i>`).join('')}</div>`}</div>`);
+  }
+  const lastEv = days.length ? days[days.length - 1].day : base;
+  const maxMonth = (lastEv.getFullYear() - t0.getFullYear()) * 12 + lastEv.getMonth() - t0.getMonth();
+  const inMonth = days.filter(d => d.day.getMonth() === base.getMonth() && d.day.getFullYear() === base.getFullYear());
+  const legend = [...new Set(inMonth.flatMap(d => d.types))];
+  return `<div class="mnav"><button class="btn icon" data-month="-1" aria-label="Vorheriger Monat" ${S.month <= 0 ? 'disabled' : ''}>‹</button>
+      <b>${esc(monthDe(base))}</b><button class="btn icon" data-month="1" aria-label="Nächster Monat" ${S.month >= Math.max(0, maxMonth) ? 'disabled' : ''}>›</button></div>
+    <div class="grid7">${['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].map(w => `<div class="wd">${w}</div>`).join('')}${cells.join('')}</div>
+    ${legend.length ? `<div class="legend">${legend.map(t => `<span style="${cv(t)}">${esc(t)}</span>`).join('')}</div>` : '<p class="hint" style="text-align:center">Keine Termine in diesem Monat.</p>'}`;
+}
+
+function sensorsHTML(){
+  const sens = S.entities.filter(e => e.entity_id.startsWith('sensor.') && (S.src === 'all' || srcOf(e) === S.src));
+  if (!sens.length) return '';
+  const last = sens.map(e => S.states.get(e.entity_id)?.attributes.attribution).find(Boolean);
+  return `<details class="more" data-k="sens" ${S.openSens ? 'open' : ''}><summary>Sensoren <small>${sens.length}</small></summary>
+    <div class="body"><div class="tiles">${sens.map(e => { const st = S.states.get(e.entity_id);
+      return `<button class="tile" data-ent="${esc(e.entity_id)}"><span>${esc(st?.attributes.friendly_name || e.name || e.original_name || e.entity_id)}</span>
+        <strong>${esc(fmtState(st))}</strong></button>`; }).join('')}</div>
+    ${last ? `<p class="hint">${esc(String(last).replace(/^Last update:/, 'Zuletzt abgerufen:'))}</p>` : ''}</div></details>`;
+}
+function fmtState(st){
+  if (!st) return '–';
+  if (st.state === 'unavailable') return 'nicht verfügbar';
+  if (st.state === 'unknown' || st.state === '') return 'keine Termine';
+  return st.state.replace(/ in 0 days$/, ' heute').replace(/ in 1 days$/, ' morgen').replace(/ in (\d+) days$/, ' in $1 Tagen');
+}
+
+let rt; function scheduleRender(){ clearTimeout(rt); rt = setTimeout(render, 250); }
+function render(){
+  if (!S.entities.length) { $('#main').innerHTML = '<div class="empty">Keine Einträge der Integration Waste Collection Schedule gefunden.</div>'; return; }
+  if (S.events === null) { $('#main').innerHTML = '<div class="empty">Lade Abholtermine …</div>'; return; }
+  S.openSens = !!document.querySelector('details.more[data-k="sens"][open]');
+  const srcs = [...new Set(S.events.map(e => e.src))];
+  if (S.src !== 'all' && !srcs.includes(S.src)) S.src = 'all';
+  const t0 = today0();
+  const mine = S.events.filter(e => e.day >= t0 && (S.src === 'all' || e.src === S.src));
+  if (S.filter && !mine.some(e => e.type === S.filter)) S.filter = null;
+  const days = groupByDay(mine), fdays = groupByDay(S.filter ? mine.filter(e => e.type === S.filter) : mine);
+  let html = '';
+  if (srcs.length > 1) html += `<div class="seg" style="margin-bottom:14px" role="group" aria-label="Adresse">
+    <button data-src="all" aria-pressed="${S.src === 'all'}">Alle</button>${srcs.map(s =>
+    `<button data-src="${esc(s)}" aria-pressed="${S.src === s}">${esc(srcName(s))}</button>`).join('')}</div>`;
+  html += heroHTML(days);
+  if (mine.length) {
+    html += typesHTML(mine);
+    html += `<div class="card"><div class="card-h"><h2>Termine</h2>
+      ${S.filter ? `<button class="filter" data-type="${esc(S.filter)}" style="${cv(S.filter)}" aria-label="Filter ${esc(S.filter)} entfernen">${esc(S.filter)}<i>✕</i></button>` : ''}
+      <div class="seg" role="group" aria-label="Darstellung">${[['list', 'Liste'], ['month', 'Monat']].map(([k, t]) =>
+        `<button data-view="${k}" aria-pressed="${S.view === k}">${t}</button>`).join('')}</div></div>
+      ${S.view === 'month' ? monthHTML(fdays) : listHTML(fdays)}</div>`;
+  }
+  html += sensorsHTML();
+  $('#main').innerHTML = html;
+}
+
+/* ---------- Aktionen ---------- */
+$('#main').addEventListener('click', e => {
+  const t = e.target.closest('button,summary'); if (!t) return;
+  if (t.dataset.src) { S.src = t.dataset.src; save('wcs:src', S.src); render(); return; }
+  if (t.dataset.type) { S.filter = S.filter === t.dataset.type ? null : t.dataset.type; S.showAll = false; render(); return; }
+  if (t.dataset.view) { S.view = t.dataset.view; save('wcs:view', S.view); render(); return; }
+  if (t.dataset.month) { S.month = Math.max(0, S.month + +t.dataset.month); render(); return; }
+  if (t.dataset.showall) { S.showAll = !S.showAll; render(); return; }
+  if (t.classList.contains('tile') && t.dataset.ent) openDetail(t.dataset.ent);
+});
+$('#main').addEventListener('toggle', e => { if (e.target.matches?.('details.more')) S.openSens = e.target.open; }, true);
+
+$('#refreshBtn').onclick = async () => {
+  const b = $('#refreshBtn'); if (S.refreshing) return;
+  S.refreshing = true; b.disabled = true; b.classList.add('spin');
+  try {
+    await call(DOMAIN, 'fetch_data', {});
+    toast('Termine werden neu abgerufen');
+    setTimeout(() => loadEvents().catch(() => {}), 8000);
+  } catch (err) { toast('Fehlgeschlagen: ' + err.message, true); }
+  setTimeout(() => { S.refreshing = false; b.disabled = false; b.classList.remove('spin'); }, 8000);
+};
+
+const HIDE_ATTR = new Set(['friendly_name','icon','unit_of_measurement','device_class','state_class','entity_picture','supported_features','restored']);
+function openDetail(id){
+  const e = S.entities.find(x => x.entity_id === id), st = S.states.get(id); if (!e) return;
+  const val = v => { const d = typeof v === 'string' && parseDay(v); return d && /^\d{4}-\d{2}-\d{2}$/.test(v) ? `${longDe(d)} (${relDe(d)})` : typeof v === 'object' ? JSON.stringify(v) : v; };
+  const kname = k => { const d = /^\d{4}-\d{2}-\d{2}$/.test(k) && parseDay(k); return d ? `${d.toLocaleDateString('de-DE', {weekday:'short', day:'2-digit', month:'2-digit'})} (${relDe(d)})` : k === 'attribution' ? 'Abruf' : k.replace(/_/g, ' '); };
+  const rows = Object.entries(st?.attributes || {}).filter(([k]) => !HIDE_ATTR.has(k)).map(([k, v]) =>
+    `<dt>${esc(kname(k))}</dt><dd>${esc(k === 'attribution' ? String(v).replace(/^Last update:\s*/, '') : val(v))}</dd>`).join('');
+  $('#detail').innerHTML = `<div class="dh"><div style="flex:1"><h2>${esc(st?.attributes.friendly_name || e.name || e.original_name || id)}</h2><p>${esc(id)}</p></div>
+    <button class="btn icon" onclick="$('#detail').close()" aria-label="Schließen">✕</button></div>
+    <div class="db"><div class="big">${esc(fmtState(st))}</div>
+    <dl class="kv"><dt>Geändert</dt><dd>${st ? esc(new Date(st.last_changed).toLocaleString('de-DE')) : '–'}</dd>${rows}</dl>
+    <a class="btn" href="${esc(cfg.url)}/history?entity_id=${encodeURIComponent(id)}" target="_top">Verlauf in Home Assistant</a></div>`;
+  $('#detail').showModal();
+}
+$('#detail').addEventListener('click', e => { if (e.target.id === 'detail') e.target.close(); });
+
+function openSettings(){ $('#cfgUrl').value = cfg.url; $('#cfgToken').value = cfg.token || ''; $('#setDlg').showModal(); }
+$('#setBtn').onclick = openSettings;
+$('#setForm').addEventListener('submit', e => {
+  if (e.submitter?.value !== 'ok') return;
+  cfg.url = $('#cfgUrl').value.trim().replace(/\/+$/, ''); cfg.token = $('#cfgToken').value.trim();
+  save('wcs:cfg', {url:cfg.url, token:cfg.token}); connect();
+});
+// Tageswechsel: „Morgen“ wird zu „Heute“ usw.; stündlich Termine neu lesen
+let lastDay = ymd(new Date());
+setInterval(() => { if (ymd(new Date()) !== lastDay) { lastDay = ymd(new Date()); if (S.entities.length) loadEvents().catch(() => {}); } }, 60000);
+setInterval(() => { if (S.entities.length) loadEvents().catch(() => {}); }, 3600000);
+connect();
+</script>
+</body>
+</html>

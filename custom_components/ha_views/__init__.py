@@ -16,6 +16,7 @@ from typing import Any
 from homeassistant.components import frontend
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import SIGNAL_CONFIG_ENTRY_CHANGED, ConfigEntry
+from homeassistant.const import EVENT_COMPONENT_LOADED
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.helpers.debounce import Debouncer
@@ -58,6 +59,8 @@ def _is_available(hass: HomeAssistant, view: View) -> bool:
     for domain in view.domains:
         if hass.config_entries.async_entries(domain, include_ignore=False, include_disabled=False):
             return True
+    if any(c in hass.config.components for c in view.components):
+        return True
     if view.entity_domains:
         prefixes = tuple(f"{d}." for d in view.entity_domains)
         for entry in er.async_get(hass).entities.values():
@@ -155,6 +158,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
     entry.async_on_unload(
         hass.bus.async_listen(er.EVENT_ENTITY_REGISTRY_UPDATED, _async_schedule)
+    )
+    # Für Integrationen, die per YAML eingerichtet werden (z. B. Waste Collection Schedule).
+    entry.async_on_unload(
+        hass.bus.async_listen(EVENT_COMPONENT_LOADED, _async_schedule)
     )
     entry.async_on_unload(entry.add_update_listener(_async_options_updated))
 
