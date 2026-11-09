@@ -21,6 +21,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.helpers.debounce import Debouncer
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.helpers.start import async_at_started
 from homeassistant.loader import async_get_integration
 
 from .const import (
@@ -61,6 +62,13 @@ def _is_available(hass: HomeAssistant, view: View) -> bool:
             return True
     if any(c in hass.config.components for c in view.components):
         return True
+    if view.dashboards:
+        lovelace = hass.data.get("lovelace")
+        boards = getattr(lovelace, "dashboards", None)
+        if boards is None and isinstance(lovelace, dict):
+            boards = lovelace.get("dashboards")
+        if boards and any(d in boards for d in view.dashboards):
+            return True
     if view.entity_domains:
         prefixes = tuple(f"{d}." for d in view.entity_domains)
         for entry in er.async_get(hass).entities.values():
@@ -159,6 +167,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(
         hass.bus.async_listen(er.EVENT_ENTITY_REGISTRY_UPDATED, _async_schedule)
     )
+    # Dashboards (z. B. „Verlauf“): neu prüfen, wenn eines gespeichert wird
+    entry.async_on_unload(hass.bus.async_listen("lovelace_updated", _async_schedule))
+    entry.async_on_unload(async_at_started(hass, _async_schedule))
     # Für Integrationen, die per YAML eingerichtet werden (z. B. Waste Collection Schedule).
     entry.async_on_unload(
         hass.bus.async_listen(EVENT_COMPONENT_LOADED, _async_schedule)

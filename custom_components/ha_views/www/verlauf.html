@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<link rel="manifest" href="pwa/verlauf.webmanifest">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111214" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="pwa/verlauf-192.png">
+<link rel="icon" href="pwa/verlauf-192.png">
+<script src="ha-token.js"></script>
+<script src="ha-views.js"></script>
+<title>Verlauf</title>
+<!-- Apache ECharts 5.5.1 (Apache-2.0, lib/echarts-LICENSE.txt) – lokal mitgeliefert, braucht kein Internet -->
+<script src="lib/echarts.min.js?v=5.5.1"></script>
+<style>
+  :root { --bg:#ffffff; --fg:#1c1c1e; --muted:#6b6b70; --line:#e4e4e8; --accent:#2F6FDE; color-scheme:light; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#111214; --fg:#f2f2f4; --muted:#9a9aa2; --line:#2a2b30; --accent:#6D9EF0; color-scheme:dark; } }
+  :root[data-theme="dark"] { --bg:#111214; --fg:#f2f2f4; --muted:#9a9aa2; --line:#2a2b30; --accent:#6D9EF0; color-scheme:dark; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--fg);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  body { display:flex; flex-direction:column; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px); box-sizing:border-box; }
+  header { display:flex; align-items:center; gap:8px; padding:8px 12px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  header h1 { font-size:16px; margin:0; font-weight:600; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
+  select, button { font:inherit; font-size:14px; padding:6px 10px; border-radius:8px; border:1px solid var(--line);
+    background:var(--bg); color:var(--fg); max-width:100%; }
+  #now { font-size:13px; color:var(--muted); width:100%; display:flex; gap:14px; flex-wrap:wrap; }
+  #now b { font-weight:600; }
+  #chart { flex:1; min-height:0; }
+  #msg { position:absolute; inset:60px 16px auto 16px; text-align:center; color:var(--muted); font-size:14px; line-height:1.5; }
+  #msg a { color:var(--accent); }
+  #msg button { margin-top:10px; cursor:pointer; }
+  body.nohead header { display:none; }
+  @media (max-width:640px) { select, button { font-size:16px; } }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title">Verlauf</h1>
+  <select id="raum" aria-label="Diagramm"></select>
+  <select id="range" aria-label="Zeitraum">
+    <option value="6">6 h</option><option value="24">24 h</option>
+    <option value="48" selected>48 h</option><option value="168">7 Tage</option><option value="720">30 Tage</option>
+  </select>
+  <div id="now"></div>
+</header>
+<div id="chart"></div>
+<div id="msg">Lade Daten …</div>
+
+<script>
+// ---------- Diagramme ----------
+// Die Diagramme kommen aus dem HA-Dashboard „Verlauf“ (jede Ansicht = ein Diagramm mit einer ApexCharts-Card).
+// Änderungen also einfach in HA an der Karte machen – diese Seite übernimmt sie beim nächsten Laden.
+// URL-Parameter: d=<Ansicht> h=<Stunden> kopf=0 (ohne Kopfzeile) dash=<anderes Dashboard>
+const REFRESH_S = 15;
+const RAW_MAX_H = 240;   // ohne MariaDB-Recorder speichert HA Rohdaten 10 Tage – darüber Stundenmittel
+
+const qs = new URLSearchParams(location.search);
+const DASH = qs.get("dash") || "dashboard-verlauf";
+let DIAGRAMME = {};
+let key = (qs.get("d") || qs.get("raum") || "").toLowerCase();
+let hours = qs.get("h") ? parseInt(qs.get("h"), 10) : null;
+if (qs.get("kopf") === "0") document.body.classList.add("nohead");
+const selR = document.getElementById("raum"), selH = document.getElementById("range");
+
+function spanHours(s) {
+  let h = 0; const re = /(\d+(?:\.\d+)?)\s*(ms|s|min|h|d|w|month|y)/g; let m;
+  const f = { ms: 1 / 3600e3, s: 1 / 3600, min: 1 / 60, h: 1, d: 24, w: 168, month: 720, y: 8760 };
+  while ((m = re.exec(s || ""))) h += parseFloat(m[1]) * f[m[2]];
+  return h || 24;
+}
+function findCard(cards) {
+  for (const c of cards || []) {
+    if (c.type === "custom:apexcharts-card") return c;
+    const inner = findCard(c.cards) || (c.card ? findCard([c.card]) : null);
+    if (inner) return inner;
+  }
+  return null;
+}
+function convert(view) {
+  const card = findCard(view.cards) || findCard((view.sections || []).flatMap(s => s.cards || []));
+  if (!card) return null;
+  const ids = (card.yaxis || []).map(y => y.id);
+  const axes = (card.yaxis && card.yaxis.length ? card.yaxis : [{}]).map(y => ({
+    min: typeof y.min === "number" ? y.min : undefined, max: typeof y.max === "number" ? y.max : undefined,
+    unit: "", right: !!y.opposite, hide: y.show === false, dec: y.decimals }));
+  const series = (card.series || []).map(s => {
+    let map = null;
+    if (s.transform) { try { const fn = new Function("x", "hass", "entity", s.transform); map = x => { try { const v = fn(x, null, null); return v === null || v === undefined || isNaN(+v) ? null : +v; } catch { return null; } }; } catch {} }
+    const ax = Math.max(0, ids.indexOf(s.yaxis_id));
+    if (s.unit && axes[ax] && !axes[ax].unit) axes[ax].unit = s.unit;
+    return { entity: s.entity, attr: s.attribute, name: s.name || s.entity, unit: s.unit || "", color: s.color,
+             style: s.curve === "stepline" ? "step" : "line", area: s.type === "area", opacity: s.opacity ?? (s.type === "area" ? 0.3 : 0),
+             width: s.stroke_width ?? 2, dashed: !!s.stroke_dash, axis: ax, map, dec: axes[ax]?.dec ?? 1,
+             stat: !!s.statistics, statType: s.statistics?.type || "mean", statPeriod: s.statistics?.period || "hour" };
+  });
+  const upd = card.update_interval ? spanHours(card.update_interval) * 3600 : REFRESH_S;
+  return { title: card.header?.title || view.title || view.path, hours: spanHours(card.graph_span), refresh: Math.max(5, upd), axes, series };
+}
+async function loadConfig() {
+  let cfg;
+  try { cfg = await send({ type: "lovelace/config", url_path: DASH }); }
+  catch (e) { throw new Error(`Das Dashboard „${DASH}“ wurde nicht gefunden. Lege in Home Assistant ein Dashboard mit der Adresse „${DASH}“ an und darin je Diagramm eine Ansicht mit einer ApexCharts-Card.`); }
+  DIAGRAMME = {};
+  for (const v of cfg.views || []) { const d = convert(v); if (d) DIAGRAMME[(v.path || v.title || "").toLowerCase()] = d; }
+  if (!Object.keys(DIAGRAMME).length) throw new Error(`Im Dashboard „${DASH}“ ist keine ApexCharts-Card gefunden.`);
+  if (!DIAGRAMME[key]) key = Object.keys(DIAGRAMME)[0];
+  selR.innerHTML = "";
+  for (const [k, d] of Object.entries(DIAGRAMME)) selR.add(new Option(d.title, k, false, k === key));
+  selR.hidden = Object.keys(DIAGRAMME).length < 2;
+  setHours(hours || DIAGRAMME[key].hours);
+}
+function setHours(h) {
+  hours = h;
+  if (![...selH.options].some(o => +o.value === hours)) selH.add(new Option(hours >= 48 ? Math.round(hours / 24) + " Tage" : hours + " h", hours));
+  selH.value = String(hours);
+}
+selR.onchange = () => { key = selR.value; setHours(DIAGRAMME[key].hours); syncUrl(); load(true); startTimer(); };
+selH.onchange = () => { hours = +selH.value; syncUrl(); load(true); };
+function syncUrl() { qs.delete("raum"); qs.set("d", key); qs.set("h", hours); history.replaceState(null, "", "?" + qs); }
+
+// ---------- Anmeldung (wie bei den anderen Seiten: festes Token, HA-Oberfläche, gespeicherte Anmeldung) ----------
+const FIXED_TOKEN = window.HA_FIXED_TOKEN || "";
+async function token() {
+  if (FIXED_TOKEN) return FIXED_TOKEN;
+  try {
+    const auth = window.parent !== window && window.parent.document.querySelector("home-assistant")?.hass?.auth;
+    if (auth) { if (auth.expired) await auth.refreshAccessToken(); return auth.accessToken; }
+  } catch {}
+  const raw = localStorage.getItem("hassTokens");
+  if (!raw) throw new Error("login");
+  let t = JSON.parse(raw);
+  if (!t.expires || Date.now() > t.expires - 60000) {
+    const body = new URLSearchParams({ grant_type: "refresh_token", refresh_token: t.refresh_token, client_id: t.clientId || location.origin + "/" });
+    const r = await fetch((t.hassUrl || location.origin) + "/auth/token", { method: "POST", body });
+    if (!r.ok) throw new Error("login");
+    const n = await r.json();
+    t = { ...t, access_token: n.access_token, expires: Date.now() + n.expires_in * 1000 };
+    localStorage.setItem("hassTokens", JSON.stringify(t));
+  }
+  return t.access_token;
+}
+async function api(path) {
+  const r = await fetch(path, { headers: { Authorization: "Bearer " + await token() } });
+  if (r.status === 401) throw new Error("login");
+  if (!r.ok) throw new Error("HTTP " + r.status);
+  return r.json();
+}
+
+// Eine dauerhafte WebSocket-Verbindung für alle Abfragen (baut sich bei Bedarf neu auf)
+let ws = null, wsReady = null, msgId = 0; const pending = new Map();
+function connectWs() {
+  if (wsReady) return wsReady;
+  wsReady = (async () => {
+    const tok = await token();
+    return new Promise((res, rej) => {
+      const s = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/api/websocket");
+      const t = setTimeout(() => { s.close(); rej(new Error("Zeitüberschreitung")); }, 20000);
+      s.onmessage = ev => {
+        const m = JSON.parse(ev.data);
+        if (m.type === "auth_required") s.send(JSON.stringify({ type: "auth", access_token: tok }));
+        else if (m.type === "auth_invalid") { clearTimeout(t); s.close(); rej(new Error("login")); }
+        else if (m.type === "auth_ok") { clearTimeout(t); ws = s; res(s); }
+        else if (m.type === "result") { const p = pending.get(m.id); if (p) { pending.delete(m.id); m.success ? p.res(m.result) : p.rej(new Error(m.error?.message || "Fehler")); } }
+      };
+      s.onerror = () => { clearTimeout(t); rej(new Error("WebSocket-Fehler")); };
+      s.onclose = () => { ws = null; wsReady = null; for (const p of pending.values()) p.rej(new Error("Verbindung getrennt")); pending.clear(); };
+    });
+  })();
+  wsReady.catch(() => { wsReady = null; });
+  return wsReady;
+}
+async function send(msg) {
+  const s = await connectWs();
+  return new Promise((res, rej) => { const id = ++msgId; pending.set(id, { res, rej }); s.send(JSON.stringify({ ...msg, id })); });
+}
+
+// ---------- Diagramm ----------
+if (!window.echarts) document.getElementById("msg").textContent = "Die Diagramm-Bibliothek konnte nicht geladen werden. Bitte die Seite neu laden.";
+// Größe ausdrücklich aus clientWidth/-Height: im App-Browser mit Ausgleichs-Zoom (ha-views.js) würde ECharts
+// sonst die vergrößerte Breite nehmen und über den Rand zeichnen.
+window.HAV?.apply(); // Ausgleichs-Zoom (App-Browser) vor dem Messen anwenden
+const chartEl = document.getElementById("chart");
+// Fingerposition unter Ausgleichs-Zoom: ECharts liest offsetX/layerX, die der Browser bei CSS-Zoom nicht passend zur
+// Zeichenfläche liefert. Innerhalb des Diagramms daher aus clientX/Y und der sichtbaren Position umrechnen.
+if (window.HAV) for (const [prop, cl, side] of [["offsetX", "clientX", "left"], ["offsetY", "clientY", "top"], ["layerX", "clientX", "left"], ["layerY", "clientY", "top"]]) {
+  const orig = Object.getOwnPropertyDescriptor(MouseEvent.prototype, prop) || Object.getOwnPropertyDescriptor(UIEvent.prototype, prop);
+  if (!orig?.get) continue;
+  Object.defineProperty(MouseEvent.prototype, prop, { configurable: true, get() {
+    const z = HAV.zoom(), t = this.target;
+    if (z > 1 && t instanceof Element && chartEl.contains(t)) return (this[cl] - t.getBoundingClientRect()[side]) / z;
+    return orig.get.call(this);
+  } });
+}
+const chartSize = () => ({ width: chartEl.clientWidth || undefined, height: chartEl.clientHeight || undefined });
+// Pixeldichte inkl. Ausgleichs-Zoom und Seitenmaßstab, sonst wird das Diagramm im App-Browser unscharf
+const pixelRatio = () => Math.min(6, (window.devicePixelRatio || 1) * (window.HAV ? HAV.zoom() : 1) * (window.visualViewport?.scale || 1)) || 1;
+const chart = window.echarts ? echarts.init(chartEl, null, { renderer: "canvas", devicePixelRatio: pixelRatio(), ...chartSize() }) : null;
+let rsz; const resize = () => { clearTimeout(rsz); rsz = setTimeout(() => chart?.resize(chartSize()), 100); };
+addEventListener("resize", resize);
+window.ResizeObserver && new ResizeObserver(resize).observe(chartEl);
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const num = v => (v === null || v === undefined || v === "" || isNaN(+v)) ? null : +v;
+
+async function fetchData(d, now) {
+  const startMs = now - hours * 3600e3, start = new Date(startMs).toISOString();
+  const ents = [...new Set(d.series.map(s => s.entity))];
+  const useStat = hours > RAW_MAX_H;
+  const out = d.series.map(() => []);
+  const rawEnts = ents.filter(e => !(useStat && d.series.some(s => s.entity === e && s.stat)));
+  if (rawEnts.length) {
+    const hist = await api(`/api/history/period/${start}?filter_entity_id=${rawEnts.join(",")}&significant_changes_only=0`);
+    d.series.forEach((s, i) => {
+      if (!rawEnts.includes(s.entity)) return;
+      const h = hist.find(x => x[0]?.entity_id === s.entity) || [];
+      for (const st of h) {
+        const raw = s.attr ? (st.attributes || {})[s.attr] : st.state;
+        out[i].push([new Date(st.last_updated || st.last_changed).getTime(), s.map ? s.map(raw) : num(raw)]);
+      }
+    });
+  }
+  const statEnts = ents.filter(e => !rawEnts.includes(e));
+  if (statEnts.length) {
+    const r = await send({ type: "recorder/statistics_during_period", start_time: start, end_time: new Date(now).toISOString(),
+                           statistic_ids: statEnts, period: d.series.find(x => x.stat)?.statPeriod || "hour", types: ["mean", "min", "max", "state", "sum"] });
+    d.series.forEach((s, i) => {
+      if (!statEnts.includes(s.entity)) return;
+      for (const p of (r[s.entity] || [])) out[i].push([typeof p.start === "number" ? p.start : new Date(p.start).getTime(), num(p[s.statType] ?? p.mean)]);
+    });
+  }
+  for (const arr of out) if (arr.length) arr.push([now, arr[arr.length - 1][1]]);
+  return out;
+}
+
+const LOGIN_MSG = 'Nicht angemeldet. Öffne die Seite über die Seitenleiste von Home Assistant oder melde dich in diesem Browser bzw. dieser App einmal in <a href="/">Home Assistant</a> mit „Angemeldet bleiben“ an. Für Verknüpfungen außerhalb der HA-Oberfläche lässt sich in der Integration „Home Assistant Views“ ein festes Zugriffstoken hinterlegen.';
+function showMsg(html, retry) {
+  const msg = document.getElementById("msg");
+  msg.style.display = "block";
+  msg.innerHTML = html + (retry ? '<br><button onclick="start()">Erneut versuchen</button>' : "");
+}
+
+let lastTheme = "";
+async function load(reset) {
+  try {
+    const now = Date.now(), d = DIAGRAMME[key];
+    const data = await fetchData(d, now);
+    document.getElementById("msg").style.display = "none";
+    document.getElementById("title").textContent = d.title;
+    document.title = d.title;
+    const last = a => { for (let i = a.length - 1; i >= 0; i--) if (a[i][1] !== null) return a[i][1]; return null; };
+    const f = (v, u, dec = 1) => v === null ? "–" : v.toLocaleString("de-DE", { maximumFractionDigits: dec }) + " " + u;
+    document.getElementById("now").innerHTML = d.series.map((s, i) =>
+      `<span style="color:${s.color || "inherit"}">${s.name} <b>${f(last(data[i]), s.unit || "", s.dec ?? 1)}</b></span>`).join("");
+
+    const fg = css("--fg"), muted = css("--muted"), line = css("--line");
+    // Farbwechsel (hell/dunkel) braucht ein vollständiges Neuzeichnen
+    const theme = fg + line; if (theme !== lastTheme) { reset = true; lastTheme = theme; }
+    chart.setOption({
+      animation: false,
+      backgroundColor: "transparent",
+      textStyle: { color: fg },
+      legend: { top: 4, right: 8, textStyle: { color: fg } },
+      grid: { left: 48, right: d.axes.some(a => a.right && !a.hide) ? 48 : 20, top: 36, bottom: 70 },
+      tooltip: { trigger: "axis", axisPointer: { type: "cross" },
+        valueFormatter: v => v === null || v === undefined ? "–" : (+v).toLocaleString("de-DE", { maximumFractionDigits: 1 }) },
+      toolbox: { right: 8, bottom: 36, feature: { saveAsImage: { title: "Bild", name: key }, restore: { title: "Zurück" } } },
+      dataZoom: [{ type: "inside", xAxisIndex: 0 }, { type: "slider", xAxisIndex: 0, bottom: 8, height: 22 }],
+      xAxis: { type: "time", min: now - hours * 3600e3, max: now,
+        axisLabel: { color: muted, hideOverlap: true, formatter: { day: "{dd}.{MM}.", hour: "{HH}:{mm}", minute: "{HH}:{mm}" } },
+        axisLine: { lineStyle: { color: line } }, splitLine: { show: true, lineStyle: { color: line } } },
+      yAxis: d.axes.map((ax, i) => ({ type: "value", min: ax.min, max: ax.max, name: ax.hide ? "" : ax.unit, position: ax.right ? "right" : "left",
+        nameTextStyle: { color: muted }, axisLabel: { color: muted, show: !ax.hide },
+        splitLine: { show: i === 0, lineStyle: { color: line } } })),
+      series: d.series.map((s, i) => ({
+        name: s.name, type: "line", data: data[i], yAxisIndex: s.axis || 0, showSymbol: false,
+        step: s.style === "step" ? "end" : false, connectNulls: false,
+        lineStyle: { width: s.width, color: s.color, type: s.dashed ? "dashed" : "solid" }, itemStyle: { color: s.color },
+        areaStyle: s.area ? { color: s.color, opacity: s.opacity ?? 0.3 } : undefined })),
+    }, { notMerge: !!reset, lazyUpdate: true });
+  } catch (e) {
+    showMsg(e.message === "login" ? LOGIN_MSG : "Fehler beim Laden: " + e.message, e.message !== "login");
+  }
+}
+
+let timer;
+function startTimer() { clearInterval(timer); timer = setInterval(() => { if (!document.hidden) load(false); }, (DIAGRAMME[key]?.refresh || REFRESH_S) * 1000); }
+async function start() {
+  if (!chart) return;
+  document.getElementById("msg").style.display = "block";
+  document.getElementById("msg").textContent = "Lade Daten …";
+  try { await loadConfig(); syncUrl(); await load(true); startTimer(); }
+  catch (e) { showMsg(e.message === "login" ? LOGIN_MSG : e.message, e.message !== "login"); }
+}
+start();
+document.addEventListener("visibilitychange", () => { if (!document.hidden && DIAGRAMME[key]) load(false); });
+// hell/dunkel umgeschaltet (System oder Home Assistant): neu zeichnen
+new MutationObserver(() => { if (DIAGRAMME[key]) load(true); }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", () => { if (DIAGRAMME[key]) load(true); });
+</script>
+</body>
+</html>

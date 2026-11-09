@@ -19,6 +19,7 @@ eingerichtet ist, und verschwindet wieder, wenn du sie entfernst.
 | Wetter | Wetter & Warnungen (`wetter`) oder DWD Weather Warnings (`dwd_weather_warnings`) eingerichtet ist |
 | FRITZ!Box | FRITZ!Box Tools (`fritz`) eingerichtet ist |
 | Tanken | Tankerkönig (`tankerkoenig`) eingerichtet ist |
+| Verlauf | es ein Dashboard mit der Adresse `dashboard-verlauf` gibt |
 | Zigbee | ZHA eingerichtet ist oder Zigbee2MQTT-Geräte vorhanden sind |
 
 Die Seiten passen sich hellem und dunklem Design an, sind für das Handy optimiert und
@@ -140,3 +141,12 @@ und **Neu verbinden** / **Neustart** (jeweils mit Rückfrage). Bei mehreren Boxe
 Kraftstoff wählen (E5, E10, Diesel). Oben die **günstigste geöffnete Tankstelle** mit Preis wie an der Säule und
 Route, darunter alle Tankstellen nach Preis mit Abstand zur günstigsten in Cent. Der **Preisverlauf** zeigt die letzten
 24 Stunden je Tankstelle; aus den letzten 7 Tagen errechnet die Seite, zu welcher Tageszeit es meist am günstigsten war.
+
+## Verlauf (Diagramme aus einem Dashboard)
+
+Zeigt die Diagramme des Dashboards **„Verlauf“** (Adresse `dashboard-verlauf`) seitenfüllend und zoombar. Jede Ansicht
+des Dashboards mit einer **ApexCharts-Card** wird ein Diagramm; Serien, Farben, Achsen, Transformationen, Zeitraum
+(`graph_span`) und Aktualisierung kommen aus der Karte – Änderungen also einfach in Home Assistant an der Karte machen.
+Oben Diagramm und Zeitraum wählen (6 h bis 30 Tage; über 10 Tage aus den Langzeit-Statistiken, wenn die Serie
+`statistics` nutzt). URL-Parameter: `d=<Ansicht>`, `h=<Stunden>`, `kopf=0` (ohne Kopfzeile, z. B. für eine
+Webseiten-Karte), `dash=<anderes Dashboard>`.
