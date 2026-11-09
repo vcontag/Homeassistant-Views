@@ -237,20 +237,11 @@ html{-webkit-text-size-adjust:100%}
 <dialog id="setDlg" aria-labelledby="setTitle">
   <form method="dialog" id="setForm">
     <div class="dlg-head">
-      <div style="flex:1"><h2 id="setTitle">Verbindung zu Home Assistant</h2>
-      <p>Die Daten bleiben nur in diesem Browser gespeichert.</p></div>
+      <div style="flex:1"><h2 id="setTitle">Einstellungen</h2>
+      <p>Wird nur in diesem Browser gespeichert.</p></div>
       <button class="btn icon" value="cancel" aria-label="Schließen">✕</button>
     </div>
     <div class="dlg-body">
-      <div class="field">
-        <label for="cfgUrl">Adresse von Home Assistant</label>
-        <input id="cfgUrl" type="url" placeholder="http://homeassistant.local:8123" required>
-      </div>
-      <div class="field">
-        <label for="cfgToken">Langlebiges Zugriffstoken</label>
-        <input id="cfgToken" type="password" autocomplete="off" placeholder="Leer lassen für HA-Anmeldung">
-        <p class="hint">Nur nötig, wenn du in diesem Browser nicht bei Home Assistant angemeldet bist. Erstellen unter Profil → Sicherheit → Langlebige Zugriffstokens.</p>
-      </div>
       <div class="two">
         <div class="field"><label for="cfgBatt">Batterie schwach unter (%)</label><input id="cfgBatt" type="number" min="1" max="99"></div>
         <div class="field"><label for="cfgLqi">Signal schwach unter (LQI)</label><input id="cfgLqi" type="number" min="1" max="255"></div>
@@ -261,9 +252,8 @@ html{-webkit-text-size-adjust:100%}
         <p class="hint">Nur nötig, wenn du Zigbee2MQTT nutzt und das Topic geändert hast.</p>
       </div>
       <div class="actions">
-        <button class="btn" type="button" id="demoBtn">Mit Beispieldaten ansehen</button>
         <span class="spacer"></span>
-        <button class="btn primary" id="connectBtn" value="ok">Verbinden</button>
+        <button class="btn primary" id="connectBtn" value="ok">Speichern</button>
       </div>
     </div>
   </form>
@@ -296,11 +286,11 @@ function toast(msg, err){
 
 /* ---------- Anmeldung ----------
    Die Seite nutzt automatisch die Anmeldung von Home Assistant aus diesem Browser.
-   Optional kannst du in der Datei ha-token.js ein langlebiges Token eintragen, dann funktionieren
-   alle Seiten auf jedem Gerät ohne Anmeldung (nur im lokalen Netz empfehlenswert). */
+   Optional lässt sich in der Integration („Konfigurieren“) ein festes Token hinterlegen (landet in ha-token.js),
+   dann funktionieren Verknüpfungen außerhalb der HA-Oberfläche ohne Anmeldung (nur im lokalen Netz empfehlenswert). */
 const FIXED_TOKEN = window.HA_FIXED_TOKEN || '';
 
-async function getToken(manual){
+async function getToken(){
   if (FIXED_TOKEN) return {token: FIXED_TOKEN, via: 'festes Token'};
   // 1. Als Dashboard in HA eingebettet (Seitenleiste, Companion-App): Anmeldung der HA-Oberfläche mitbenutzen
   try {
@@ -324,17 +314,16 @@ async function getToken(manual){
       return {token: t.access_token, via: 'HA-Anmeldung'};
     }
   } catch {}
-  // 3. Token aus den Einstellungen dieser Seite
-  return manual ? {token: manual, via: 'eigenes Token'} : null;
+  return null;
 }
-const NO_LOGIN = 'Keine Anmeldung gefunden. Öffne Home Assistant einmal in diesem Browser und melde dich mit „Angemeldet bleiben“ an, oder trag in den Einstellungen ein Token ein.';
+const NO_LOGIN = 'Keine Anmeldung gefunden. Öffne die Seite über die Seitenleiste von Home Assistant oder melde dich in diesem Browser mit „Angemeldet bleiben“ an. Für Verknüpfungen außerhalb der HA-Oberfläche lässt sich in der Integration „Home Assistant Views“ unter „Konfigurieren“ ein festes Zugriffstoken hinterlegen.';
 
 /* ---------- Zustand ---------- */
-const cfg = Object.assign({
-  url: '',
-  token: '', z2mTopic: 'zigbee2mqtt', battLow: 20, lqiLow: 60
-}, store.get('cfg', {}));
-if (location.protocol.startsWith('http')) cfg.url = location.origin;
+const cfg = Object.assign({z2mTopic: 'zigbee2mqtt', battLow: 20, lqiLow: 60}, store.get('cfg', {}));
+// Die Seite wird von Home Assistant selbst ausgeliefert: Adresse = Herkunft der Seite.
+// Früher hier gespeicherte Adresse/Token entfernen.
+if ('url' in cfg || 'token' in cfg) { delete cfg.url; delete cfg.token; store.set('cfg', cfg); }
+cfg.url = location.origin;
 
 const S = {
   devices: [], entities: [], areas: [], states: new Map(), zha: new Map(), relevant: new Set(),
@@ -389,7 +378,7 @@ async function connect(){
   S.demo = false;
   if (ha?.ws) { ha.onClose = null; ha.ws.close(); }
   setConn('', 'Verbinde …');
-  const auth = await getToken(cfg.token);
+  const auth = await getToken();
   if (!cfg.url || !auth) { setConn('err', 'Nicht angemeldet'); renderBanner(NO_LOGIN); return; }
   ha = new HA(cfg.url, auth.token);
   try {
@@ -522,7 +511,7 @@ function render(){
   if (!S.models.length) {
     $('#list').innerHTML = `<div class="empty">${S.demo || ha?.ws?.readyState === 1
       ? 'Keine Zigbee-Geräte gefunden. Ist ZHA oder Zigbee2MQTT eingerichtet?'
-      : 'Verbinde dich mit Home Assistant, um deine Zigbee-Geräte zu sehen.<br><button class="btn primary" onclick="openSettings()">Verbindung einrichten</button>'}</div>`;
+      : 'Keine Verbindung zu Home Assistant.<br><button class="btn primary" onclick="connect()">Erneut versuchen</button> <button class="btn" onclick="loadDemo()">Mit Beispieldaten ansehen</button>'}</div>`;
     return;
   }
   if (!list.length) { $('#list').innerHTML = '<div class="empty">Kein Gerät passt zu Suche und Filter.</div>'; return; }
@@ -545,8 +534,8 @@ function render(){
 
 function renderBanner(err){
   $('#banner').innerHTML = err
-    ? `<div class="banner" style="border-color:var(--bad)"><span style="flex:1">${esc(err)}</span><button class="btn" onclick="openSettings()">Einstellungen</button></div>`
-    : S.demo ? `<div class="banner"><span style="flex:1">Du siehst Beispieldaten. Änderungen werden nicht gespeichert.</span><button class="btn" onclick="openSettings()">Mit Home Assistant verbinden</button></div>` : '';
+    ? `<div class="banner" style="border-color:var(--bad)"><span style="flex:1">${esc(err)}</span><button class="btn" onclick="connect()">Erneut versuchen</button></div>`
+    : S.demo ? `<div class="banner"><span style="flex:1">Du siehst Beispieldaten. Änderungen werden nicht gespeichert.</span><button class="btn" onclick="connect()">Mit Home Assistant verbinden</button></div>` : '';
 }
 
 /* ---------- Gerätedetails ---------- */
@@ -665,20 +654,19 @@ $('#joinBtn').onclick = async () => {
 
 /* ---------- Einstellungen ---------- */
 function openSettings(){
-  $('#cfgUrl').value = cfg.url; $('#cfgToken').value = cfg.token; $('#cfgTopic').value = cfg.z2mTopic;
+  $('#cfgTopic').value = cfg.z2mTopic;
   $('#cfgBatt').value = cfg.battLow; $('#cfgLqi').value = cfg.lqiLow;
   $('#setDlg').showModal();
 }
 $('#setForm').addEventListener('submit', e => {
   if (e.submitter?.value !== 'ok') return;
   Object.assign(cfg, {
-    url: $('#cfgUrl').value.trim().replace(/\/+$/, ''), token: $('#cfgToken').value.trim(),
     z2mTopic: $('#cfgTopic').value.trim() || 'zigbee2mqtt',
     battLow: +$('#cfgBatt').value || 20, lqiLow: +$('#cfgLqi').value || 60
   });
-  store.set('cfg', cfg); connect();
+  const {url, ...keep} = cfg; store.set('cfg', keep);
+  S.demo ? render() : connect();
 });
-$('#demoBtn').onclick = () => { $('#setDlg').close(); loadDemo(); };
 
 /* ---------- Beispieldaten ---------- */
 function loadDemo(){

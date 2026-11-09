@@ -41,6 +41,7 @@ Fertig – die passenden Ansichten stehen danach in der Seitenleiste.
 - **Festes Zugriffstoken (optional)** – nur nötig für Handy-Verknüpfungen außerhalb der
   HA-Oberfläche (z. B. angeheftete Verknüpfungen der Companion-App oder als Chrome-App).
   In der Seitenleiste nutzen die Seiten automatisch deine normale Anmeldung.
+  Die Seiten selbst haben keine eigenen Verbindungseinstellungen mehr – Adresse und Anmeldung kommen von Home Assistant.
   ⚠️ Das Token ist im lokalen Netz ohne Anmeldung abrufbar – nur verwenden, wenn
   Home Assistant nicht aus dem Internet erreichbar ist.
 

@@ -196,7 +196,6 @@ html{-webkit-text-size-adjust:100%}
       <h1 id="title">Fahrzeug</h1>
       <div class="meta" id="meta"><i></i><span>Nicht verbunden</span></div>
     </div>
-    <button class="btn icon" id="setBtn" aria-label="Einstellungen" title="Einstellungen">⚙</button>
     <div class="hrow">
       <select class="btn" id="carSel" aria-label="Fahrzeug wählen" hidden></select>
       <button class="btn" id="refreshBtn">Daten abrufen</button>
@@ -207,18 +206,6 @@ html{-webkit-text-size-adjust:100%}
 
 <dialog id="detail"></dialog>
 
-<dialog id="setDlg" aria-labelledby="setTitle">
-  <form method="dialog" id="setForm">
-    <div class="dh"><div style="flex:1"><h2 id="setTitle">Verbindung zu Home Assistant</h2><p>Wird nur in diesem Browser gespeichert.</p></div>
-      <button class="btn icon" value="cancel" aria-label="Schließen">✕</button></div>
-    <div class="db">
-      <div class="field"><label for="cfgUrl">Adresse von Home Assistant</label><input id="cfgUrl" type="url" required></div>
-      <div class="field"><label for="cfgToken">Langlebiges Zugriffstoken</label><input id="cfgToken" type="password" autocomplete="off" placeholder="Leer lassen für HA-Anmeldung">
-        <p class="hint">Nur nötig, wenn du in diesem Browser nicht bei Home Assistant angemeldet bist.</p></div>
-      <div style="display:flex;justify-content:flex-end"><button class="btn primary" value="ok">Verbinden</button></div>
-    </div>
-  </form>
-</dialog>
 
 <script>
 const $ = s => document.querySelector(s);
@@ -245,11 +232,11 @@ function toast(msg, err){
 
 /* ---------- Anmeldung ----------
    Die Seite nutzt automatisch die Anmeldung von Home Assistant aus diesem Browser.
-   Optional kannst du in der Datei ha-token.js ein langlebiges Token eintragen, dann funktionieren
-   alle Seiten auf jedem Gerät ohne Anmeldung (nur im lokalen Netz empfehlenswert). */
+   Optional lässt sich in der Integration („Konfigurieren“) ein festes Token hinterlegen (landet in ha-token.js),
+   dann funktionieren Verknüpfungen außerhalb der HA-Oberfläche ohne Anmeldung (nur im lokalen Netz empfehlenswert). */
 const FIXED_TOKEN = window.HA_FIXED_TOKEN || '';
 
-async function getToken(manual){
+async function getToken(){
   if (FIXED_TOKEN) return {token: FIXED_TOKEN, via: 'festes Token'};
   // 1. Als Dashboard in HA eingebettet (Seitenleiste, Companion-App): Anmeldung der HA-Oberfläche mitbenutzen
   try {
@@ -273,14 +260,14 @@ async function getToken(manual){
       return {token: t.access_token, via: 'HA-Anmeldung'};
     }
   } catch {}
-  // 3. Token aus den Einstellungen dieser Seite
-  return manual ? {token: manual, via: 'eigenes Token'} : null;
+  return null;
 }
-const NO_LOGIN = 'Keine Anmeldung gefunden. Öffne Home Assistant einmal in diesem Browser und melde dich mit „Angemeldet bleiben“ an, oder trag in den Einstellungen ein Token ein.';
+const NO_LOGIN = 'Keine Anmeldung gefunden. Öffne die Seite über die Seitenleiste von Home Assistant oder melde dich in diesem Browser mit „Angemeldet bleiben“ an. Für Verknüpfungen außerhalb der HA-Oberfläche lässt sich in der Integration „Home Assistant Views“ unter „Konfigurieren“ ein festes Zugriffstoken hinterlegen.';
 
 /* Verbindung: übernimmt die Daten der Zigbee-Seite, falls vorhanden */
-const cfg = Object.assign({url:'', token:''}, load('zbm:cfg') || {}, load('car:cfg') || {});
-if (location.protocol.startsWith('http')) cfg.url = location.origin;
+// Die Seite wird von Home Assistant selbst ausgeliefert: Adresse = Herkunft der Seite.
+const cfg = {url: location.origin};
+try { localStorage.removeItem('car:cfg'); } catch {} // früher hier gespeicherte Adresse/Token
 
 const S = {devices:[], entities:[], states:new Map(), carId: load('car:id'), ents:[], busy:new Set()};
 let ws, msgId = 0; const pending = new Map();
@@ -290,7 +277,7 @@ function setMeta(kind, text){ const m = $('#meta'); m.className = 'meta ' + kind
 async function connect(){
   if (ws) { ws.onclose = null; ws.close(); }
   setMeta('', 'Verbinde …');
-  const auth = await getToken(cfg.token);
+  const auth = await getToken();
   if (!cfg.url || !auth) { setMeta('err', 'Nicht angemeldet'); showError(NO_LOGIN); return; }
   ws = new WebSocket(cfg.url.replace(/^http/i, 'ws').replace(/\/+$/, '') + '/api/websocket');
   let authed = false;
@@ -416,7 +403,7 @@ const find = (dom, re) => S.ents.find(e => e.entity_id.startsWith(dom + '.') && 
 let rt; function scheduleRender(){ clearTimeout(rt); rt = setTimeout(render, 250); }
 
 function showError(msg){
-  $('#main').innerHTML = `<div class="empty">${esc(msg)}<br><button class="btn primary" onclick="openSettings()">Einstellungen öffnen</button></div>`;
+  $('#main').innerHTML = `<div class="empty">${esc(msg)}<br><button class="btn primary" onclick="connect()">Erneut versuchen</button></div>`;
 }
 
 function render(){
@@ -652,13 +639,6 @@ function openDetail(id){
 }
 $('#detail').addEventListener('click', e => { if (e.target.id === 'detail') e.target.close(); });
 
-function openSettings(){ $('#cfgUrl').value = cfg.url; $('#cfgToken').value = cfg.token; $('#setDlg').showModal(); }
-$('#setBtn').onclick = openSettings;
-$('#setForm').addEventListener('submit', e => {
-  if (e.submitter?.value !== 'ok') return;
-  cfg.url = $('#cfgUrl').value.trim().replace(/\/+$/, ''); cfg.token = $('#cfgToken').value.trim();
-  save('car:cfg', {url:cfg.url, token:cfg.token}); connect();
-});
 setInterval(() => { if (S.ents.length) render(); }, 60000);
 connect();
 </script>
