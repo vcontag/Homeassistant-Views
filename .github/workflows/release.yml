@@ -1,0 +1,31 @@
+name: Release
+# Legt das Release v<version> an, sobald auf main eine Version aus manifest.json landet,
+# für die es noch kein Release gibt. Beschreibung = Abschnitt "## <version>" aus CHANGELOG.md.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Version ermitteln
+        id: v
+        run: echo "version=$(jq -r .version custom_components/ha_views/manifest.json)" >> "$GITHUB_OUTPUT"
+      - name: Release anlegen (nur bei neuer Version)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.v.outputs.version }}
+        run: |
+          if gh release view "v$VERSION" >/dev/null 2>&1; then
+            echo "Release v$VERSION gibt es schon – nichts zu tun."
+            exit 0
+          fi
+          awk -v v="## $VERSION" '$0==v{f=1;next} /^## /{f=0} f' CHANGELOG.md > notes.md
+          [ -s notes.md ] || echo "Version $VERSION" > notes.md
+          gh release create "v$VERSION" --target "$GITHUB_SHA" --title "$VERSION" --notes-file notes.md

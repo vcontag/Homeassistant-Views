@@ -63,6 +63,9 @@ löschen und Verknüpfungen von `/local/…` auf `/ha_views/…` ändern.
 
 ## Updates
 
+Änderungen je Version stehen im [CHANGELOG](CHANGELOG.md). Releases entstehen automatisch, sobald eine neue
+Version (`manifest.json`) auf `main` landet.
+
 HACS meldet neue Versionen. Nach dem Update Home Assistant neu starten.
 Die Seiten werden ohne langes Caching ausgeliefert, Änderungen sind also sofort sichtbar.
 
