@@ -4,6 +4,12 @@ Neue Einträge oben. Die Überschrift `## <Version>` muss zu `version` in
 `custom_components/ha_views/manifest.json` passen – der Abschnitt wird beim Release
 automatisch als Beschreibung übernommen.
 
+## 1.7.0
+- Neue Ansicht **Verlauf**: zeigt die Diagramme des HA-Dashboards „Verlauf“ (`dashboard-verlauf`, je Ansicht eine
+  ApexCharts-Card) groß und zoombar – Achsen, Farben, Transformationen und Zeitraum kommen aus der Karte, Zeitraum
+  umschaltbar (6 h bis 30 Tage, ab 10 Tagen aus den Langzeit-Statistiken). Erscheint automatisch, sobald es das
+  Dashboard gibt. Anmeldung, hell/dunkel und Mobilansicht wie bei den anderen Seiten.
+
 ## 1.6.0
 - Neue Ansicht **FRITZ!Box** für die Integration FRITZ!Box Tools: Internetverbindung mit externer IPv4/IPv6 und
   Verbindungsdauer, FRITZ!OS-Version mit Update, Download/Upload live mit Auslastung und Verlauf (3 Stunden),

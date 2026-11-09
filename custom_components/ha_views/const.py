@@ -28,6 +28,8 @@ class View:
     entity_domains: tuple[str, ...] = ()
     # … oder eine dieser Integrationen per YAML geladen ist …
     components: tuple[str, ...] = ()
+    # … oder eines dieser Dashboards existiert (URL-Pfad) …
+    dashboards: tuple[str, ...] = ()
     # … oder Zigbee2MQTT-Geräte vorhanden sind.
     zigbee2mqtt: bool = False
     # Immer verfügbar (Übersicht).
@@ -102,6 +104,13 @@ VIEWS: tuple[View, ...] = (
         "Tanken",
         "mdi:gas-station",
         domains=("tankerkoenig",),
+    ),
+    View(
+        "verlauf",
+        "verlauf.html",
+        "Verlauf",
+        "mdi:chart-line",
+        dashboards=("dashboard-verlauf",),
     ),
     View(
         "zigbee",
