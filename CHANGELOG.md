@@ -4,6 +4,17 @@ Neue Einträge oben. Die Überschrift `## <Version>` muss zu `version` in
 `custom_components/ha_views/manifest.json` passen – der Abschnitt wird beim Release
 automatisch als Beschreibung übernommen.
 
+## 1.7.1
+- Verlauf: Zeiträume **3 Monate, 6 Monate, 1 Jahr und 2 Jahre**.
+- Die Seite richtet sich nach den tatsächlich gespeicherten Daten – egal ob Standard-Recorder (10 Tage) oder eigene
+  Datenbank (z. B. MySQL/MariaDB mit 2 Jahren):
+  - bis 30 Tage Rohdaten; reichen sie nicht bis zum Anfang, wird er aus der Langzeit-Statistik ergänzt,
+  - darüber Langzeit-Statistik (Stunden-, ab 3 Monaten Tageswerte) für Sensoren mit `state_class`,
+    Rohdaten über den ganzen Zeitraum für alle anderen und für Attribut-Serien (bei sehr vielen Punkten verdichtet,
+    Spitzen bleiben erhalten),
+  - fangen die Werte einer Serie später an als der Zeitraum, steht oben „Daten ab …“.
+- `transform` der Karte gilt auch für Statistikwerte. Zeitachse mit Monat/Jahr, lange Zeiträume laden alle 15 Minuten neu.
+
 ## 1.7.0
 - Neue Ansicht **Verlauf**: zeigt die Diagramme des HA-Dashboards „Verlauf“ (`dashboard-verlauf`, je Ansicht eine
   ApexCharts-Card) groß und zoombar – Achsen, Farben, Transformationen und Zeitraum kommen aus der Karte, Zeitraum
