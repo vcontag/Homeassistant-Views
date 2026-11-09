@@ -4,7 +4,7 @@ Neue Einträge oben. Die Überschrift `## <Version>` muss zu `version` in
 `custom_components/ha_views/manifest.json` passen – der Abschnitt wird beim Release
 automatisch als Beschreibung übernommen.
 
-## 1.6.0
+## 1.5.2
 - Neue **Diagnoseseite** (`/ha_views/diagnose.html`, Link unten auf der Übersicht): misst auf dem jeweiligen Gerät Design
   und Mobilansicht (Breite, Zoom, In-App-Browser, Desktop-Modus, System-/HA-Design), erklärt die Ursache im Klartext
   und sendet den Bericht auf Wunsch als Benachrichtigung an Home Assistant.
