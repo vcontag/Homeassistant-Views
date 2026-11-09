@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="pwa/wetter.webmanifest">
+<meta name="theme-color" content="#ECEFF4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#10151F" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="pwa/wetter-192.png">
+<link rel="icon" href="pwa/wetter-192.png">
+<script src="ha-token.js"></script>
+<title>Wetter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#ECEFF4; --surface:#FFFFFF; --surface-2:#F4F6FA; --ink:#14213D; --muted:#5A6781; --line:#D5DBE6;
+  --accent:#2F6FDE; --accent-soft:#DEE8FA; --sun:#E8A317; --rain:#2B86D9; --cloud:#8C98AE;
+  --ok:#2E8B57; --minor:#C9A400; --moderate:#E07B12; --severe:#D23B3B; --extreme:#8E2DB8;
+  color-scheme:light; box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#10151F; --surface:#1A2130; --surface-2:#212A3B; --ink:#E5EAF3; --muted:#95A1B8; --line:#2C3749;
+    --accent:#6D9EF0; --accent-soft:#1B2D4D; --sun:#F2B93B; --rain:#5AACF0; --cloud:#9BA7BC;
+    --ok:#4CC282; --minor:#E4C33A; --moderate:#F0943A; --severe:#F06464; --extreme:#C07AE6; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#10151F; --surface:#1A2130; --surface-2:#212A3B; --ink:#E5EAF3; --muted:#95A1B8; --line:#2C3749;
+  --accent:#6D9EF0; --accent-soft:#1B2D4D; --sun:#F2B93B; --rain:#5AACF0; --cloud:#9BA7BC;
+  --ok:#4CC282; --minor:#E4C33A; --moderate:#F0943A; --severe:#F06464; --extreme:#C07AE6; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 Manrope,"Segoe UI",system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit}
+button,a{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+[hidden]{display:none!important}
+.wrap{max-width:1000px;margin:0 auto;padding:20px 16px 48px}
+header{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+header .t{flex:1;min-width:0}
+h1{margin:0;font-size:1.6rem;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.meta{color:var(--muted);font-size:.85rem;display:flex;align-items:center;gap:6px;margin-top:3px}
+.meta i{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
+.meta.on i{background:var(--ok)} .meta.err i{background:var(--severe)}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;min-height:40px;text-decoration:none;color:var(--ink)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.seg{display:flex;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:3px;gap:2px}
+.seg button{flex:1;border:0;background:none;border-radius:8px;padding:7px 12px;font-weight:700;font-size:.88rem;cursor:pointer;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.wi{display:block}
+.wi .sun{fill:var(--sun)} .wi .moon{fill:var(--sun)} .wi .cl{fill:var(--cloud)} .wi .cl2{fill:var(--surface);stroke:var(--cloud);stroke-width:2}
+.wi .rn{stroke:var(--rain);stroke-width:2.4;stroke-linecap:round} .wi .sn{fill:var(--rain)}
+.wi .bolt{fill:var(--sun)} .wi .fg{stroke:var(--cloud);stroke-width:2.4;stroke-linecap:round} .wi .wd{stroke:var(--cloud);stroke-width:2.4;stroke-linecap:round;fill:none}
+
+/* Warnungen */
+.warns{display:grid;gap:10px;margin-bottom:14px}
+.warn{background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--sev);border-radius:14px;overflow:hidden}
+.warn summary{list-style:none;cursor:pointer;padding:12px 14px;display:flex;gap:12px;align-items:flex-start}
+.warn summary::-webkit-details-marker{display:none}
+.warn .lvl{flex:none;font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em;border-radius:6px;padding:3px 8px;background:var(--sev);color:#fff;margin-top:2px}
+.warn .lvl.minor{color:#2A2200}
+.warn .h{flex:1;min-width:0}
+.warn .h b{display:block;font-weight:800;line-height:1.3}
+.warn .h small{color:var(--muted);font-weight:600;font-size:.83rem}
+.warn summary::after{content:"›";font-size:1.4rem;color:var(--muted);transition:transform .2s;line-height:1}
+.warn[open] summary::after{transform:rotate(90deg)}
+.warn .body{padding:0 14px 14px;display:grid;gap:8px;font-size:.92rem}
+.warn .body p{margin:0;white-space:pre-line}
+.warn .body .act{background:var(--surface-2);border-radius:10px;padding:9px 11px}
+.warn .body .act b{display:block;font-size:.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px}
+.warn .src{color:var(--muted);font-size:.8rem}
+.allclear{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:14px;font-weight:700}
+.allclear::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--ok);flex:none}
+.allclear small{color:var(--muted);font-weight:600;margin-left:auto}
+.stale{color:var(--moderate);font-size:.82rem;font-weight:700;margin:-6px 0 14px}
+
+/* Jetzt */
+.now{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:20px 22px;display:grid;grid-template-columns:auto 1fr;gap:10px 22px;align-items:center}
+.now .ico{width:110px;height:110px}
+.now .temp{font-size:3.6rem;font-weight:800;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums}
+.now .temp small{font-size:1.4rem;font-weight:700;color:var(--muted);vertical-align:top;margin-left:2px}
+.now .cond{font-weight:800;font-size:1.1rem;margin-top:4px}
+.now .sub{color:var(--muted);font-weight:600;font-size:.9rem}
+.rainline{grid-column:1 / -1;display:flex;align-items:center;gap:10px;background:var(--accent-soft);border-radius:12px;padding:9px 12px;font-weight:700}
+.rainline svg{width:20px;height:20px;flex:none;color:var(--rain)}
+.rainline.dry{background:var(--surface-2);color:var(--muted)}
+.vals{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:14px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px 14px;display:grid;gap:2px;min-width:0}
+.tile span{color:var(--muted);font-size:.8rem;font-weight:700}
+.tile strong{font-size:1.3rem;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tile strong small{font-size:.8rem;color:var(--muted);margin-left:3px}
+.tile em{font-style:normal;color:var(--muted);font-size:.78rem}
+.arrow{display:inline-block;width:14px;height:14px;vertical-align:-1px;margin-right:4px}
+
+/* Vorhersage */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin-top:14px}
+.card-h{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.card-h h2{margin:0;font-size:1.05rem;font-weight:800;flex:1}
+.hscroll{overflow-x:auto;margin:0 -18px;padding:0 18px;scrollbar-width:thin}
+.hours{display:grid;grid-auto-flow:column;grid-auto-columns:58px;position:relative}
+.hour{display:grid;justify-items:center;gap:4px;padding:4px 0;text-align:center}
+.hour .tm{font-size:.78rem;font-weight:700;color:var(--muted)}
+.hour .tm.day{color:var(--ink)}
+.hour .wi{width:30px;height:30px}
+.hour .p{font-size:.75rem;font-weight:700;color:var(--rain);min-height:1em}
+.chart{display:block}
+.chart .line{fill:none;stroke:var(--sun);stroke-width:2.5;stroke-linejoin:round}
+.chart .area{fill:color-mix(in srgb,var(--sun) 14%,transparent)}
+.chart .bar{fill:var(--rain);opacity:.75}
+.chart text{fill:var(--ink);font-size:11px;font-weight:700;font-family:inherit}
+.days{display:grid}
+.dayrow{display:grid;grid-template-columns:88px 36px 64px 1fr;align-items:center;gap:10px;padding:8px 0}
+.dayrow + .dayrow{border-top:1px solid var(--line)}
+.dayrow .wd{font-weight:800}
+.dayrow .wd small{display:block;color:var(--muted);font-weight:600;font-size:.78rem}
+.dayrow .wi{width:34px;height:34px}
+.dayrow .pp{font-size:.82rem;font-weight:700;color:var(--rain);line-height:1.2}
+.dayrow .pp small{display:block;color:var(--muted);font-weight:600}
+.range{display:grid;grid-template-columns:34px 1fr 34px;align-items:center;gap:8px;font-weight:800;font-variant-numeric:tabular-nums}
+.range .lo{color:var(--muted);text-align:right}
+.range .tr{position:relative;height:8px;border-radius:4px;background:var(--surface-2)}
+.range .tr i{position:absolute;top:0;bottom:0;border-radius:4px;background:linear-gradient(90deg,var(--rain),var(--sun))}
+
+/* Pollen/UV */
+.health{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.pol{background:var(--surface-2);border-radius:12px;padding:10px 12px;display:grid;gap:5px;min-width:0}
+.pol b{font-weight:800;font-size:.92rem}
+.pol .lv{display:flex;gap:3px}
+.pol .lv i{flex:1;height:6px;border-radius:3px;background:var(--line)}
+.pol .lv i.on{background:var(--c)}
+.pol small{color:var(--muted);font-weight:600;font-size:.78rem}
+.uv{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.uv .badge{width:52px;height:52px;border-radius:14px;display:grid;place-items:center;font-weight:800;font-size:1.4rem;color:#fff;background:var(--c)}
+.uv .t b{display:block;font-weight:800}
+.uv .t small{color:var(--muted);font-weight:600}
+.empty{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:36px 20px;text-align:center;color:var(--muted)}
+.empty .btn{margin-top:12px}
+.hint{font-size:.8rem;color:var(--muted);margin:10px 0 0}
+
+@media (max-width:760px){ .vals{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (max-width:640px){
+  .wrap{padding:12px 12px 32px}
+  h1{font-size:1.35rem}
+  .now{padding:16px;gap:8px 16px}
+  .now .ico{width:84px;height:84px}
+  .now .temp{font-size:3rem}
+  .vals{gap:10px;margin-top:10px}
+  .card{padding:14px}
+  .hscroll{margin:0 -14px;padding:0 14px}
+  .dayrow{grid-template-columns:62px 30px 46px 1fr;gap:8px}
+  .dayrow .wi{width:30px;height:30px}
+  .range{grid-template-columns:28px 1fr 28px;gap:6px}
+  .health{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .btn{min-height:44px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="t"><h1 id="title">Wetter</h1><div class="meta" id="meta"><i></i><span>Nicht verbunden</span></div></div>
+  </header>
+  <main id="main"></main>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const load = k => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } };
+const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+const nf = (v, d = 1) => new Intl.NumberFormat('de-DE', {maximumFractionDigits:d}).format(v);
+
+/* ---------- Anmeldung (wie bei den anderen Seiten) ---------- */
+const FIXED_TOKEN = window.HA_FIXED_TOKEN || '';
+async function getToken(){
+  if (FIXED_TOKEN) return {token: FIXED_TOKEN, via: 'festes Token'};
+  try {
+    const auth = window.parent !== window && window.parent.document.querySelector('home-assistant')?.hass?.auth;
+    if (auth) { if (auth.expired) await auth.refreshAccessToken(); return {token: auth.accessToken, via: 'HA-Anmeldung'}; }
+  } catch {}
+  try {
+    const t = JSON.parse(localStorage.getItem('hassTokens'));
+    if (t?.refresh_token) {
+      if (!t.expires || t.expires < Date.now() + 60000) {
+        const r = await fetch((t.hassUrl || location.origin) + '/auth/token', {
+          method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: new URLSearchParams({grant_type: 'refresh_token', client_id: t.clientId || location.origin + '/', refresh_token: t.refresh_token})
+        });
+        if (!r.ok) throw new Error('refresh');
+        const n = await r.json();
+        Object.assign(t, {access_token: n.access_token, expires_in: n.expires_in, expires: Date.now() + n.expires_in * 1000});
+        localStorage.setItem('hassTokens', JSON.stringify(t));
+      }
+      return {token: t.access_token, via: 'HA-Anmeldung'};
+    }
+  } catch {}
+  return null;
+}
+const NO_LOGIN = 'Keine Anmeldung gefunden. Öffne die Seite über die Seitenleiste von Home Assistant oder melde dich in diesem Browser mit „Angemeldet bleiben“ an. Für Verknüpfungen außerhalb der HA-Oberfläche lässt sich in der Integration „Home Assistant Views“ unter „Konfigurieren“ ein festes Zugriffstoken hinterlegen.';
+
+// Die Seite wird von Home Assistant selbst ausgeliefert: Adresse = Herkunft der Seite.
+const cfg = {url: location.origin};
+
+const S = {entries:[], entities:[], devices:[], states:new Map(), entry: load('ww:entry'), fc:{hourly:null, daily:null}, subs:[], open:new Set()};
+let ws, msgId = 0; const pending = new Map(), listeners = new Map();
+function setMeta(kind, text){ const m = $('#meta'); m.className = 'meta ' + kind; m.querySelector('span').textContent = text; }
+
+async function connect(){
+  if (ws) { ws.onclose = null; ws.close(); }
+  setMeta('', 'Verbinde …');
+  const auth = await getToken();
+  if (!cfg.url || !auth) { setMeta('err', 'Nicht angemeldet'); showError(NO_LOGIN); return; }
+  ws = new WebSocket(cfg.url.replace(/^http/i, 'ws').replace(/\/+$/, '') + '/api/websocket');
+  let authed = false;
+  ws.onmessage = async e => {
+    const m = JSON.parse(e.data);
+    if (m.type === 'auth_required') ws.send(JSON.stringify({type:'auth', access_token:auth.token}));
+    else if (m.type === 'auth_invalid') { setMeta('err', 'Anmeldung abgelehnt'); showError('Die Anmeldung wurde abgelehnt. Melde dich in Home Assistant neu an.'); }
+    else if (m.type === 'auth_ok') {
+      authed = true; setMeta('on', 'Verbunden über ' + auth.via);
+      send({type:'subscribe_events', event_type:'state_changed'}).catch(() => {});
+      try { await loadAll(); } catch (err) { showError(err.message); }
+    }
+    else if (m.type === 'result') { const p = pending.get(m.id); if (p) { pending.delete(m.id); m.success ? p.res(m.result) : p.rej(new Error(m.error?.message || 'Fehler')); } }
+    else if (m.type === 'event' && listeners.has(m.id)) listeners.get(m.id)(m.event);
+    else if (m.type === 'event' && m.event?.event_type === 'state_changed') {
+      const {entity_id, new_state} = m.event.data;
+      if (!S.mine?.has(entity_id)) return;
+      new_state ? S.states.set(entity_id, new_state) : S.states.delete(entity_id);
+      scheduleRender();
+    }
+  };
+  ws.onerror = () => { if (!authed) { setMeta('err', 'Nicht verbunden'); showError('Keine Verbindung zu ' + cfg.url + '.'); } };
+  ws.onclose = () => { if (authed) { setMeta('err', 'Verbindung verloren, neuer Versuch …'); setTimeout(connect, 5000); } };
+}
+function send(msg){
+  return new Promise((res, rej) => {
+    if (!ws || ws.readyState !== 1) return rej(new Error('Nicht verbunden'));
+    const id = ++msgId; pending.set(id, {res, rej}); ws.send(JSON.stringify({...msg, id}));
+  });
+}
+// Abonnement: die Antwort hat dieselbe id wie die folgenden Events
+function subscribe(msg, fn){
+  const id = ++msgId; listeners.set(id, fn);
+  return new Promise((res, rej) => { pending.set(id, {res: () => res(id), rej}); ws.send(JSON.stringify({...msg, id})); });
+}
+
+/* ---------- Daten der Integration (unique_id = "<entry>_<schlüssel>") ---------- */
+const DOMAIN = 'wetter';
+async function loadAll(){
+  const [devices, entities, states] = await Promise.all([
+    send({type:'config/device_registry/list'}), send({type:'config/entity_registry/list'}), send({type:'get_states'})]);
+  S.entities = entities.filter(e => !e.disabled_by && e.platform === DOMAIN);
+  S.devices = devices.filter(d => (d.identifiers || []).some(([dom]) => dom === DOMAIN));
+  S.mine = new Set(S.entities.map(e => e.entity_id));
+  S.states = new Map(states.filter(s => S.mine.has(s.entity_id)).map(s => [s.entity_id, s]));
+  S.entries = [...new Set(S.entities.map(e => e.config_entry_id).filter(Boolean))];
+  if (!S.entries.includes(S.entry)) S.entry = S.entries[0];
+  render();
+  await subscribeForecasts();
+}
+async function subscribeForecasts(){
+  for (const id of S.subs) send({type:'unsubscribe_events', subscription:id}).catch(() => {});
+  S.subs = []; S.fc = {hourly:null, daily:null};
+  const w = E('weather'); if (!w) return;
+  for (const type of ['hourly', 'daily']) {
+    try {
+      S.subs.push(await subscribe({type:'weather/subscribe_forecast', entity_id:w.entity_id, forecast_type:type},
+        ev => { S.fc[type] = ev.forecast || []; scheduleRender(); }));
+    } catch (err) { console.warn('Vorhersage', type, err); S.fc[type] = []; }
+  }
+}
+function E(key){
+  const uid = `${S.entry}_${key}`;
+  return S.entities.find(e => e.config_entry_id === S.entry && e.unique_id === uid);
+}
+const st = key => { const e = E(key); return e && S.states.get(e.entity_id); };
+const usable = s => s && !['unavailable', 'unknown', ''].includes(s.state);
+const num = s => { const n = parseFloat(s?.state); return usable(s) && Number.isFinite(n) ? n : null; };
+
+/* ---------- Symbole ---------- */
+const P = {
+  sun:'<circle class="sun" cx="24" cy="24" r="9"/><g class="sun">' + [0,45,90,135,180,225,270,315].map(a => `<rect x="22.6" y="5" width="2.8" height="7" rx="1.4" transform="rotate(${a} 24 24)"/>`).join('') + '</g>',
+  sunS:'<circle class="sun" cx="17" cy="17" r="7"/><g class="sun">' + [0,45,90,135,180,225,270,315].map(a => `<rect x="15.9" y="3" width="2.2" height="5" rx="1.1" transform="rotate(${a} 17 17)"/>`).join('') + '</g>',
+  moon:'<path class="moon" d="M30 8a15 15 0 1 0 12 23A13 13 0 0 1 30 8z"/>',
+  moonS:'<path class="moon" d="M20 5a11 11 0 1 0 9 17A9.5 9.5 0 0 1 20 5z"/>',
+  cloud:'<path class="cl" d="M14 38a9 9 0 0 1-1-18 12 12 0 0 1 23 3 7.5 7.5 0 0 1-1 15z"/>',
+  cloudF:'<path class="cl2" d="M16 37a8 8 0 0 1-1-16 11 11 0 0 1 21 3 6.5 6.5 0 0 1-1 13z"/>',
+  rain:'<line class="rn" x1="17" y1="41" x2="15" y2="46"/><line class="rn" x1="25" y1="41" x2="23" y2="46"/><line class="rn" x1="33" y1="41" x2="31" y2="46"/>',
+  pour:'<line class="rn" x1="15" y1="40" x2="12" y2="47"/><line class="rn" x1="21" y1="40" x2="18" y2="47"/><line class="rn" x1="27" y1="40" x2="24" y2="47"/><line class="rn" x1="33" y1="40" x2="30" y2="47"/>',
+  snow:'<circle class="sn" cx="16" cy="43" r="2.2"/><circle class="sn" cx="24" cy="45" r="2.2"/><circle class="sn" cx="32" cy="43" r="2.2"/>',
+  sleet:'<line class="rn" x1="17" y1="41" x2="15" y2="46"/><circle class="sn" cx="24" cy="44" r="2.2"/><line class="rn" x1="33" y1="41" x2="31" y2="46"/>',
+  hail:'<circle class="sn" cx="16" cy="43" r="2.8"/><circle class="sn" cx="25" cy="45" r="2.8"/><circle class="sn" cx="33" cy="42" r="2.8"/>',
+  bolt:'<path class="bolt" d="M26 34l-6 8h5l-3 6 8-9h-5l3-5z"/>',
+  fog:'<line class="fg" x1="10" y1="22" x2="38" y2="22"/><line class="fg" x1="6" y1="29" x2="34" y2="29"/><line class="fg" x1="12" y1="36" x2="42" y2="36"/>',
+  wind:'<path class="wd" d="M6 18h24a5 5 0 1 0-5-5M6 26h32a5 5 0 1 1-5 5M6 34h16"/>',
+};
+function icon(c, cls = 'wi'){
+  const parts = {
+    'sunny':['sun'], 'clear-night':['moon'], 'partlycloudy':['sunS', 'cloudF'], 'cloudy':['cloud'], 'fog':['fog'],
+    'rainy':['cloud', 'rain'], 'pouring':['cloud', 'pour'], 'snowy':['cloud', 'snow'], 'snowy-rainy':['cloud', 'sleet'],
+    'hail':['cloud', 'hail'], 'lightning':['cloud', 'bolt'], 'lightning-rainy':['cloud', 'bolt', 'rain'],
+    'windy':['wind'], 'windy-variant':['cloud', 'wind'], 'exceptional':['sun', 'cloud'],
+  }[c] || ['cloud'];
+  return `<svg class="${cls}" viewBox="0 0 48 48" aria-hidden="true">${parts.map(p => P[p]).join('')}</svg>`;
+}
+const COND = {'sunny':'Sonnig', 'clear-night':'Klar', 'partlycloudy':'Teilweise bewölkt', 'cloudy':'Bewölkt', 'fog':'Nebel',
+  'rainy':'Regen', 'pouring':'Starkregen', 'snowy':'Schnee', 'snowy-rainy':'Schneeregen', 'hail':'Hagel', 'lightning':'Gewitter',
+  'lightning-rainy':'Gewitter mit Regen', 'windy':'Windig', 'windy-variant':'Windig, bewölkt', 'exceptional':'Unwetter'};
+const DIRS = ['N', 'NNO', 'NO', 'ONO', 'O', 'OSO', 'SO', 'SSO', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+const dir = b => b == null ? '' : DIRS[Math.round(((b % 360) + 360) % 360 / 22.5) % 16];
+const arrow = b => b == null ? '' : `<svg class="arrow" viewBox="0 0 16 16" style="transform:rotate(${b + 180}deg)" aria-hidden="true"><path fill="currentColor" d="M8 1l5 13-5-3-5 3z"/></svg>`;
+const SEV = {Extreme:['extreme', 'Extrem'], Severe:['severe', 'Unwetter'], Moderate:['moderate', 'Markant'], Minor:['minor', 'Wetter']};
+const rtf = new Intl.RelativeTimeFormat('de', {numeric:'auto'});
+function whenDe(v){
+  const t = new Date(v); if (isNaN(t)) return '';
+  const d0 = new Date(); d0.setHours(0, 0, 0, 0); const d = new Date(t); d.setHours(0, 0, 0, 0);
+  const diff = Math.round((d - d0) / 86400000), time = t.toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'});
+  if (diff === 0) return `heute ${time}`; if (diff === 1) return `morgen ${time}`; if (diff === -1) return `gestern ${time}`;
+  return t.toLocaleDateString('de-DE', {weekday:'short', day:'2-digit', month:'2-digit'}) + ' ' + time;
+}
+
+/* ---------- Darstellung ---------- */
+let rt; function scheduleRender(){ clearTimeout(rt); rt = setTimeout(render, 150); }
+function showError(msg){ $('#main').innerHTML = `<div class="empty">${esc(msg)}<br><button class="btn primary" onclick="connect()">Erneut versuchen</button></div>`; }
+
+function warningsHTML(){
+  const s = st('warnings'); if (!s) return '';
+  const list = s.attributes.warnings || [], area = s.attributes.area, stale = s.attributes.stale || [];
+  const staleHTML = stale.length ? `<div class="stale">Nicht erreichbar: ${esc([].concat(stale).join(', '))} – letzte Warnungen bleiben stehen.</div>` : '';
+  if (!list.length) return `<div class="allclear">Keine Warnungen${area ? '' : ''}<small>${esc(area || '')}</small></div>${staleHTML}`;
+  return `<div class="warns">${list.map(w => {
+    const [cls, txt] = SEV[w.severity] || SEV.Minor, open = S.open.has(w.id);
+    const range = [w.start && 'ab ' + whenDe(w.start), w.expires && 'bis ' + whenDe(w.expires)].filter(Boolean).join(' ');
+    return `<details class="warn" style="--sev:var(--${cls})" data-id="${esc(w.id)}" ${open ? 'open' : ''}><summary>
+      <span class="lvl ${cls}">${txt}</span><div class="h"><b>${esc(w.headline || w.event || 'Warnung')}</b><small>${esc(range)}</small></div></summary>
+      <div class="body">${w.description ? `<p>${esc(w.description)}</p>` : ''}
+        ${w.recommended_actions ? `<div class="act"><b>Was tun?</b><p>${esc(w.recommended_actions)}</p></div>` : ''}
+        <div class="src">${esc([w.sender || w.provider, w.affected_areas].filter(Boolean).join(' · '))}</div>
+        ${w.more_info_url ? `<a class="btn" href="${esc(w.more_info_url)}" target="_blank" rel="noopener">Mehr Informationen</a>` : ''}</div></details>`;
+  }).join('')}</div>${staleHTML}`;
+}
+
+function nowHTML(){
+  const w = st('weather'); if (!usable(w)) return '<div class="empty">Keine aktuellen Wetterdaten.</div>';
+  const a = w.attributes, tu = a.temperature_unit || '°C', today = S.fc.daily?.[0];
+  const feels = a.apparent_temperature ?? num(st('apparent_temperature'));
+  const rain = st('rain_in'), rmin = num(rain);
+  let rainTxt, dry = false;
+  if (rmin == null) { rainTxt = 'Kein Regen in Sicht'; dry = true; }
+  else if (rmin <= 0) rainTxt = 'Es regnet' + (rain.attributes.precipitation != null ? ` (${nf(rain.attributes.precipitation, 1)} mm/h)` : '');
+  else if (rmin < 120) rainTxt = `Regen in etwa ${nf(rmin, 0)} Minuten`;
+  else rainTxt = `Regen ab ${whenDe(rain.attributes.start || Date.now() + rmin * 60000)}`;
+  const probToday = num(st('precipitation_probability_today'));
+  return `<article class="now">
+    <div class="ico">${icon(w.state)}</div>
+    <div><div class="temp">${a.temperature == null ? '–' : nf(a.temperature, 1)}<small>${esc(tu)}</small></div>
+      <div class="cond">${esc(COND[w.state] || w.state)}</div>
+      <div class="sub">${feels != null ? `Gefühlt ${nf(feels, 0)}° · ` : ''}${today ? `H ${nf(today.temperature, 0)}° T ${nf(today.templow, 0)}°` : ''}${probToday != null ? ` · Regenrisiko ${nf(probToday, 0)} %` : ''}</div></div>
+    <div class="rainline ${dry ? 'dry' : ''}"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2s-7 7.6-7 12.5a7 7 0 0 0 14 0C19 9.6 12 2 12 2z"/></svg>${esc(rainTxt)}</div>
+  </article>
+  <div class="vals">
+    <div class="tile"><span>Wind</span><strong>${arrow(a.wind_bearing)}${a.wind_speed == null ? '–' : nf(a.wind_speed, 0)}<small>${esc(a.wind_speed_unit || 'km/h')}</small></strong><em>${esc([dir(a.wind_bearing), a.wind_gust_speed != null && 'Böen ' + nf(a.wind_gust_speed, 0)].filter(Boolean).join(' · '))}</em></div>
+    <div class="tile"><span>Luftfeuchte</span><strong>${a.humidity == null ? '–' : nf(a.humidity, 0)}<small>%</small></strong>${a.dew_point != null ? `<em>Taupunkt ${nf(a.dew_point, 0)}°</em>` : ''}</div>
+    <div class="tile"><span>Luftdruck</span><strong>${a.pressure == null ? '–' : nf(a.pressure, 0)}<small>${esc(a.pressure_unit || 'hPa')}</small></strong></div>
+    <div class="tile"><span>Sicht · Wolken</span><strong>${a.visibility == null ? '–' : nf(a.visibility, 0)}<small>${esc(a.visibility_unit || 'km')}</small></strong>${a.cloud_coverage != null ? `<em>${nf(a.cloud_coverage, 0)} % bewölkt</em>` : ''}</div>
+  </div>`;
+}
+
+function hourlyHTML(){
+  const list = (S.fc.hourly || []).filter(h => new Date(h.datetime) > Date.now() - 3600000).slice(0, 48);
+  if (!list.length) return S.fc.hourly === null ? `<div class="card"><div class="card-h"><h2>Nächste Stunden</h2></div><div class="hint">Lade Vorhersage …</div></div>` : '';
+  const colW = 58, W = list.length * colW, H = 92, top = 18, bot = 30;
+  const temps = list.map(h => h.temperature), min = Math.min(...temps), max = Math.max(...temps), span = Math.max(1, max - min);
+  const y = t => top + (H - top - bot) * (1 - (t - min) / span), x = i => i * colW + colW / 2;
+  const pts = list.map((h, i) => `${x(i)},${y(h.temperature)}`).join(' ');
+  const pmax = Math.max(2, ...list.map(h => h.precipitation || 0));
+  const bars = list.map((h, i) => { const ph = (h.precipitation || 0) / pmax * (bot - 6); return ph ? `<rect class="bar" x="${x(i) - 9}" y="${H - ph}" width="18" height="${ph}" rx="3"/>` : ''; }).join('');
+  const labels = list.map((h, i) => `<text x="${x(i)}" y="${y(h.temperature) - 7}" text-anchor="middle">${nf(h.temperature, 0)}°</text>`).join('');
+  const cells = list.map(h => { const t = new Date(h.datetime), mid = t.getHours() === 0;
+    return `<div class="hour"><span class="tm ${mid ? 'day' : ''}">${mid ? esc(t.toLocaleDateString('de-DE', {weekday:'short'})) : t.getHours() + ' Uhr'}</span>${icon(h.condition)}
+      <span class="p">${h.precipitation_probability >= 10 ? nf(h.precipitation_probability, 0) + ' %' : ''}</span></div>`; }).join('');
+  return `<div class="card"><div class="card-h"><h2>Nächste 48 Stunden</h2></div><div class="hscroll"><div style="width:${W}px">
+    <div class="hours">${cells}</div>
+    <svg class="chart" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Temperatur und Niederschlag der nächsten Stunden">
+      ${bars}<polygon class="area" points="${x(0)},${H - bot} ${pts} ${x(list.length - 1)},${H - bot}"/><polyline class="line" points="${pts}"/>${labels}</svg>
+  </div></div><p class="hint">Linie: Temperatur · Balken: Niederschlag (mm)</p></div>`;
+}
+
+function dailyHTML(){
+  const list = (S.fc.daily || []).slice(0, 8); if (!list.length) return '';
+  const lo = Math.min(...list.map(d => d.templow ?? d.temperature)), hi = Math.max(...list.map(d => d.temperature)), span = Math.max(1, hi - lo);
+  const d0 = new Date(); d0.setHours(0, 0, 0, 0);
+  return `<div class="card"><div class="card-h"><h2>8 Tage</h2></div><div class="days">${list.map((d, i) => {
+    const t = new Date(d.datetime), dd = new Date(t); dd.setHours(0, 0, 0, 0); const diff = Math.round((dd - d0) / 86400000);
+    const name = diff === 0 ? 'Heute' : diff === 1 ? 'Morgen' : t.toLocaleDateString('de-DE', {weekday: innerWidth < 640 ? 'short' : 'long'});
+    const l = d.templow ?? d.temperature;
+    return `<div class="dayrow"><div class="wd">${esc(name)}<small>${esc(t.toLocaleDateString('de-DE', {day:'2-digit', month:'2-digit'}))}</small></div>${icon(d.condition)}
+      <div class="pp">${d.precipitation_probability != null ? nf(d.precipitation_probability, 0) + ' %' : ''}<small>${d.precipitation ? nf(d.precipitation, 1) + ' mm' : ''}</small></div>
+      <div class="range"><span class="lo">${nf(l, 0)}°</span><div class="tr"><i style="left:${(l - lo) / span * 100}%;right:${(hi - d.temperature) / span * 100}%"></i></div><span>${nf(d.temperature, 0)}°</span></div></div>`;
+  }).join('')}</div></div>`;
+}
+
+const POLLEN = [['hazel', 'Hasel'], ['alder', 'Erle'], ['ash', 'Esche'], ['birch', 'Birke'], ['grass', 'Gräser'], ['rye', 'Roggen'], ['mugwort', 'Beifuß'], ['ambrosia', 'Ambrosia']];
+const POL_TXT = v => v == null ? 'keine Daten' : v === 0 ? 'keine' : v <= 1 ? 'gering' : v <= 2 ? 'mittel' : 'hoch';
+const POL_C = v => v <= 1 ? 'var(--minor)' : v <= 2 ? 'var(--moderate)' : 'var(--severe)';
+const UV_INFO = v => v <= 2 ? ['gering', '#3E9B3E'] : v <= 5 ? ['mäßig', '#D9A900'] : v <= 7 ? ['hoch', '#E07B12'] : v <= 10 ? ['sehr hoch', '#D23B3B'] : ['extrem', '#8E2DB8'];
+function healthHTML(){
+  const uv = num(st('uv_index')), uv2 = num(st('uv_index_tomorrow'));
+  const pol = POLLEN.map(([k, n]) => [n, st('pollen_' + k)]).filter(([, s]) => s);
+  if (uv == null && uv2 == null && !pol.length) return '';
+  const uvBadge = (v, label) => { const [t, c] = UV_INFO(v); return `<div class="uv"><div class="badge" style="--c:${c}">${nf(v, 0)}</div><div class="t"><b>UV-Index ${label}: ${t}</b><small>${esc(st('uv_index')?.attributes.city ? 'Messort ' + st('uv_index').attributes.city : '')}</small></div></div>`; };
+  const polHTML = pol.map(([n, s]) => {
+    const v = num(s), tm = s.attributes.tomorrow;
+    return `<div class="pol" style="--c:${v ? POL_C(v) : 'var(--line)'}"><b>${esc(n)}</b>
+      <div class="lv">${[0.5, 1, 1.5, 2, 2.5, 3].map(x => `<i class="${v != null && v >= x ? 'on' : ''}"></i>`).join('')}</div>
+      <small>Heute ${POL_TXT(v)}${tm != null ? ` · morgen ${POL_TXT(+tm)}` : ''}</small></div>`;
+  }).join('');
+  return `<div class="card"><div class="card-h"><h2>Pollen & UV</h2></div>
+    ${uv != null ? uvBadge(uv, 'heute') : ''}${uv2 != null ? uvBadge(uv2, 'morgen') : ''}
+    ${pol.length ? `<div class="health">${polHTML}</div>` : ''}</div>`;
+}
+
+function render(){
+  if (!S.entities.length) { $('#main').innerHTML = '<div class="empty">Keine Einträge der Integration „Wetter & Warnungen“ gefunden.</div>'; return; }
+  const dev = id => S.devices.find(d => (d.identifiers || []).some(([dom, i]) => dom === DOMAIN && i === id));
+  let html = '';
+  if (S.entries.length > 1) html += `<div class="seg" style="margin-bottom:14px" role="group" aria-label="Ort">${S.entries.map(id =>
+    `<button data-entry="${esc(id)}" aria-pressed="${id === S.entry}">${esc(dev(id)?.name_by_user || dev(id)?.name || 'Wetter')}</button>`).join('')}</div>`;
+  const d = dev(S.entry);
+  $('#title').textContent = S.entries.length > 1 || !d ? 'Wetter' : 'Wetter ' + (d.name_by_user || d.name || '').replace(/^Wetter\s*/i, '');
+  html += warningsHTML() + nowHTML() + hourlyHTML() + dailyHTML() + healthHTML();
+  const w = st('weather');
+  if (w?.attributes.attribution) html += `<p class="hint">${esc(w.attributes.attribution)}</p>`;
+  const sc = $('.hscroll')?.scrollLeft;
+  $('#main').innerHTML = html;
+  if (sc) { const h = $('.hscroll'); if (h) h.scrollLeft = sc; }
+}
+
+$('#main').addEventListener('click', e => {
+  const t = e.target.closest('button'); if (!t) return;
+  if (t.dataset.entry) { S.entry = t.dataset.entry; save('ww:entry', S.entry); render(); subscribeForecasts(); }
+});
+// geöffnete Warnungen über Aktualisierungen hinweg offen halten
+$('#main').addEventListener('toggle', e => { const d = e.target; if (d.matches?.('details.warn')) d.open ? S.open.add(d.dataset.id) : S.open.delete(d.dataset.id); }, true);
+setInterval(() => { if (S.entities.length) render(); }, 60000);
+connect();
+</script>
+</body>
+</html>

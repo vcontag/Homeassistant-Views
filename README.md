@@ -16,6 +16,7 @@ eingerichtet ist, und verschwindet wieder, wenn du sie entfernst.
 | Wasser (Grünbeck) | Grünbeck Cloud (`gruenbeck_cloud`) eingerichtet ist |
 | Abfall | Waste Collection Schedule (`waste_collection_schedule`) eingerichtet ist – über die Oberfläche oder per YAML |
 | Garten | Garten-Bewässerung — Score Irrigation (`garten_bewaesserung`) eingerichtet ist |
+| Wetter | Wetter & Warnungen (`wetter`) eingerichtet ist |
 | Zigbee | ZHA eingerichtet ist oder Zigbee2MQTT-Geräte vorhanden sind |
 
 Die Seiten passen sich hellem und dunklem Design an, sind für das Handy optimiert und
@@ -102,3 +103,11 @@ Score, Bodenfeuchte mit Veto-Schwelle bzw. Sollband (Töpfe), Vetos wie „Regen
 zum Anpassen, Kreis an/aus, bei Töpfen **Dosis jetzt geben** und Dosen/Liter/Kosten. Der **Verlauf** zeigt die
 Läufe und Dosen der letzten 14 Tage aus dem Bewässerungskalender. Alle weiteren Regler (Pausen, Bodensensor-Betrieb,
 Schwellen, Boost …) sind unter „Einstellungen“ eingeklappt.
+
+## Wetter (Wetter & Warnungen)
+
+Für die Integration [Wetter & Warnungen](https://github.com/SH1FT-W/wetter-warnungen). Ganz oben die **amtlichen Warnungen**
+(DWD und NINA), nach Schwere gefärbt; ein Tipp zeigt Beschreibung, Handlungsempfehlung und Absender. Ohne Warnung
+steht „Keine Warnungen“ mit dem Warngebiet. Darunter das aktuelle Wetter mit „Regen in X Minuten“, Wind, Luftfeuchte,
+Druck und Sicht, die nächsten 48 Stunden mit Temperaturkurve und Niederschlag, die Vorhersage für 8 Tage sowie
+Pollenflug und UV-Index. Die Vorhersage aktualisiert sich live.
