@@ -53,6 +53,8 @@ Die Seiten folgen in der Home-Assistant-Oberfläche dem Design von Home Assistan
 einem Gerät etwas nicht (z. B. dunkel oder keine Mobilansicht in einem App-Browser), die Seite
 `/ha_views/diagnose.html` **auf diesem Gerät** öffnen (Link unten auf der Übersicht). Sie zeigt die Ursache, lässt
 das Design für dieses Gerät fest auf Hell oder Dunkel stellen und schickt den Bericht auf Wunsch an Home Assistant.
+Rechnet der eingebaute Browser einer App mit Desktop-Breite, passen sich die Seiten automatisch an und zeigen trotzdem
+die Mobilansicht (abschaltbar auf der Diagnoseseite). In normalen Browsern bleibt „Desktop-Website“ wählbar.
 
 ## Direkt aufrufen / als App installieren
 
