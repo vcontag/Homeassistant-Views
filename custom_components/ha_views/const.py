@@ -83,6 +83,13 @@ VIEWS: tuple[View, ...] = (
         domains=("garten_bewaesserung",),
     ),
     View(
+        "wetter",
+        "wetter.html",
+        "Wetter",
+        "mdi:weather-partly-cloudy",
+        domains=("wetter", "dwd_weather_warnings"),
+    ),
+    View(
         "zigbee",
         "zigbee-manager.html",
         "Zigbee",

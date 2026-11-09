@@ -4,6 +4,15 @@ Neue Einträge oben. Die Überschrift `## <Version>` muss zu `version` in
 `custom_components/ha_views/manifest.json` passen – der Abschnitt wird beim Release
 automatisch als Beschreibung übernommen.
 
+## 1.5.0
+- Neue Ansicht **Wetter** für [Wetter & Warnungen](https://github.com/SH1FT-W/wetter-warnungen): amtliche Warnungen
+  (DWD und NINA) nach Schwere mit Beschreibung und Handlungsempfehlung, aktuelles Wetter, „Regen in X Minuten“,
+  48-Stunden-Verlauf mit Temperaturkurve und Niederschlag, 8-Tage-Vorhersage, Pollenflug und UV-Index.
+- Ist die Integration **DWD Weather Warnings** eingerichtet, erscheinen ihre Warnungen (aktuell und Vorabinformation)
+  ebenfalls in der Liste; doppelte Meldungen beider Integrationen werden zusammengefasst. Eine neue aktuelle
+  DWD-Warnung öffnet ein **Popup**, bis sie mit „Verstanden“ bestätigt wird. Die Ansicht erscheint auch,
+  wenn nur DWD Weather Warnings eingerichtet ist.
+
 ## 1.4.0
 - Neue Ansicht **Garten** für [Garten-Bewässerung — Score Irrigation](https://github.com/philipp-builder/ha-garten-bewaesserung-integration):
   nächster Lauf mit Minuten je Kreis, Startzeit, „Heute überspringen“, Jetzt bewässern, Not-Aus,
