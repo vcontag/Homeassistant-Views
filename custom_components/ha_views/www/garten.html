@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="pwa/garten.webmanifest">
+<meta name="theme-color" content="#ECEFF4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#10151F" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="pwa/garten-192.png">
+<link rel="icon" href="pwa/garten-192.png">
+<script src="ha-token.js"></script>
+<title>Garten</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#ECEFF4; --surface:#FFFFFF; --surface-2:#F4F6FA; --ink:#14213D; --muted:#5A6781; --line:#D5DBE6;
+  --accent:#1F7A52; --accent-ink:#FFFFFF; --accent-soft:#DCEFE5; --water:#1C7FC0; --water-soft:#DCEBF6;
+  --ok:#2E8B57; --warn:#B7790A; --bad:#C23B3B;
+  color-scheme:light; box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#10151F; --surface:#1A2130; --surface-2:#212A3B; --ink:#E5EAF3; --muted:#95A1B8; --line:#2C3749;
+    --accent:#56C38E; --accent-ink:#062014; --accent-soft:#173A2A; --water:#5AB2EA; --water-soft:#16324A;
+    --ok:#4CC282; --warn:#E3A93A; --bad:#EF6B6B; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#10151F; --surface:#1A2130; --surface-2:#212A3B; --ink:#E5EAF3; --muted:#95A1B8; --line:#2C3749;
+  --accent:#56C38E; --accent-ink:#062014; --accent-soft:#173A2A; --water:#5AB2EA; --water-soft:#16324A;
+  --ok:#4CC282; --warn:#E3A93A; --bad:#EF6B6B; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 Manrope,"Segoe UI",system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+button,a,select,input{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+[hidden]{display:none!important}
+.wrap{max-width:1000px;margin:0 auto;padding:20px 16px 48px}
+
+header{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+header .t{flex:1;min-width:0}
+h1{margin:0;font-size:1.6rem;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.meta{color:var(--muted);font-size:.85rem;display:flex;align-items:center;gap:6px;margin-top:3px}
+.meta i{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
+.meta.on i{background:var(--ok)} .meta.err i{background:var(--bad)}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;text-decoration:none;color:var(--ink)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.danger{border-color:var(--bad);color:var(--bad)}
+.btn.danger.solid{background:var(--bad);color:#fff}
+.btn:disabled{opacity:.5;cursor:default}
+@media (hover:hover){.btn:hover{border-color:var(--muted)} .btn.primary:hover{filter:brightness(1.08)}}
+.seg{display:flex;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:3px;gap:2px}
+.seg button{flex:1;border:0;background:none;border-radius:8px;padding:8px 10px;font-weight:700;font-size:.88rem;cursor:pointer;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+
+/* Hauptkarte */
+.hero{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:20px 22px;display:grid;gap:14px}
+.hero .top{display:flex;align-items:flex-start;gap:18px;flex-wrap:wrap}
+.hero .when{flex:1;min-width:200px}
+.label{font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.big{font-size:2.1rem;font-weight:800;letter-spacing:-.02em;line-height:1.1;font-variant-numeric:tabular-nums}
+.sub{color:var(--muted);font-weight:600;margin-top:2px}
+.state{display:inline-flex;align-items:center;gap:8px;font-weight:800;border-radius:999px;padding:6px 14px;background:var(--accent-soft);color:var(--accent)}
+.state::before{content:"";width:9px;height:9px;border-radius:50%;background:currentColor}
+.state.run{background:var(--water-soft);color:var(--water)} .state.run::before{animation:pulse 1.2s ease-in-out infinite}
+.state.pause{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
+.state.skip{background:var(--surface-2);color:var(--muted)}
+@keyframes pulse{50%{opacity:.3}}
+.mins{display:flex;flex-wrap:wrap;gap:8px}
+.mins span{background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-weight:700;font-size:.88rem}
+.mins span b{color:var(--water)}
+.actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.actions .btn{flex:1 1 auto}
+.timefield{display:flex;align-items:center;gap:8px;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:0 4px 0 12px;min-height:40px;font-weight:700}
+.timefield input{border:0;background:none;font-weight:800;font-size:1rem;padding:6px;min-height:36px}
+.toggle{display:flex;align-items:center;gap:10px;font-weight:700;cursor:pointer}
+
+.banner{display:flex;align-items:center;gap:12px;flex-wrap:wrap;border:1px solid var(--warn);border-left-width:5px;background:var(--surface);border-radius:12px;padding:12px 14px;margin-top:14px}
+.banner b{display:block}
+.banner small{color:var(--muted)}
+.banner .txt{flex:1;min-width:200px}
+
+/* Wetter */
+.wx{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:14px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px 14px;display:grid;gap:2px;min-width:0}
+.tile span{color:var(--muted);font-size:.8rem;font-weight:700}
+.tile strong{font-size:1.3rem;font-weight:800;font-variant-numeric:tabular-nums}
+.tile strong small{font-size:.8rem;color:var(--muted);margin-left:3px}
+.tile em{font-style:normal;color:var(--muted);font-size:.78rem}
+
+/* Kreise */
+h2.sec{font-size:1.05rem;font-weight:800;margin:22px 0 10px}
+.zones{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.zone{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;display:grid;gap:12px;align-content:start}
+.zone.off{opacity:.65}
+.zh{display:flex;align-items:center;gap:10px}
+.zh .ico{width:40px;height:40px;border-radius:12px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;flex:none}
+.zh .ico svg{width:24px;height:24px}
+.zh .n{flex:1;min-width:0}
+.zh .n b{display:block;font-weight:800;font-size:1.02rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.zh .n small{color:var(--muted);font-weight:600;font-size:.8rem}
+.why{background:var(--surface-2);border-radius:10px;padding:9px 11px;font-size:.88rem;font-weight:600;line-height:1.35}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.meter span{display:flex;justify-content:space-between;font-size:.8rem;font-weight:700;color:var(--muted);margin-bottom:5px}
+.meter span b{color:var(--ink);font-size:.95rem}
+.bar{position:relative;height:8px;border-radius:4px;background:var(--surface-2);overflow:visible}
+.bar i{position:absolute;inset:0 auto 0 0;border-radius:4px;background:var(--accent)}
+.bar.soil i{background:var(--water)}
+.bar .band{position:absolute;top:-3px;bottom:-3px;border:2px solid var(--accent);border-radius:5px;background:transparent}
+.bar .mark{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink);opacity:.55}
+.dur{display:flex;align-items:center;gap:6px}
+.dur button{width:36px;height:36px;border-radius:8px;border:1px solid var(--line);background:var(--surface-2);font-weight:800;font-size:1.1rem;cursor:pointer}
+.dur output{min-width:64px;text-align:center;font-weight:800;font-size:1.25rem;font-variant-numeric:tabular-nums}
+.dur output small{font-size:.8rem;color:var(--muted);margin-left:2px}
+.facts{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.84rem;color:var(--muted);font-weight:600}
+.facts b{color:var(--ink)}
+.vetos{display:flex;flex-wrap:wrap;gap:6px}
+.vetos span{font-size:.75rem;font-weight:800;border-radius:999px;padding:2px 9px;background:var(--water-soft);color:var(--water)}
+.vetos span.w{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
+.sw{position:relative;width:48px;height:28px;border-radius:14px;border:0;background:var(--line);cursor:pointer;flex:none;transition:background .2s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.sw[aria-checked="true"]{background:var(--accent)}
+.sw[aria-checked="true"]::after{transform:translateX(20px)}
+.sw:disabled{opacity:.5}
+
+/* Verlauf */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin-top:14px}
+.card-h{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.card-h h2{margin:0;font-size:1.05rem;font-weight:800;flex:1}
+.ev{display:flex;gap:14px;padding:9px 0;align-items:flex-start}
+.ev + .ev{border-top:1px solid var(--line)}
+.ev .d{width:58px;flex:none;line-height:1.15}
+.ev .d b{display:block;font-weight:800}
+.ev .d small{color:var(--muted);font-weight:700;font-size:.78rem}
+.ev .x{flex:1;min-width:0}
+.ev .x b{font-weight:700}
+.ev .x small{display:block;color:var(--muted);font-size:.82rem;overflow-wrap:anywhere}
+.ev .m{font-weight:800;color:var(--water);white-space:nowrap;font-variant-numeric:tabular-nums}
+.ev.plan .m{color:var(--muted)}
+.hint{font-size:.8rem;color:var(--muted);margin:8px 0 0}
+
+/* Einstellungen */
+details.more{margin-top:14px;background:var(--surface);border:1px solid var(--line);border-radius:16px}
+details.more summary{list-style:none;cursor:pointer;padding:16px 18px;font-weight:800;font-size:1.05rem;display:flex;align-items:center;gap:10px}
+details.more summary::-webkit-details-marker{display:none}
+details.more summary::after{content:"›";margin-left:auto;font-size:1.4rem;color:var(--muted);transition:transform .2s}
+details.more[open] summary::after{transform:rotate(90deg)}
+details.more summary small{color:var(--muted);font-weight:600;font-size:.82rem}
+details.more .body{padding:0 18px 18px}
+.group + .group{margin-top:16px}
+.group h3{margin:0 0 8px;font-size:.88rem;font-weight:700;color:var(--muted);display:flex;align-items:center;gap:8px}
+.group h3::after{content:"";flex:1;height:1px;background:var(--line)}
+.controls{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.ctl{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;align-items:center;gap:12px;min-height:56px}
+.ctl .n{flex:1;min-width:0;font-weight:600;font-size:.9rem}
+.ctl .n small{display:block;color:var(--muted);font-weight:500;font-size:.78rem}
+.ctl select,.ctl input{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 8px;min-height:36px;max-width:170px}
+.ctl input[type=number]{width:90px} .ctl input[type=time]{width:110px}
+.empty{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:36px 20px;text-align:center;color:var(--muted)}
+.empty .btn{margin-top:12px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;font-size:.9rem;box-shadow:0 6px 24px rgba(0,0,0,.25);z-index:50;max-width:calc(100% - 32px)}
+.toast.err{background:var(--bad);color:#fff}
+
+@media (max-width:760px){ .wx{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (max-width:640px){
+  .wrap{padding:12px 12px 32px}
+  h1{font-size:1.35rem}
+  .hero{padding:16px}
+  .big{font-size:1.7rem}
+  .actions .btn{flex:1 1 calc(50% - 6px)}
+  .timefield{flex:1 1 100%}
+  .wx{gap:10px;margin-top:10px}
+  .zones{grid-template-columns:1fr;gap:10px}
+  .card{padding:14px}
+  .controls{grid-template-columns:1fr;gap:8px}
+  .ctl select{max-width:58%}
+  input,select,textarea{font-size:16px!important}
+  .btn{min-height:44px}
+}
+@media (prefers-reduced-motion:reduce){.state.run::before,.sw,.sw::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="t"><h1>Garten</h1><div class="meta" id="meta"><i></i><span>Nicht verbunden</span></div></div>
+  </header>
+  <main id="main"></main>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const load = k => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } };
+const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+const nf = (v, d = 1) => new Intl.NumberFormat('de-DE', {maximumFractionDigits:d}).format(v);
+let tt;
+function toast(msg, err){
+  document.querySelector('.toast')?.remove();
+  const el = Object.assign(document.createElement('div'), {className:'toast' + (err ? ' err' : ''), textContent:msg});
+  el.setAttribute('role', 'status'); document.body.append(el);
+  clearTimeout(tt); tt = setTimeout(() => el.remove(), err ? 6000 : 3500);
+}
+
+/* ---------- Anmeldung (wie bei den anderen Seiten) ---------- */
+const FIXED_TOKEN = window.HA_FIXED_TOKEN || '';
+async function getToken(){
+  if (FIXED_TOKEN) return {token: FIXED_TOKEN, via: 'festes Token'};
+  try {
+    const auth = window.parent !== window && window.parent.document.querySelector('home-assistant')?.hass?.auth;
+    if (auth) { if (auth.expired) await auth.refreshAccessToken(); return {token: auth.accessToken, via: 'HA-Anmeldung'}; }
+  } catch {}
+  try {
+    const t = JSON.parse(localStorage.getItem('hassTokens'));
+    if (t?.refresh_token) {
+      if (!t.expires || t.expires < Date.now() + 60000) {
+        const r = await fetch((t.hassUrl || location.origin) + '/auth/token', {
+          method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: new URLSearchParams({grant_type: 'refresh_token', client_id: t.clientId || location.origin + '/', refresh_token: t.refresh_token})
+        });
+        if (!r.ok) throw new Error('refresh');
+        const n = await r.json();
+        Object.assign(t, {access_token: n.access_token, expires_in: n.expires_in, expires: Date.now() + n.expires_in * 1000});
+        localStorage.setItem('hassTokens', JSON.stringify(t));
+      }
+      return {token: t.access_token, via: 'HA-Anmeldung'};
+    }
+  } catch {}
+  return null;
+}
+const NO_LOGIN = 'Keine Anmeldung gefunden. Öffne die Seite über die Seitenleiste von Home Assistant oder melde dich in diesem Browser mit „Angemeldet bleiben“ an. Für Verknüpfungen außerhalb der HA-Oberfläche lässt sich in der Integration „Home Assistant Views“ unter „Konfigurieren“ ein festes Zugriffstoken hinterlegen.';
+
+// Die Seite wird von Home Assistant selbst ausgeliefert: Adresse = Herkunft der Seite.
+const cfg = {url: location.origin};
+
+const S = {entries:[], entities:[], devices:[], states:new Map(), busy:new Set(), entry: load('gb2:entry'), events:null};
+let ws, msgId = 0; const pending = new Map();
+function setMeta(kind, text){ const m = $('#meta'); m.className = 'meta ' + kind; m.querySelector('span').textContent = text; }
+
+async function connect(){
+  if (ws) { ws.onclose = null; ws.close(); }
+  setMeta('', 'Verbinde …');
+  const auth = await getToken();
+  if (!cfg.url || !auth) { setMeta('err', 'Nicht angemeldet'); showError(NO_LOGIN); return; }
+  ws = new WebSocket(cfg.url.replace(/^http/i, 'ws').replace(/\/+$/, '') + '/api/websocket');
+  let authed = false;
+  ws.onmessage = async e => {
+    const m = JSON.parse(e.data);
+    if (m.type === 'auth_required') ws.send(JSON.stringify({type:'auth', access_token:auth.token}));
+    else if (m.type === 'auth_invalid') { setMeta('err', 'Anmeldung abgelehnt'); showError('Die Anmeldung wurde abgelehnt. Melde dich in Home Assistant neu an.'); }
+    else if (m.type === 'auth_ok') {
+      authed = true; setMeta('on', 'Verbunden über ' + auth.via);
+      send({type:'subscribe_events', event_type:'state_changed'}).catch(() => {});
+      try { await loadAll(); } catch (err) { showError(err.message); }
+    }
+    else if (m.type === 'result') { const p = pending.get(m.id); if (p) { pending.delete(m.id); m.success ? p.res(m.result) : p.rej(new Error(m.error?.message || 'Fehler')); } }
+    else if (m.type === 'event' && m.event.event_type === 'state_changed') {
+      const {entity_id, new_state} = m.event.data;
+      if (!S.mine?.has(entity_id)) return;
+      new_state ? S.states.set(entity_id, new_state) : S.states.delete(entity_id);
+      S.busy.delete(entity_id);
+      if (entity_id.startsWith('calendar.') || /letzter_lauf/.test(entity_id)) scheduleEvents();
+      scheduleRender();
+    }
+  };
+  ws.onerror = () => { if (!authed) { setMeta('err', 'Nicht verbunden'); showError('Keine Verbindung zu ' + cfg.url + '.'); } };
+  ws.onclose = () => { if (authed) { setMeta('err', 'Verbindung verloren, neuer Versuch …'); setTimeout(connect, 5000); } };
+}
+function send(msg){
+  return new Promise((res, rej) => {
+    if (!ws || ws.readyState !== 1) return rej(new Error('Nicht verbunden'));
+    const id = ++msgId; pending.set(id, {res, rej}); ws.send(JSON.stringify({...msg, id}));
+  });
+}
+const call = (domain, service, data, ret) => send({type:'call_service', domain, service, service_data:data, ...(ret ? {return_response:true} : {})});
+
+/* ---------- Daten der Integration ----------
+   unique_id: Garten "<entry>_<schlüssel>", Kreis "<entry>_<kreis-id>_<schlüssel>".
+   Kreis-Geräte haben die Kennung (garten_bewaesserung, "<entry>_<kreis-id>"). */
+const DOMAIN = 'garten_bewaesserung';
+async function loadAll(){
+  const [devices, entities, states] = await Promise.all([
+    send({type:'config/device_registry/list'}), send({type:'config/entity_registry/list'}), send({type:'get_states'})]);
+  S.entities = entities.filter(e => !e.disabled_by && e.platform === DOMAIN);
+  S.devices = devices.filter(d => (d.identifiers || []).some(([dom]) => dom === DOMAIN));
+  S.mine = new Set(S.entities.map(e => e.entity_id));
+  S.states = new Map(states.filter(s => S.mine.has(s.entity_id)).map(s => [s.entity_id, s]));
+  S.entries = [...new Set(S.entities.map(e => e.config_entry_id).filter(Boolean))];
+  if (!S.entries.includes(S.entry)) S.entry = S.entries[0];
+  render();
+  loadEvents();
+}
+
+function model(entry){
+  const hub = new Map(), zones = new Map();
+  const devOf = id => S.devices.find(d => d.id === id);
+  for (const e of S.entities.filter(x => x.config_entry_id === entry)) {
+    const uid = String(e.unique_id || ''), d = devOf(e.device_id);
+    const ident = (d?.identifiers || []).find(([dom]) => dom === DOMAIN)?.[1] || '';
+    if (ident && ident !== entry && ident.startsWith(entry + '_')) {
+      const kid = ident.slice(entry.length + 1), pre = `${entry}_${kid}_`;
+      if (!zones.has(kid)) zones.set(kid, {id:kid, dev:d, E:new Map()});
+      zones.get(kid).E.set(uid.startsWith(pre) ? uid.slice(pre.length) : uid, e);
+    } else if (uid.startsWith(entry + '_')) hub.set(uid.slice(entry.length + 1), e);
+  }
+  const hubDev = S.devices.find(d => (d.identifiers || []).some(([dom, i]) => dom === DOMAIN && i === entry));
+  return {entry, hub, hubDev, zones:[...zones.values()]};
+}
+const stOf = e => e && S.states.get(e.entity_id);
+const usable = st => st && !['unavailable', 'unknown', ''].includes(st.state);
+const num = st => { const n = parseFloat(st?.state); return usable(st) && Number.isFinite(n) ? n : null; };
+const zoneName = z => { let n = z.dev?.name_by_user || z.dev?.name || z.id; return n.replace(/^Garten\s+/i, '') || n; };
+const isPot = z => /Topf/i.test(z.dev?.model || '') || z.E.has('dosen_heute');
+
+/* ---------- Zeit ---------- */
+const today0 = () => { const t = new Date(); t.setHours(0, 0, 0, 0); return t; };
+function whenDe(v){
+  const t = new Date(v); if (isNaN(t)) return '';
+  const day = new Date(t); day.setHours(0, 0, 0, 0);
+  const diff = Math.round((day - today0()) / 86400000), time = t.toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'});
+  if (diff === 0) return `heute ${time}`; if (diff === 1) return `morgen ${time}`; if (diff === -1) return `gestern ${time}`;
+  return t.toLocaleDateString('de-DE', {weekday:'short', day:'2-digit', month:'2-digit'}) + ' ' + time;
+}
+const rtf = new Intl.RelativeTimeFormat('de', {numeric:'auto'});
+function ago(v){
+  const t = Date.parse(v); if (isNaN(t)) return '';
+  const s = (t - Date.now()) / 1000, a = Math.abs(s);
+  if (a < 60) return 'gerade eben';
+  if (a < 3600) return rtf.format(Math.round(s / 60), 'minute');
+  if (a < 86400) return rtf.format(Math.round(s / 3600), 'hour');
+  return rtf.format(Math.round(s / 86400), 'day');
+}
+
+/* ---------- Verlauf aus dem Bewässerungskalender ---------- */
+async function loadEvents(){
+  const m = model(S.entry), cal = m.hub.get('kalender');
+  if (!cal) { S.events = []; render(); return; }
+  const start = today0(); start.setDate(start.getDate() - 14);
+  const end = today0(); end.setDate(end.getDate() + 3);
+  const iso = t => t.toISOString();
+  try {
+    const r = await call('calendar', 'get_events', {entity_id: cal.entity_id, start_date_time: iso(start), end_date_time: iso(end)}, true);
+    S.events = (r?.response?.[cal.entity_id]?.events || []).map(e => ({...e, s: new Date(e.start), e: new Date(e.end)}))
+      .filter(e => !isNaN(e.s)).sort((a, b) => b.s - a.s);
+  } catch { S.events = []; }
+  render();
+}
+let et; function scheduleEvents(){ clearTimeout(et); et = setTimeout(loadEvents, 1500); }
+
+/* ---------- Darstellung ---------- */
+let rt; function scheduleRender(){ clearTimeout(rt); rt = setTimeout(render, 200); }
+function showError(msg){ $('#main').innerHTML = `<div class="empty">${esc(msg)}<br><button class="btn primary" onclick="connect()">Erneut versuchen</button></div>`; }
+const SPRINKLER = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2c-.5 0-1 .4-1 1v6.1A3 3 0 0 0 9 12v1H7a1 1 0 0 0 0 2h2v5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-5h2a1 1 0 0 0 0-2h-2v-1a3 3 0 0 0-2-2.9V3c0-.6-.5-1-1-1zM4.5 4.2a1 1 0 0 0-.7 1.7l1.4 1.4a1 1 0 1 0 1.4-1.4L5.2 4.5a1 1 0 0 0-.7-.3zm15 0a1 1 0 0 0-.7.3l-1.4 1.4a1 1 0 1 0 1.4 1.4l1.4-1.4a1 1 0 0 0-.7-1.7zM2 9a1 1 0 0 0 0 2h2a1 1 0 0 0 0-2H2zm18 0a1 1 0 0 0 0 2h2a1 1 0 0 0 0-2h-2z"/></svg>';
+const POT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2c-1.7 1.8-2.5 3.5-2.5 5 0 1 .4 1.8 1.2 2.4-.4.5-.7 1-.7 1.6H4l1.6 9.2A2 2 0 0 0 7.6 22h8.8a2 2 0 0 0 2-1.8L20 11h-6c0-.6-.3-1.1-.7-1.6.8-.6 1.2-1.4 1.2-2.4 0-1.5-.8-3.2-2.5-5z"/></svg>';
+
+function heroHTML(m){
+  const g = k => stOf(m.hub.get(k));
+  const next = g('naechster_lauf'), cal = g('kalender'), plan = g('plan_heute');
+  const running = cal?.state === 'on' && /läuft/i.test(cal.attributes.message || '') || plan?.attributes.icon === 'mdi:sprinkler';
+  const pauseSw = m.hub.get('urlaubsmodus'), paused = stOf(pauseSw)?.state === 'on';
+  const skipSw = m.hub.get('heute_ueberspringen'), skip = stOf(skipSw)?.state === 'on';
+  const kind = running ? 'run' : paused ? 'pause' : skip ? 'skip' : 'ok';
+  const stText = {run:'Bewässerung läuft', pause:'Pausiert', skip:'Heute übersprungen', ok:'Automatik aktiv'}[kind];
+  const kreise = plan?.attributes.kreise || [];
+  const time = m.hub.get('bewaesserungszeit'), timeSt = stOf(time);
+  const start = m.hub.get('sofort_start'), stop = m.hub.get('not_aus');
+  const nextTxt = paused ? 'pausiert' : usable(next) ? whenDe(next.state) : 'kein Lauf geplant';
+  return `<article class="hero">
+    <div class="top">
+      <div class="when"><div class="label">Nächster Lauf</div><div class="big">${esc(nextTxt.charAt(0).toUpperCase() + nextTxt.slice(1))}</div>
+        ${usable(next) && !paused ? `<div class="sub">${esc(new Date(next.state).toLocaleDateString('de-DE', {weekday:'long', day:'numeric', month:'long'}))}</div>` : ''}</div>
+      <span class="state ${kind}">${stText}</span>
+    </div>
+    ${kreise.length ? `<div class="mins">${kreise.map(k => `<span>${esc(k.name)} <b>${k.dauer ? nf(k.dauer, 0) + ' min' : '–'}</b></span>`).join('')}</div>` : ''}
+    <div class="actions">
+      ${time ? `<label class="timefield">Startzeit<input type="time" data-act="time" data-ent="${esc(time.entity_id)}" value="${esc(String(timeSt?.state || '').slice(0, 5))}" ${!usable(timeSt) ? 'disabled' : ''}></label>` : ''}
+      ${skipSw ? `<label class="toggle"><button class="sw" role="switch" aria-checked="${skip}" data-act="switch" data-ent="${esc(skipSw.entity_id)}" ${S.busy.has(skipSw.entity_id) ? 'disabled' : ''}></button>Heute überspringen</label>` : ''}
+    </div>
+    <div class="actions">
+      ${start ? `<button class="btn primary" data-press="${esc(start.entity_id)}" data-confirm="Jetzt alle aktiven Kreise bewässern?" ${running || paused ? 'disabled' : ''}>Jetzt bewässern</button>` : ''}
+      ${stop ? `<button class="btn danger ${running ? 'solid' : ''}" data-press="${esc(stop.entity_id)}">Not-Aus</button>` : ''}
+    </div></article>`;
+}
+
+function pauseHTML(m){
+  const sw = m.hub.get('urlaubsmodus'), st = stOf(m.hub.get('pause_status'));
+  if (stOf(sw)?.state !== 'on' && !(usable(st) && st.state !== 'Nicht pausiert')) return '';
+  return `<div class="banner"><div class="txt"><b>Bewässerung pausiert</b><small>${esc(usable(st) ? st.state : '')}</small></div>
+    ${sw ? `<button class="btn" data-act="switch-off" data-ent="${esc(sw.entity_id)}" data-confirm="Bewässerung wieder freigeben? Wasseranschluss und Schläuche vorher prüfen.">Freigeben</button>` : ''}</div>`;
+}
+
+function weatherHTML(m){
+  const a = stOf(m.hub.get('plan_heute'))?.attributes; if (!a) return '';
+  const t = (label, v, unit, em) => `<div class="tile"><span>${label}</span><strong>${v == null ? '–' : nf(v, 1)}${v == null || !unit ? '' : `<small>${unit}</small>`}</strong>${em ? `<em>${esc(em)}</em>` : ''}</div>`;
+  return `<div class="wx">
+    ${t('Max. Temperatur 3 Tage', a.tmax_3d, '°C', a.wetter_ok === false ? 'Wetter nicht verfügbar' : '')}
+    ${t('Regen 24 h', a.regen_24h_mm, 'mm')}
+    ${t('Regen-Vorhersage', a.regen_forecast_mm, 'mm')}
+    ${a.et0_mm != null ? t('Verdunstung ET₀', a.et0_mm, 'mm') : `<div class="tile"><span>Berechnet</span><strong>${a.berechnet_um ? esc(new Date(a.berechnet_um).toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'})) : '–'}</strong><em>alle 30 Minuten</em></div>`}
+  </div>`;
+}
+
+const SOIL_TXT = {eingelagert:'Bodensensor eingelagert', wartet_auf_messwert:'Wartet auf neue Bodenmessung', fehler:'Bodensensor: Konfigurationsfehler'};
+function zoneHTML(z){
+  const g = k => stOf(z.E.get(k)), pot = isPot(z);
+  const aktivE = z.E.get('aktiv'), aktiv = stOf(aktivE)?.state !== 'off';
+  const score = num(g('score')), status = g('status'), f = g('score')?.attributes || {};
+  const soil = num(g('bodenfeuchte')), veto = num(g('veto_schwelle'));
+  const lo = num(g('ziel_unten')), hi = num(g('ziel_oben'));
+  const durE = z.E.get('dauer_heute'), durSt = stOf(durE), dur = num(durSt);
+  const last = g('zuletzt_bewaessert'), soilSt = g('boden_sensorstatus');
+  const vetos = [f.veto_boden && ['Boden feucht', ''], f.veto_regen_beobachtet && ['Regen gefallen', ''], f.veto_regen_forecast && ['Regen erwartet', ''],
+    f.skip && ['Heute übersprungen', 'w'], f.aggressiv && ['Boost', 'w']].filter(Boolean);
+  const dosen = g('dosen_heute'), liter = num(g('liter_heute')), literM = num(g('liter_monat')), kosten = g('kosten_monat');
+  const facts = [];
+  if (usable(last)) facts.push(`Zuletzt <b>${esc(ago(last.state))}</b>`);
+  if (f.tage_seit != null) facts.push(`<b>${nf(f.tage_seit, 1)}</b> Tage seit Bewässerung`);
+  if (pot && usable(dosen)) facts.push(`<b>${esc(dosen.state)}</b> Dosen heute${dosen.attributes.zeiten?.length ? ' (' + esc(dosen.attributes.zeiten.join(', ')) + ')' : ''}`);
+  if (liter != null) facts.push(`<b>${nf(liter, 0)} l</b> heute`);
+  if (literM != null) facts.push(`<b>${nf(literM, 0)} l</b> im Monat${usable(kosten) ? ` · ${nf(+kosten.state, 2)} ${esc(kosten.attributes.unit_of_measurement || '')}` : ''}`);
+  const busyDur = durE && S.busy.has(durE.entity_id);
+  return `<article class="zone ${aktiv ? '' : 'off'}">
+    <div class="zh"><div class="ico">${pot ? POT : SPRINKLER}</div>
+      <div class="n"><b>${esc(zoneName(z))}</b><small>${pot ? 'Topf / Tropf' : 'Rasen / Beet'}${aktiv ? '' : ' · pausiert'}</small></div>
+      ${aktivE ? `<button class="sw" role="switch" aria-checked="${aktiv}" aria-label="${esc(zoneName(z))} aktiv" title="Kreis aktiv" data-act="switch" data-ent="${esc(aktivE.entity_id)}" ${S.busy.has(aktivE.entity_id) ? 'disabled' : ''}></button>` : ''}</div>
+    ${usable(status) ? `<div class="why">${esc(status.state)}</div>` : ''}
+    ${usable(soilSt) && SOIL_TXT[soilSt.state] ? `<div class="vetos"><span class="w">${SOIL_TXT[soilSt.state]}</span></div>` : ''}
+    ${vetos.length ? `<div class="vetos">${vetos.map(([t, c]) => `<span class="${c}">${t}</span>`).join('')}</div>` : ''}
+    <div class="row2">
+      ${pot ? '' : `<div class="meter"><span>Score <b>${score == null ? '–' : nf(score, 0)}</b></span><div class="bar"><i style="width:${score ?? 0}%"></i></div></div>`}
+      ${soil != null || z.E.has('bodenfeuchte') ? `<div class="meter" ${pot ? 'style="grid-column:1 / -1"' : ''}><span>Bodenfeuchte <b>${soil == null ? '–' : nf(soil, 0) + ' %'}</b></span>
+        <div class="bar soil"><i style="width:${soil ?? 0}%"></i>
+          ${pot && lo != null && hi != null ? `<div class="band" style="left:${lo}%;width:${Math.max(0, hi - lo)}%" title="Sollband ${nf(lo, 0)}–${nf(hi, 0)} %"></div>` : ''}
+          ${!pot && veto != null ? `<div class="mark" style="left:${veto}%" title="Veto-Schwelle ${nf(veto, 0)} %"></div>` : ''}</div></div>` : ''}
+    </div>
+    ${durE ? `<div class="dur"><span style="flex:1;font-weight:700;color:var(--muted);font-size:.85rem">Dauer heute</span>
+      <button data-dur="-1" data-ent="${esc(durE.entity_id)}" aria-label="Kürzer" ${busyDur || dur == null ? 'disabled' : ''}>−</button>
+      <output>${dur == null ? '–' : nf(dur, 0)}<small>min</small></output>
+      <button data-dur="1" data-ent="${esc(durE.entity_id)}" aria-label="Länger" ${busyDur || dur == null ? 'disabled' : ''}>+</button></div>` : ''}
+    ${pot && z.E.has('dosen_heute') ? `<button class="btn" data-dose="${esc(z.id)}" ${!aktiv ? 'disabled' : ''}>Dosis jetzt geben</button>` : ''}
+    ${facts.length ? `<div class="facts">${facts.map(x => `<span>${x}</span>`).join('')}</div>` : ''}
+  </article>`;
+}
+
+function historyHTML(m){
+  const last = stOf(m.hub.get('letzter_lauf_bericht'));
+  if (S.events === null) return `<div class="card"><div class="card-h"><h2>Verlauf</h2></div><div class="hint">Lade …</div></div>`;
+  const now = Date.now();
+  const list = S.events.slice(0, 15).map(e => {
+    const mins = Math.round((e.e - e.s) / 60000), plan = e.s > now;
+    return `<div class="ev ${plan ? 'plan' : ''}"><div class="d"><b>${esc(e.s.toLocaleDateString('de-DE', {day:'2-digit', month:'2-digit'}))}</b>
+      <small>${esc(e.s.toLocaleDateString('de-DE', {weekday:'short'}))} ${esc(e.s.toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'}))}</small></div>
+      <div class="x"><b>${esc(e.summary)}</b>${e.description ? `<small>${esc(e.description)}</small>` : ''}</div>
+      <div class="m">${plan ? 'geplant' : mins + ' min'}</div></div>`;
+  }).join('');
+  return `<div class="card"><div class="card-h"><h2>Verlauf</h2><small style="color:var(--muted);font-weight:600">14 Tage</small></div>
+    ${usable(last) ? `<div class="why" style="margin-bottom:6px"><span class="label" style="display:block">Letzter Lauf</span>${esc(last.state)}</div>` : ''}
+    ${list || '<div class="hint">In den letzten 14 Tagen wurde nicht bewässert.</div>'}</div>`;
+}
+
+/* Einstellungen: alle Regler der Integration, nach Garten und Kreisen gruppiert */
+const MAIN_KEYS = new Set(['bewaesserungszeit', 'heute_ueberspringen', 'aktiv', 'dauer_heute', 'sofort_start', 'not_aus']);
+const label = e => { const st = stOf(e); let n = e.name || st?.attributes.friendly_name || e.original_name || e.entity_id;
+  return n.replace(/^Garten\s+/i, ''); };
+function ctlHTML(e){
+  const id = e.entity_id, dom = id.split('.')[0], st = stOf(e), na = !usable(st) && !['button', 'datetime'].includes(dom);
+  const busy = S.busy.has(id), n = esc(e.original_name || e.name || label(e)), u = st?.attributes.unit_of_measurement;
+  const name = `<div class="n">${n}${busy ? '<small>Wird gesendet …</small>' : u ? `<small>${esc(u)}</small>` : ''}</div>`;
+  if (dom === 'switch') return `<div class="ctl">${name}<button class="sw" role="switch" aria-checked="${st?.state === 'on'}" aria-label="${n}" data-act="switch" data-ent="${esc(id)}" ${na || busy ? 'disabled' : ''}></button></div>`;
+  if (dom === 'select') return `<div class="ctl">${name}<select data-act="select" data-ent="${esc(id)}" aria-label="${n}" ${na ? 'disabled' : ''}>
+    ${(st?.attributes.options || []).map(o => `<option ${o === st.state ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select></div>`;
+  if (dom === 'number') { const a = st?.attributes || {};
+    return `<div class="ctl">${name}<input type="number" data-act="number" data-ent="${esc(id)}" aria-label="${n}" value="${esc(st?.state)}" min="${a.min ?? ''}" max="${a.max ?? ''}" step="${a.step ?? 1}" ${na ? 'disabled' : ''}></div>`; }
+  if (dom === 'time') return `<div class="ctl">${name}<input type="time" data-act="time" data-ent="${esc(id)}" aria-label="${n}" value="${esc(String(st?.state || '').slice(0, 5))}" ${na ? 'disabled' : ''}></div>`;
+  if (dom === 'datetime') { const v = usable(st) ? new Date(st.state) : null;
+    const local = v && !isNaN(v) ? new Date(v - v.getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '';
+    return `<div class="ctl">${name}<input type="datetime-local" data-act="datetime" data-ent="${esc(id)}" aria-label="${n}" value="${local}" ${st?.state === 'unavailable' ? 'disabled' : ''}></div>`; }
+  if (dom === 'button') return `<div class="ctl">${name}<button class="btn" data-press="${esc(id)}" ${busy ? 'disabled' : ''}>Ausführen</button></div>`;
+  return '';
+}
+function settingsHTML(m, open){
+  const ctls = list => list.filter(e => /^(switch|select|number|time|datetime|button)\./.test(e.entity_id));
+  const hubC = ctls([...m.hub.entries()].filter(([k]) => !MAIN_KEYS.has(k)).map(([, e]) => e));
+  const groups = [['Garten', hubC], ...m.zones.map(z => [zoneName(z), ctls([...z.E.entries()].filter(([k]) => !MAIN_KEYS.has(k)).map(([, e]) => e))])]
+    .filter(([, l]) => l.length);
+  const total = groups.reduce((s, [, l]) => s + l.length, 0);
+  if (!total) return '';
+  return `<details class="more" data-k="set" ${open ? 'open' : ''}><summary>Einstellungen <small>${total}</small></summary><div class="body">
+    ${groups.map(([t, l]) => `<div class="group"><h3>${esc(t)}</h3><div class="controls">${l.map(ctlHTML).join('')}</div></div>`).join('')}
+    <p class="hint">Kreise, Ventile, Sensoren und das Tuning der Formel stellst du in den Optionen der Integration ein.</p></div></details>`;
+}
+
+function render(){
+  if (!S.entities.length) { $('#main').innerHTML = '<div class="empty">Keine Einträge der Integration Garten-Bewässerung (Score Irrigation) gefunden.</div>'; return; }
+  const ae = document.activeElement;
+  if (ae && ['SELECT', 'INPUT'].includes(ae.tagName) && $('#main').contains(ae)) return; // nicht stören, während etwas eingegeben wird
+  const open = !!document.querySelector('details.more[open]');
+  const m = model(S.entry);
+  let html = '';
+  if (S.entries.length > 1) html += `<div class="seg" style="margin-bottom:14px" role="group" aria-label="Garten">${S.entries.map(id => {
+    const d = S.devices.find(x => (x.identifiers || []).some(([dom, i]) => dom === DOMAIN && i === id));
+    return `<button data-entry="${esc(id)}" aria-pressed="${id === S.entry}">${esc(d?.name_by_user || d?.name || 'Garten')}</button>`; }).join('')}</div>`;
+  html += heroHTML(m) + pauseHTML(m) + weatherHTML(m);
+  if (m.zones.length) html += `<h2 class="sec">Kreise</h2><div class="zones">${m.zones
+    .sort((a, b) => zoneName(a).localeCompare(zoneName(b), 'de')).map(zoneHTML).join('')}</div>`;
+  else html += '<div class="empty" style="margin-top:14px">Noch kein Kreis angelegt – in den Optionen der Integration „Kreis hinzufügen“.</div>';
+  html += historyHTML(m) + settingsHTML(m, open);
+  $('#main').innerHTML = html;
+}
+
+/* ---------- Aktionen ---------- */
+async function run(key, fn, msg){
+  S.busy.add(key); render();
+  try { await fn(); toast(msg || 'Gespeichert'); }
+  catch (err) { toast('Fehlgeschlagen: ' + err.message, true); }
+  setTimeout(() => { S.busy.delete(key); render(); }, 3000);
+}
+$('#main').addEventListener('click', e => {
+  const t = e.target.closest('button'); if (!t) return;
+  if (t.dataset.entry) { S.entry = t.dataset.entry; save('gb2:entry', S.entry); S.events = null; render(); loadEvents(); return; }
+  if (t.dataset.confirm && !confirm(t.dataset.confirm)) return;
+  if (t.dataset.press) {
+    const id = t.dataset.press, stop = /not_aus/.test(id);
+    run(id, () => call('button', 'press', {entity_id:id}), stop ? 'Alle Ventile werden geschlossen' : 'Ausgelöst');
+    return;
+  }
+  if (t.dataset.act === 'switch') { const id = t.dataset.ent; run(id, () => call('switch', t.getAttribute('aria-checked') === 'true' ? 'turn_off' : 'turn_on', {entity_id:id})); return; }
+  if (t.dataset.act === 'switch-off') { const id = t.dataset.ent; run(id, () => call('switch', 'turn_off', {entity_id:id}), 'Bewässerung freigegeben'); return; }
+  if (t.dataset.dur) {
+    const id = t.dataset.ent, st = S.states.get(id), a = st?.attributes || {};
+    const v = Math.min(a.max ?? 90, Math.max(a.min ?? 0, (parseFloat(st?.state) || 0) + (+t.dataset.dur) * (a.step || 1)));
+    run(id, () => call('number', 'set_value', {entity_id:id, value:v}), `Dauer ${v} min`);
+    return;
+  }
+  if (t.dataset.dose) {
+    if (!confirm('Jetzt eine Dosis geben?')) return;
+    run('dose:' + t.dataset.dose, () => call(DOMAIN, 'dosis_geben', {kreis:t.dataset.dose}), 'Dosis wird gegeben');
+  }
+});
+$('#main').addEventListener('change', e => {
+  const el = e.target.closest('[data-act]'); if (!el) return; const id = el.dataset.ent, act = el.dataset.act;
+  const cur = String(S.states.get(id)?.state ?? ''), v = el.value;
+  if (v === cur || (act === 'time' && v + ':00' === cur) || (act === 'number' && +v === +cur)) return;
+  el.blur();
+  if (act === 'select') run(id, () => call('select', 'select_option', {entity_id:id, option:v}));
+  if (act === 'number') run(id, () => call('number', 'set_value', {entity_id:id, value:+v}));
+  if (act === 'time' && v) run(id, () => call('time', 'set_value', {entity_id:id, time:v + ':00'}), 'Startzeit gespeichert');
+  if (act === 'datetime' && v) run(id, () => call('datetime', 'set_value', {entity_id:id, datetime:new Date(v).toISOString()}));
+});
+setInterval(() => { if (S.entities.length) render(); }, 60000);
+setInterval(() => { if (S.entities.length) loadEvents(); }, 15 * 60000);
+connect();
+</script>
+</body>
+</html>
