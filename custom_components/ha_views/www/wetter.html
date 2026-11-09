@@ -141,6 +141,23 @@ h1{margin:0;font-size:1.6rem;font-weight:800;letter-spacing:-.02em;line-height:1
 .uv .t small{color:var(--muted);font-weight:600}
 .empty{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:36px 20px;text-align:center;color:var(--muted)}
 .empty .btn{margin-top:12px}
+.tag{display:inline-block;font-size:.7rem;font-weight:800;border-radius:6px;padding:1px 6px;margin-left:6px;background:var(--surface-2);color:var(--muted);vertical-align:1px}
+dialog#alarm{border:0;padding:0;background:var(--surface);color:var(--ink);border-radius:18px;width:min(520px,calc(100% - 24px));max-height:calc(100% - 40px);box-shadow:0 20px 60px rgba(0,0,0,.35)}
+dialog#alarm::backdrop{background:rgba(8,14,26,.6)}
+.al-h{display:flex;align-items:center;gap:12px;padding:18px 20px;background:var(--sev);color:#fff}
+.al-h.minor{color:#2A2200}
+.al-h svg{width:34px;height:34px;flex:none}
+.al-h b{display:block;font-size:1.15rem;font-weight:800;line-height:1.2}
+.al-h small{font-weight:700;opacity:.9}
+.al-b{padding:16px 20px 20px;display:grid;gap:12px;overflow:auto}
+.al-w + .al-w{border-top:1px solid var(--line);padding-top:12px}
+.al-w h3{margin:0 0 4px;font-size:1.02rem;font-weight:800}
+.al-w .when{color:var(--muted);font-weight:700;font-size:.85rem;margin-bottom:6px}
+.al-w p{margin:0 0 8px;white-space:pre-line;font-size:.93rem}
+.al-w .act{background:var(--surface-2);border-radius:10px;padding:9px 11px;font-size:.92rem}
+.al-w .act b{display:block;font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.al-f{display:flex;justify-content:flex-end;padding:0 20px 18px}
+@media (max-width:640px){ dialog#alarm{width:100%;max-width:100%;margin:auto 0 0;border-radius:18px 18px 0 0;max-height:92%;padding-bottom:env(safe-area-inset-bottom,0px)} }
 .hint{font-size:.8rem;color:var(--muted);margin:10px 0 0}
 
 @media (max-width:760px){ .vals{grid-template-columns:repeat(2,minmax(0,1fr))} }
@@ -168,6 +185,7 @@ h1{margin:0;font-size:1.6rem;font-weight:800;letter-spacing:-.02em;line-height:1
   </header>
   <main id="main"></main>
 </div>
+<dialog id="alarm" aria-labelledby="alTitle"></dialog>
 
 <script>
 const $ = s => document.querySelector(s);
@@ -207,7 +225,7 @@ const NO_LOGIN = 'Keine Anmeldung gefunden. Öffne die Seite über die Seitenlei
 // Die Seite wird von Home Assistant selbst ausgeliefert: Adresse = Herkunft der Seite.
 const cfg = {url: location.origin};
 
-const S = {entries:[], entities:[], devices:[], states:new Map(), entry: load('ww:entry'), fc:{hourly:null, daily:null}, subs:[], open:new Set()};
+const S = {entries:[], entities:[], dwd:[], devices:[], states:new Map(), entry: load('ww:entry'), fc:{hourly:null, daily:null}, subs:[], open:new Set()};
 let ws, msgId = 0; const pending = new Map(), listeners = new Map();
 function setMeta(kind, text){ const m = $('#meta'); m.className = 'meta ' + kind; m.querySelector('span').textContent = text; }
 
@@ -252,13 +270,16 @@ function subscribe(msg, fn){
 }
 
 /* ---------- Daten der Integration (unique_id = "<entry>_<schlüssel>") ---------- */
-const DOMAIN = 'wetter';
+const DOMAIN = 'wetter', DWD = 'dwd_weather_warnings';
 async function loadAll(){
   const [devices, entities, states] = await Promise.all([
     send({type:'config/device_registry/list'}), send({type:'config/entity_registry/list'}), send({type:'get_states'})]);
   S.entities = entities.filter(e => !e.disabled_by && e.platform === DOMAIN);
+  // DWD Weather Warnings (Kern-Integration): je Warnregion „aktuelle Warnstufe“ und „Vorabinformation“
+  S.dwd = entities.filter(e => !e.disabled_by && e.platform === DWD &&
+    /-(current|advance)_warning_level$/.test(String(e.unique_id || '')));
   S.devices = devices.filter(d => (d.identifiers || []).some(([dom]) => dom === DOMAIN));
-  S.mine = new Set(S.entities.map(e => e.entity_id));
+  S.mine = new Set([...S.entities, ...S.dwd].map(e => e.entity_id));
   S.states = new Map(states.filter(s => S.mine.has(s.entity_id)).map(s => [s.entity_id, s]));
   S.entries = [...new Set(S.entities.map(e => e.config_entry_id).filter(Boolean))];
   if (!S.entries.includes(S.entry)) S.entry = S.entries[0];
@@ -330,21 +351,77 @@ function whenDe(v){
 let rt; function scheduleRender(){ clearTimeout(rt); rt = setTimeout(render, 150); }
 function showError(msg){ $('#main').innerHTML = `<div class="empty">${esc(msg)}<br><button class="btn primary" onclick="connect()">Erneut versuchen</button></div>`; }
 
+/* DWD Weather Warnings: Stufe 1 Wetterwarnung … 4 extremes Unwetter */
+const DWD_LVL = {1:['minor', 'Wetter'], 2:['moderate', 'Markant'], 3:['severe', 'Unwetter'], 4:['extreme', 'Extrem']};
+function dwdWarnings(){
+  const out = [];
+  for (const e of S.dwd) {
+    const s = S.states.get(e.entity_id); if (!usable(s)) continue;
+    const a = s.attributes, advance = /-advance_warning_level$/.test(e.unique_id), n = +a.warning_count || 0;
+    for (let i = 1; i <= n; i++) {
+      const g = k => a[`warning_${i}_${k}`] ?? a[`warning_${i}`]?.[k];
+      const level = Math.max(1, Math.min(4, +g('level') || 1)), start = g('start') ?? g('start_time'), end = g('end') ?? g('end_time');
+      out.push({id:`dwd:${a.region_id || e.entity_id}:${g('type') ?? g('event_code')}:${start}`, level, advance,
+        headline:g('headline') || g('name') || g('event'), event:g('name') || g('event'), description:g('description'),
+        actions:g('instruction'), start, end, region:a.region_name});
+    }
+  }
+  return out;
+}
+function unifiedWarnings(){
+  const ws = st('warnings'), own = (ws?.attributes.warnings || []).map(w => {
+    const [cls, txt] = SEV[w.severity] || SEV.Minor;
+    return {id:w.id, cls, txt, headline:w.headline || w.event || 'Warnung', start:w.start, end:w.expires, description:w.description,
+      actions:w.recommended_actions, src:[w.sender || w.provider, w.affected_areas].filter(Boolean).join(' · '), url:w.more_info_url, rank:{extreme:4, severe:3, moderate:2, minor:1}[cls]};
+  });
+  // dieselbe DWD-Warnung kommt oft aus beiden Integrationen: nur einmal zeigen
+  const key = h => String(h || '').toLowerCase().replace(/[^a-zäöüß0-9]/g, '');
+  const known = new Set(own.map(w => key(w.headline)));
+  const dwd = dwdWarnings().filter(w => !known.has(key(w.headline))).map(w => {
+    const [cls, txt] = DWD_LVL[w.level];
+    return {id:w.id, cls, txt, headline:w.headline, start:w.start, end:w.end, description:w.description, actions:w.actions,
+      src:['Deutscher Wetterdienst', w.region].filter(Boolean).join(' · '), tag:w.advance ? 'Vorab' : 'DWD', rank:w.level - (w.advance ? .5 : 0)};
+  });
+  return [...own, ...dwd].sort((a, b) => b.rank - a.rank || String(a.start).localeCompare(String(b.start)));
+}
 function warningsHTML(){
-  const s = st('warnings'); if (!s) return '';
-  const list = s.attributes.warnings || [], area = s.attributes.area, stale = s.attributes.stale || [];
+  const s = st('warnings');
+  if (!s && !S.dwd.length) return '';
+  const list = unifiedWarnings();
+  const area = s?.attributes.area || S.dwd.map(e => S.states.get(e.entity_id)?.attributes.region_name).find(Boolean), stale = s?.attributes.stale || [];
   const staleHTML = stale.length ? `<div class="stale">Nicht erreichbar: ${esc([].concat(stale).join(', '))} – letzte Warnungen bleiben stehen.</div>` : '';
-  if (!list.length) return `<div class="allclear">Keine Warnungen${area ? '' : ''}<small>${esc(area || '')}</small></div>${staleHTML}`;
+  if (!list.length) return `<div class="allclear">Keine Warnungen<small>${esc(area || '')}</small></div>${staleHTML}`;
   return `<div class="warns">${list.map(w => {
-    const [cls, txt] = SEV[w.severity] || SEV.Minor, open = S.open.has(w.id);
-    const range = [w.start && 'ab ' + whenDe(w.start), w.expires && 'bis ' + whenDe(w.expires)].filter(Boolean).join(' ');
-    return `<details class="warn" style="--sev:var(--${cls})" data-id="${esc(w.id)}" ${open ? 'open' : ''}><summary>
-      <span class="lvl ${cls}">${txt}</span><div class="h"><b>${esc(w.headline || w.event || 'Warnung')}</b><small>${esc(range)}</small></div></summary>
+    const open = S.open.has(w.id);
+    const range = [w.start && 'ab ' + whenDe(w.start), w.end && 'bis ' + whenDe(w.end)].filter(Boolean).join(' ');
+    return `<details class="warn" style="--sev:var(--${w.cls})" data-id="${esc(w.id)}" ${open ? 'open' : ''}><summary>
+      <span class="lvl ${w.cls}">${w.txt}</span><div class="h"><b>${esc(w.headline)}${w.tag ? `<span class="tag">${w.tag}</span>` : ''}</b><small>${esc(range)}</small></div></summary>
       <div class="body">${w.description ? `<p>${esc(w.description)}</p>` : ''}
-        ${w.recommended_actions ? `<div class="act"><b>Was tun?</b><p>${esc(w.recommended_actions)}</p></div>` : ''}
-        <div class="src">${esc([w.sender || w.provider, w.affected_areas].filter(Boolean).join(' · '))}</div>
-        ${w.more_info_url ? `<a class="btn" href="${esc(w.more_info_url)}" target="_blank" rel="noopener">Mehr Informationen</a>` : ''}</div></details>`;
+        ${w.actions ? `<div class="act"><b>Was tun?</b><p>${esc(w.actions)}</p></div>` : ''}
+        <div class="src">${esc(w.src)}</div>
+        ${w.url ? `<a class="btn" href="${esc(w.url)}" target="_blank" rel="noopener">Mehr Informationen</a>` : ''}</div></details>`;
   }).join('')}</div>${staleHTML}`;
+}
+
+/* Popup: neue aktuelle DWD-Warnung, die in diesem Browser noch nicht bestätigt wurde */
+const WARN_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2 1 21h22L12 2zm0 6 1 7h-2l1-7zm0 9.2a1.3 1.3 0 1 1 0 2.6 1.3 1.3 0 0 1 0-2.6z"/></svg>';
+function checkAlarm(){
+  const dlg = $('#alarm'); if (dlg.open) return;
+  const seen = new Set(load('ww:seen') || []);
+  const fresh = dwdWarnings().filter(w => !w.advance && !seen.has(w.id)).sort((a, b) => b.level - a.level);
+  if (!fresh.length) return;
+  const top = fresh[0], [cls, txt] = DWD_LVL[top.level];
+  dlg.innerHTML = `<div class="al-h ${cls}" style="--sev:var(--${cls})">${WARN_ICON}<div><b id="alTitle">${fresh.length > 1 ? fresh.length + ' Wetterwarnungen' : esc(txt === 'Wetter' ? 'Wetterwarnung' : txt === 'Markant' ? 'Markantes Wetter' : txt === 'Extrem' ? 'Extremes Unwetter' : 'Unwetterwarnung')}</b>
+      <small>${esc(top.region || 'Deutscher Wetterdienst')}</small></div></div>
+    <div class="al-b">${fresh.map(w => `<div class="al-w"><h3>${esc(w.headline)}</h3>
+      <div class="when">${esc([w.start && 'ab ' + whenDe(w.start), w.end && 'bis ' + whenDe(w.end)].filter(Boolean).join(' '))}</div>
+      ${w.description ? `<p>${esc(w.description)}</p>` : ''}${w.actions ? `<div class="act"><b>Was tun?</b>${esc(w.actions)}</div>` : ''}</div>`).join('')}</div>
+    <div class="al-f"><button class="btn primary" id="alOk">Verstanden</button></div>`;
+  $('#alOk').onclick = () => {
+    const ids = [...seen, ...fresh.map(w => w.id)].slice(-100);
+    save('ww:seen', ids); dlg.close();
+  };
+  dlg.showModal();
 }
 
 function nowHTML(){
@@ -428,14 +505,15 @@ function healthHTML(){
 }
 
 function render(){
-  if (!S.entities.length) { $('#main').innerHTML = '<div class="empty">Keine Einträge der Integration „Wetter & Warnungen“ gefunden.</div>'; return; }
+  if (!S.entities.length && !S.dwd.length) { $('#main').innerHTML = '<div class="empty">Keine Einträge der Integration „Wetter & Warnungen“ oder „DWD Weather Warnings“ gefunden.</div>'; return; }
+  checkAlarm();
   const dev = id => S.devices.find(d => (d.identifiers || []).some(([dom, i]) => dom === DOMAIN && i === id));
   let html = '';
   if (S.entries.length > 1) html += `<div class="seg" style="margin-bottom:14px" role="group" aria-label="Ort">${S.entries.map(id =>
     `<button data-entry="${esc(id)}" aria-pressed="${id === S.entry}">${esc(dev(id)?.name_by_user || dev(id)?.name || 'Wetter')}</button>`).join('')}</div>`;
   const d = dev(S.entry);
   $('#title').textContent = S.entries.length > 1 || !d ? 'Wetter' : 'Wetter ' + (d.name_by_user || d.name || '').replace(/^Wetter\s*/i, '');
-  html += warningsHTML() + nowHTML() + hourlyHTML() + dailyHTML() + healthHTML();
+  html += warningsHTML() + (S.entities.length ? nowHTML() + hourlyHTML() + dailyHTML() + healthHTML() : '');
   const w = st('weather');
   if (w?.attributes.attribution) html += `<p class="hint">${esc(w.attributes.attribution)}</p>`;
   const sc = $('.hscroll')?.scrollLeft;
@@ -449,7 +527,7 @@ $('#main').addEventListener('click', e => {
 });
 // geöffnete Warnungen über Aktualisierungen hinweg offen halten
 $('#main').addEventListener('toggle', e => { const d = e.target; if (d.matches?.('details.warn')) d.open ? S.open.add(d.dataset.id) : S.open.delete(d.dataset.id); }, true);
-setInterval(() => { if (S.entities.length) render(); }, 60000);
+setInterval(() => { if (S.entities.length || S.dwd.length) render(); }, 60000);
 connect();
 </script>
 </body>

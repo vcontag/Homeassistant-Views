@@ -16,7 +16,7 @@ eingerichtet ist, und verschwindet wieder, wenn du sie entfernst.
 | Wasser (Grünbeck) | Grünbeck Cloud (`gruenbeck_cloud`) eingerichtet ist |
 | Abfall | Waste Collection Schedule (`waste_collection_schedule`) eingerichtet ist – über die Oberfläche oder per YAML |
 | Garten | Garten-Bewässerung — Score Irrigation (`garten_bewaesserung`) eingerichtet ist |
-| Wetter | Wetter & Warnungen (`wetter`) eingerichtet ist |
+| Wetter | Wetter & Warnungen (`wetter`) oder DWD Weather Warnings (`dwd_weather_warnings`) eingerichtet ist |
 | Zigbee | ZHA eingerichtet ist oder Zigbee2MQTT-Geräte vorhanden sind |
 
 Die Seiten passen sich hellem und dunklem Design an, sind für das Handy optimiert und
@@ -111,3 +111,8 @@ Für die Integration [Wetter & Warnungen](https://github.com/SH1FT-W/wetter-warn
 steht „Keine Warnungen“ mit dem Warngebiet. Darunter das aktuelle Wetter mit „Regen in X Minuten“, Wind, Luftfeuchte,
 Druck und Sicht, die nächsten 48 Stunden mit Temperaturkurve und Niederschlag, die Vorhersage für 8 Tage sowie
 Pollenflug und UV-Index. Die Vorhersage aktualisiert sich live.
+
+Ist zusätzlich die Integration **DWD Weather Warnings** eingerichtet, kommen ihre Warnungen für die eingestellte
+Warnregion mit in die Liste (Vorabinformationen gekennzeichnet). Gibt es eine neue **aktuelle** DWD-Warnung, öffnet
+die Seite ein **Popup** mit Stufe, Zeitraum, Text und Handlungsempfehlung. Nach „Verstanden“ erscheint dieselbe
+Warnung in diesem Browser nicht erneut. Ist nur DWD Weather Warnings eingerichtet, zeigt die Seite nur die Warnungen.
