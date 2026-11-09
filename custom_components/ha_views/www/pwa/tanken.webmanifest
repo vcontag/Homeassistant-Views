@@ -1,0 +1,31 @@
+{
+  "id": "/ha_views/tanken.html",
+  "name": "Tanken",
+  "short_name": "Tanken",
+  "lang": "de",
+  "start_url": "../tanken.html",
+  "scope": "../tanken.html",
+  "display": "standalone",
+  "background_color": "#ECEFF4",
+  "theme_color": "#ECEFF4",
+  "icons": [
+    {
+      "src": "tanken-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "tanken-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "tanken-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

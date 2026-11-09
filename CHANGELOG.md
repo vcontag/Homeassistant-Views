@@ -4,6 +4,16 @@ Neue Einträge oben. Die Überschrift `## <Version>` muss zu `version` in
 `custom_components/ha_views/manifest.json` passen – der Abschnitt wird beim Release
 automatisch als Beschreibung übernommen.
 
+## 1.6.0
+- Neue Ansicht **FRITZ!Box** für die Integration FRITZ!Box Tools: Internetverbindung mit externer IPv4/IPv6 und
+  Verbindungsdauer, FRITZ!OS-Version mit Update, Download/Upload live mit Auslastung und Verlauf (3 Stunden),
+  WLAN-Netze schaltbar, Gast-WLAN mit QR-Code und neuem Passwort, Geräte im Netz (Suche, online/alle, IP,
+  LAN/WLAN, Internetzugang je Gerät, Wake on LAN), Portfreigaben, Rufumleitungen, Leitungswerte (DSL),
+  Neu verbinden und Neustart.
+- Neue Ansicht **Tanken** für die Integration Tankerkönig: günstigste geöffnete Tankstelle für E5, E10 oder Diesel
+  mit Route, alle Tankstellen nach Preis mit Abstand zur günstigsten, Preisverlauf der letzten 24 Stunden und die
+  meist günstigste Tageszeit aus den letzten 7 Tagen.
+
 ## 1.5.3
 - **Mobilansicht in App-Browsern:** Manche Apps ignorieren die Viewport-Angabe, bauen die Seite mit Desktop-Breite auf
   (z. B. 1082 px) und verkleinern sie aufs Display – winzige Desktop-Ansicht. Die Seiten erkennen das jetzt
