@@ -107,12 +107,11 @@ Schwellen, Boost …) sind unter „Einstellungen“ eingeklappt.
 ## Wetter (Wetter & Warnungen)
 
 Für die Integration [Wetter & Warnungen](https://github.com/SH1FT-W/wetter-warnungen). Ganz oben die **amtlichen Warnungen**
-(DWD und NINA), nach Schwere gefärbt; ein Tipp zeigt Beschreibung, Handlungsempfehlung und Absender. Ohne Warnung
+(DWD und NINA), nach Schwere gefärbt; ein Tipp öffnet ein Popup mit Beschreibung, Handlungsempfehlung und Absender. Ohne Warnung
 steht „Keine Warnungen“ mit dem Warngebiet. Darunter das aktuelle Wetter mit „Regen in X Minuten“, Wind, Luftfeuchte,
 Druck und Sicht, die nächsten 48 Stunden mit Temperaturkurve und Niederschlag, die Vorhersage für 8 Tage sowie
 Pollenflug und UV-Index. Die Vorhersage aktualisiert sich live.
 
 Ist zusätzlich die Integration **DWD Weather Warnings** eingerichtet, kommen ihre Warnungen für die eingestellte
-Warnregion mit in die Liste (Vorabinformationen gekennzeichnet). Gibt es eine neue **aktuelle** DWD-Warnung, öffnet
-die Seite ein **Popup** mit Stufe, Zeitraum, Text und Handlungsempfehlung. Nach „Verstanden“ erscheint dieselbe
-Warnung in diesem Browser nicht erneut. Ist nur DWD Weather Warnings eingerichtet, zeigt die Seite nur die Warnungen.
+Warnregion mit in die Liste (Vorabinformationen gekennzeichnet); auch sie zeigen ihre Details im Popup.
+Ist nur DWD Weather Warnings eingerichtet, zeigt die Seite nur die Warnungen.
