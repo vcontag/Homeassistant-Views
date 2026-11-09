@@ -8,7 +8,9 @@ automatisch als Beschreibung übernommen.
 - **Mobilansicht in App-Browsern:** Manche Apps ignorieren die Viewport-Angabe, bauen die Seite mit Desktop-Breite auf
   (z. B. 1082 px) und verkleinern sie aufs Display – winzige Desktop-Ansicht. Die Seiten erkennen das jetzt
   (Touch-Gerät, Seite deutlich breiter als das Display), vergrößern sich passend und zeigen die Mobilansicht.
-  Normale Handys, Tablets und PCs sind nicht betroffen. Abschaltbar auf der Diagnoseseite („Mobilansicht anpassen“).
+  Das gilt **nur in eingebauten App-Browsern** (Android WebView, iOS-App-Browser): In Chrome, Samsung Internet,
+  Firefox und Safari bleibt „Desktop-Website“ eine bewusste Wahl und funktioniert wie gewohnt. Normale Handys,
+  Tablets und PCs sind nicht betroffen. Abschaltbar auf der Diagnoseseite („Mobilansicht anpassen“).
 - Diagnoseseite zeigt, ob und wie stark angepasst wird.
 
 ## 1.5.2

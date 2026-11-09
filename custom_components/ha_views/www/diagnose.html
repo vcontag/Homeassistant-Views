@@ -77,7 +77,7 @@ pre{white-space:pre-wrap;word-break:break-word;background:var(--surface-2);borde
   <div class="card"><h2>Mobilansicht anpassen</h2>
     <div class="seg" role="group" aria-label="Mobilansicht anpassen" id="fit">
       <button data-v="auto">Automatisch</button><button data-v="off">Aus</button></div>
-    <p class="hint">Rechnet der Browser einer App mit einer Desktop-Breite, vergrößert sich die Seite selbst passend und zeigt die Mobilansicht. „Aus“ schaltet das in diesem Browser bzw. dieser App ab.</p>
+    <p class="hint">Nur in eingebauten Browsern von Apps: Rechnet so ein Browser mit einer Desktop-Breite, vergrößert sich die Seite selbst passend und zeigt die Mobilansicht. In normalen Browsern (Chrome, Samsung Internet, Firefox, Safari) bleibt die Wahl „Desktop-Website“ erhalten. „Aus“ schaltet die Anpassung in dieser App ab.</p>
   </div>
 
   <div class="card"><h2>Breite</h2>
@@ -110,7 +110,7 @@ function measure(){
   const ua = navigator.userAgent, vv = window.visualViewport;
   return {
     ua,
-    webview: /; wv\)|Version\/[\d.]+ Chrome\/[\d.]+ Mobile/.test(ua) && /Android/.test(ua),
+    webview: window.HAV ? HAV.inApp() : /; wv\)/.test(ua),
     mobileUA: /Mobi|Android|iPhone|iPad/i.test(ua),
     companion: /Home ?Assistant/i.test(ua),
     innerW: innerWidth, innerH: innerHeight, docW: document.documentElement.clientWidth,
@@ -138,10 +138,12 @@ function findings(m){
   if (m.fitZoom > 1) out.push(['ok', 'Mobilansicht angepasst', `Die App rechnet mit ${m.innerW} px statt ${m.screenW} px. Die Seiten gleichen das aus (Vergrößerung ${String(m.fitZoom).replace('.', ',')}×) und zeigen die Mobilansicht.`]);
   else if (m.mobileView) out.push(['ok', 'Mobilansicht aktiv', `Die Seite rechnet mit ${m.innerW} px Breite.`]);
   else if (phone && m.screenW <= 900) {
-    const why = !m.mobileUA ? 'Der Browser meldet sich als Desktop-Rechner – in der App ist vermutlich „Desktop-Website“ / „Desktop-Modus“ eingeschaltet. Bitte dort ausschalten.'
+    const why = !m.webview ? 'Das ist ein normaler Browser – dort ist vermutlich „Desktop-Website“ eingeschaltet (Menü des Browsers). Das bleibt bewusst so, die Seiten passen sich nur in App-Browsern selbst an.'
+      : !m.mobileUA ? 'Der Browser meldet sich als Desktop-Rechner – in der App ist vermutlich „Desktop-Website“ / „Desktop-Modus“ eingeschaltet. Bitte dort ausschalten.'
       : m.innerW >= 900 ? 'Der Browser der App ignoriert die Viewport-Angabe der Seite und rechnet mit einer festen Desktop-Breite. In den App-Einstellungen nach „Weite Ansicht“, „Übersichtsmodus“, „Seite einpassen“ oder „Desktop-Modus“ suchen und ausschalten.'
       : (m.vvScale && m.vvScale < 1) ? 'Die Seite ist herausgezoomt. Zoom bzw. Textgröße der App auf 100 % stellen.'
       : 'Die App rechnet mit einer größeren Breite als das Display. Prüfe Zoom-/Textgrößen-Einstellungen der App.';
+    if (!m.webview) out.push(['ok', 'Desktop-Ansicht im Browser', `Display ${m.screenW} px, die Seite rechnet mit ${m.innerW} px. ${why}`]); else
     out.push(['bad', 'Keine Mobilansicht', `Display ${m.screenW} px breit, die Seite rechnet aber mit ${m.innerW} px. ${m.fitChoice === 'off' ? 'Die automatische Anpassung ist ausgeschaltet (siehe oben). ' : ''}${why}`]);
   } else out.push(['ok', 'Desktop-Ansicht', `Großer Bildschirm (${m.innerW} px) – die Desktop-Ansicht ist hier richtig.`]);
   // Design

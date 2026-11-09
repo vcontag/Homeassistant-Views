@@ -4,7 +4,7 @@
 //    Bei "auto" gilt innerhalb von Home Assistant (Seitenleiste, Companion-App, Webseiten-Karte) das Design von
 //    Home Assistant, sonst das Systemdesign. Die Seiten färben sich über :root[data-theme="light"|"dark"].
 //
-// 2. Mobilansicht: Manche Apps (eingebauter Browser/WebView) ignorieren die Viewport-Angabe, bauen die Seite mit
+// 2. Mobilansicht (nur in eingebauten App-Browsern): Manche Apps (WebView) ignorieren die Viewport-Angabe, bauen die Seite mit
 //    Desktop-Breite (z. B. 1082 px) auf und verkleinern sie dann aufs Display. Erkennt die Seite das (Touch-Gerät,
 //    Seite deutlich breiter als das Display), vergrößert sie sich passend (CSS-Zoom) und schaltet die
 //    Breiten-Regeln (@media min/max-width) so, als wäre das Fenster so breit wie das Display.
@@ -40,8 +40,17 @@
     var land = innerWidth > innerHeight;
     return land ? Math.max(sw, sh) : Math.min(sw, sh);
   }
+  // Eingebauter Browser einer App (WebView)? Nur dort wird angepasst – in normalen Browsern (Chrome, Samsung
+  // Internet, Firefox, Safari) bleibt „Desktop-Website“ eine bewusste Wahl.
+  function inApp() {
+    var ua = navigator.userAgent || '';
+    if (/; wv\)/.test(ua)) return true;                                          // Android WebView
+    if (/Android/.test(ua) && /Version\/[\d.]+ Chrome\//.test(ua)) return true;     // ältere Android WebView
+    if (/(iPhone|iPad|iPod)/.test(ua) && !/Safari\//.test(ua)) return true;       // iOS WKWebView in Apps
+    return false;
+  }
   function needFit() {
-    if (get(FIT, 'auto') === 'off' || !coarse()) return 1;
+    if (get(FIT, 'auto') === 'off' || !coarse() || !inApp()) return 1;
     var w = wanted(), real = innerWidth; // innerWidth hängt nicht vom CSS-Zoom ab
     // nur bei deutlich zu breiter Rechnung auf kleinen Displays (normale Handys und PCs bleiben unberührt)
     return w > 0 && w <= 1024 && real > w * 1.3 ? real / w : 1;
@@ -92,7 +101,7 @@
     THEME: THEME, FIT: FIT,
     choice: function () { return get(THEME, 'auto'); },
     fitChoice: function () { return get(FIT, 'auto'); },
-    haDark: haDark,
+    haDark: haDark, inApp: inApp,
     setTheme: function (v) { put(THEME, v, 'auto'); applyTheme(); },
     setFit: function (v) { put(FIT, v, 'auto'); fitZoom = 0; applyFit(); },
     // Zoom und Breite, mit der die Seite effektiv rechnet
