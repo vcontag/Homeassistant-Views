@@ -74,6 +74,12 @@ pre{white-space:pre-wrap;word-break:break-word;background:var(--surface-2);borde
     <p class="hint">Gilt für alle Seiten in diesem Browser bzw. dieser App. „Automatisch“: in der Home-Assistant-Oberfläche wie Home Assistant, sonst wie das System.</p>
   </div>
 
+  <div class="card"><h2>Mobilansicht anpassen</h2>
+    <div class="seg" role="group" aria-label="Mobilansicht anpassen" id="fit">
+      <button data-v="auto">Automatisch</button><button data-v="off">Aus</button></div>
+    <p class="hint">Rechnet der Browser einer App mit einer Desktop-Breite, vergrößert sich die Seite selbst passend und zeigt die Mobilansicht. „Aus“ schaltet das in diesem Browser bzw. dieser App ab.</p>
+  </div>
+
   <div class="card"><h2>Breite</h2>
     <div class="ruler" aria-hidden="true"><i id="rulerBar"></i><span id="rulerTxt"></span></div>
     <p class="hint">Der Balken zeigt die Breite, mit der die Seite rechnet, im Verhältnis zur Schwelle der Mobilansicht (640 px). Status: <span class="mq only-mobile">Mobilansicht aktiv</span><span class="mq only-desk">Desktop-Ansicht</span></p>
@@ -111,7 +117,8 @@ function measure(){
     screenW: screen.width, screenH: screen.height, dpr: devicePixelRatio,
     vvW: vv ? Math.round(vv.width) : null, vvScale: vv ? +vv.scale.toFixed(2) : null,
     viewportMeta: document.querySelector('meta[name=viewport]')?.content || '',
-    mobileView: mq('(max-width:640px)'),
+    mobileView: (window.HAV ? HAV.width() : innerWidth) <= 640,
+    fitChoice: window.HAV ? HAV.fitChoice() : 'auto', fitZoom: window.HAV ? +HAV.zoom().toFixed(2) : 1,
     touch: navigator.maxTouchPoints || 0, coarse: mq('(pointer:coarse)'),
     sysDark: mq('(prefers-color-scheme: dark)'),
     themeChoice: window.HAV ? HAV.choice() : 'auto',
@@ -128,13 +135,14 @@ function measure(){
 function findings(m){
   const out = [], phone = m.coarse || m.touch > 0;
   // Mobilansicht
-  if (m.mobileView) out.push(['ok', 'Mobilansicht aktiv', `Die Seite rechnet mit ${m.innerW} px Breite.`]);
+  if (m.fitZoom > 1) out.push(['ok', 'Mobilansicht angepasst', `Die App rechnet mit ${m.innerW} px statt ${m.screenW} px. Die Seiten gleichen das aus (Vergrößerung ${String(m.fitZoom).replace('.', ',')}×) und zeigen die Mobilansicht.`]);
+  else if (m.mobileView) out.push(['ok', 'Mobilansicht aktiv', `Die Seite rechnet mit ${m.innerW} px Breite.`]);
   else if (phone && m.screenW <= 900) {
     const why = !m.mobileUA ? 'Der Browser meldet sich als Desktop-Rechner – in der App ist vermutlich „Desktop-Website“ / „Desktop-Modus“ eingeschaltet. Bitte dort ausschalten.'
       : m.innerW >= 900 ? 'Der Browser der App ignoriert die Viewport-Angabe der Seite und rechnet mit einer festen Desktop-Breite. In den App-Einstellungen nach „Weite Ansicht“, „Übersichtsmodus“, „Seite einpassen“ oder „Desktop-Modus“ suchen und ausschalten.'
       : (m.vvScale && m.vvScale < 1) ? 'Die Seite ist herausgezoomt. Zoom bzw. Textgröße der App auf 100 % stellen.'
       : 'Die App rechnet mit einer größeren Breite als das Display. Prüfe Zoom-/Textgrößen-Einstellungen der App.';
-    out.push(['bad', 'Keine Mobilansicht', `Display ${m.screenW} px breit, die Seite rechnet aber mit ${m.innerW} px. ${why}`]);
+    out.push(['bad', 'Keine Mobilansicht', `Display ${m.screenW} px breit, die Seite rechnet aber mit ${m.innerW} px. ${m.fitChoice === 'off' ? 'Die automatische Anpassung ist ausgeschaltet (siehe oben). ' : ''}${why}`]);
   } else out.push(['ok', 'Desktop-Ansicht', `Großer Bildschirm (${m.innerW} px) – die Desktop-Ansicht ist hier richtig.`]);
   // Design
   if (m.themeChoice !== 'auto') out.push(['ok', `Design fest auf „${m.themeChoice === 'dark' ? 'Dunkel' : 'Hell'}“`, 'Auf diesem Gerät eingestellt (siehe unten).']);
@@ -153,7 +161,7 @@ function report(m){
 const LABELS = {ua:'User-Agent', webview:'In-App-Browser (WebView)', mobileUA:'Meldet sich als Mobilgerät', companion:'HA Companion-App', innerW:'Seitenbreite (CSS px)', innerH:'Seitenhöhe (CSS px)',
   docW:'Dokumentbreite', screenW:'Displaybreite', screenH:'Displayhöhe', dpr:'Pixelverhältnis', vvW:'Sichtbare Breite', vvScale:'Zoom',
   viewportMeta:'Viewport-Angabe', mobileView:'Mobilansicht aktiv', touch:'Touchpunkte', coarse:'Fingerbedienung', sysDark:'System meldet dunkel',
-  themeChoice:'Design-Wahl (Gerät)', haDark:'Home Assistant dunkel', dataTheme:'Gesetztes Design', effectiveDark:'Seite ist dunkel', embedded:'In HA-Oberfläche eingebettet',
+  fitChoice:'Mobilansicht anpassen', fitZoom:'Ausgleichs-Zoom', themeChoice:'Design-Wahl (Gerät)', haDark:'Home Assistant dunkel', dataTheme:'Gesetztes Design', effectiveDark:'Seite ist dunkel', embedded:'In HA-Oberfläche eingebettet',
   standalone:'Als App installiert', lang:'Sprache', tz:'Zeitzone', fixedToken:'Festes Token vorhanden', haLogin:'HA-Anmeldung gespeichert', url:'Seite'};
 const fmt = v => v === true ? 'ja' : v === false ? 'nein' : v === null ? 'unbekannt' : v;
 
@@ -161,14 +169,16 @@ function render(){
   const m = measure();
   $('#finds').innerHTML = findings(m).map(([c, t, d]) => `<div class="find ${c}"><i></i><div><b>${esc(t)}</b><span>${esc(d)}</span></div></div>`).join('');
   $('#kv').innerHTML = Object.entries(m).map(([k, v]) => `<dt>${esc(LABELS[k] || k)}</dt><dd>${esc(fmt(v))}</dd>`).join('');
-  const pct = Math.min(100, m.innerW / 1280 * 100);
+  const eff = window.HAV ? HAV.width() : m.innerW, pct = Math.min(100, eff / 1280 * 100);
   $('#rulerBar').style.width = pct + '%';
-  $('#rulerTxt').textContent = `${m.innerW} px (Mobil bis 640 px)`;
+  $('#rulerTxt').textContent = `${eff} px (Mobil bis 640 px)`;
   document.querySelectorAll('#theme button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === m.themeChoice));
+  document.querySelectorAll('#fit button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === m.fitChoice));
   $('#report').textContent = report(m);
   return m;
 }
 
+$('#fit').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; HAV.setFit(b.dataset.v); setTimeout(render, 50); });
 $('#theme').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; HAV.setTheme(b.dataset.v); setTimeout(render, 50); });
 $('#copyBtn').onclick = async () => {
   const txt = $('#report').textContent, msg = $('#msg');
@@ -213,7 +223,8 @@ $('#sendBtn').onclick = async () => {
     msg.className = 'msg ok'; msg.textContent = 'Gesendet – in Home Assistant unter Benachrichtigungen (Glocke).';
   } catch (err) { msg.className = 'msg err'; msg.textContent = 'Senden fehlgeschlagen: ' + err.message; }
 };
-addEventListener('resize', render);
+addEventListener('resize', () => setTimeout(render, 250));
+addEventListener('load', () => setTimeout(render, 50));
 matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', render);
 render();
 </script>
