@@ -43,6 +43,7 @@
   <select id="range" aria-label="Zeitraum">
     <option value="6">6 h</option><option value="24">24 h</option>
     <option value="48" selected>48 h</option><option value="168">7 Tage</option><option value="720">30 Tage</option>
+    <option value="2160">3 Monate</option><option value="4380">6 Monate</option><option value="8760">1 Jahr</option><option value="17520">2 Jahre</option>
   </select>
   <div id="now"></div>
 </header>
@@ -55,7 +56,8 @@
 // Änderungen also einfach in HA an der Karte machen – diese Seite übernimmt sie beim nächsten Laden.
 // URL-Parameter: d=<Ansicht> h=<Stunden> kopf=0 (ohne Kopfzeile) dash=<anderes Dashboard>
 const REFRESH_S = 15;
-const RAW_MAX_H = 240;   // ohne MariaDB-Recorder speichert HA Rohdaten 10 Tage – darüber Stundenmittel
+const RAW_MAX_H = 240;   // HA speichert Rohdaten standardmäßig 10 Tage – darüber Langzeit-Statistiken (bleiben dauerhaft)
+const DAY_MIN_H = 2160;  // ab 3 Monaten Tageswerte statt Stundenwerte (schnelleres Laden)
 
 const qs = new URLSearchParams(location.search);
 const DASH = qs.get("dash") || "dashboard-verlauf";
@@ -114,11 +116,12 @@ async function loadConfig() {
 }
 function setHours(h) {
   hours = h;
-  if (![...selH.options].some(o => +o.value === hours)) selH.add(new Option(hours >= 48 ? Math.round(hours / 24) + " Tage" : hours + " h", hours));
+  if (![...selH.options].some(o => +o.value === hours)) selH.add(new Option(hours >= 8760 ? Math.round(hours / 8760 * 10) / 10 + " Jahre"
+    : hours >= 48 ? Math.round(hours / 24) + " Tage" : hours + " h", hours));
   selH.value = String(hours);
 }
 selR.onchange = () => { key = selR.value; setHours(DIAGRAMME[key].hours); syncUrl(); load(true); startTimer(); };
-selH.onchange = () => { hours = +selH.value; syncUrl(); load(true); };
+selH.onchange = () => { hours = +selH.value; syncUrl(); load(true); startTimer(); };
 function syncUrl() { qs.delete("raum"); qs.set("d", key); qs.set("h", hours); history.replaceState(null, "", "?" + qs); }
 
 // ---------- Anmeldung (wie bei den anderen Seiten: festes Token, HA-Oberfläche, gespeicherte Anmeldung) ----------
@@ -204,16 +207,34 @@ window.ResizeObserver && new ResizeObserver(resize).observe(chartEl);
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const num = v => (v === null || v === undefined || v === "" || isNaN(+v)) ? null : +v;
 
+// Bis 10 Tage Rohdaten (History). Darüber Langzeit-Statistiken für alle Serien, die welche haben (Sensoren mit
+// state_class) – ab 3 Monaten als Tageswerte. Serien ohne Statistik (oder mit attribute) fallen auf Rohdaten zurück.
 async function fetchData(d, now) {
   const startMs = now - hours * 3600e3, start = new Date(startMs).toISOString();
-  const ents = [...new Set(d.series.map(s => s.entity))];
   const useStat = hours > RAW_MAX_H;
   const out = d.series.map(() => []);
-  const rawEnts = ents.filter(e => !(useStat && d.series.some(s => s.entity === e && s.stat)));
-  if (rawEnts.length) {
-    const hist = await api(`/api/history/period/${start}?filter_entity_id=${rawEnts.join(",")}&significant_changes_only=0`);
+  const statEnts = useStat ? [...new Set(d.series.filter(s => !s.attr).map(s => s.entity))] : [];
+  const hasStat = new Set();
+  if (statEnts.length) {
+    const period = hours >= DAY_MIN_H ? "day" : (d.series.find(x => x.stat)?.statPeriod || "hour");
+    const r = await send({ type: "recorder/statistics_during_period", start_time: start, end_time: new Date(now).toISOString(),
+                           statistic_ids: statEnts, period, types: ["mean", "min", "max", "state", "sum"] });
     d.series.forEach((s, i) => {
-      if (!rawEnts.includes(s.entity)) return;
+      const pts = s.attr ? null : r[s.entity];
+      if (!pts?.length) return;
+      hasStat.add(s.entity);
+      for (const p of pts) {
+        const v = s.stat ? (p[s.statType] ?? p.mean ?? p.state) : (p.mean ?? p.state);
+        out[i].push([typeof p.start === "number" ? p.start : new Date(p.start).getTime(), s.map ? s.map(v) : num(v)]);
+      }
+    });
+  }
+  const rawEnts = [...new Set(d.series.filter(s => s.attr || !hasStat.has(s.entity)).map(s => s.entity))];
+  if (rawEnts.length) {
+    const rawStart = new Date(Math.max(startMs, useStat ? now - RAW_MAX_H * 3600e3 : startMs)).toISOString();
+    const hist = await api(`/api/history/period/${rawStart}?filter_entity_id=${rawEnts.join(",")}&significant_changes_only=0`);
+    d.series.forEach((s, i) => {
+      if (!(s.attr || !hasStat.has(s.entity))) return;
       const h = hist.find(x => x[0]?.entity_id === s.entity) || [];
       for (const st of h) {
         const raw = s.attr ? (st.attributes || {})[s.attr] : st.state;
@@ -221,16 +242,9 @@ async function fetchData(d, now) {
       }
     });
   }
-  const statEnts = ents.filter(e => !rawEnts.includes(e));
-  if (statEnts.length) {
-    const r = await send({ type: "recorder/statistics_during_period", start_time: start, end_time: new Date(now).toISOString(),
-                           statistic_ids: statEnts, period: d.series.find(x => x.stat)?.statPeriod || "hour", types: ["mean", "min", "max", "state", "sum"] });
-    d.series.forEach((s, i) => {
-      if (!statEnts.includes(s.entity)) return;
-      for (const p of (r[s.entity] || [])) out[i].push([typeof p.start === "number" ? p.start : new Date(p.start).getTime(), num(p[s.statType] ?? p.mean)]);
-    });
-  }
   for (const arr of out) if (arr.length) arr.push([now, arr[arr.length - 1][1]]);
+  // Serien, die bei langem Zeitraum nur die letzten 10 Tage haben (keine Langzeit-Statistik)
+  out.short = useStat ? d.series.map(s => !!(s.attr || !hasStat.has(s.entity))) : d.series.map(() => false);
   return out;
 }
 
@@ -252,7 +266,8 @@ async function load(reset) {
     const last = a => { for (let i = a.length - 1; i >= 0; i--) if (a[i][1] !== null) return a[i][1]; return null; };
     const f = (v, u, dec = 1) => v === null ? "–" : v.toLocaleString("de-DE", { maximumFractionDigits: dec }) + " " + u;
     document.getElementById("now").innerHTML = d.series.map((s, i) =>
-      `<span style="color:${s.color || "inherit"}">${s.name} <b>${f(last(data[i]), s.unit || "", s.dec ?? 1)}</b></span>`).join("");
+      `<span style="color:${s.color || "inherit"}">${s.name} <b>${f(last(data[i]), s.unit || "", s.dec ?? 1)}</b>${data.short[i]
+        ? ' <small style="color:var(--muted)" title="Für diesen Sensor gibt es keine Langzeit-Statistik (state_class fehlt) – Home Assistant hat nur die letzten 10 Tage.">· nur 10 Tage</small>' : ""}</span>`).join("");
 
     const fg = css("--fg"), muted = css("--muted"), line = css("--line");
     // Farbwechsel (hell/dunkel) braucht ein vollständiges Neuzeichnen
@@ -268,7 +283,7 @@ async function load(reset) {
       toolbox: { right: 8, bottom: 36, feature: { saveAsImage: { title: "Bild", name: key }, restore: { title: "Zurück" } } },
       dataZoom: [{ type: "inside", xAxisIndex: 0 }, { type: "slider", xAxisIndex: 0, bottom: 8, height: 22 }],
       xAxis: { type: "time", min: now - hours * 3600e3, max: now,
-        axisLabel: { color: muted, hideOverlap: true, formatter: { day: "{dd}.{MM}.", hour: "{HH}:{mm}", minute: "{HH}:{mm}" } },
+        axisLabel: { color: muted, hideOverlap: true, formatter: { year: "{yyyy}", month: "{MM}.{yyyy}", day: "{dd}.{MM}.", hour: "{HH}:{mm}", minute: "{HH}:{mm}" } },
         axisLine: { lineStyle: { color: line } }, splitLine: { show: true, lineStyle: { color: line } } },
       yAxis: d.axes.map((ax, i) => ({ type: "value", min: ax.min, max: ax.max, name: ax.hide ? "" : ax.unit, position: ax.right ? "right" : "left",
         nameTextStyle: { color: muted }, axisLabel: { color: muted, show: !ax.hide },
@@ -285,7 +300,9 @@ async function load(reset) {
 }
 
 let timer;
-function startTimer() { clearInterval(timer); timer = setInterval(() => { if (!document.hidden) load(false); }, (DIAGRAMME[key]?.refresh || REFRESH_S) * 1000); }
+// lange Zeiträume ändern sich kaum: dann nur alle 15 Minuten neu laden
+function startTimer() { clearInterval(timer); const sec = hours > RAW_MAX_H ? 900 : (DIAGRAMME[key]?.refresh || REFRESH_S);
+  timer = setInterval(() => { if (!document.hidden) load(false); }, sec * 1000); }
 async function start() {
   if (!chart) return;
   document.getElementById("msg").style.display = "block";

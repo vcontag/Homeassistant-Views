@@ -4,6 +4,12 @@ Neue Einträge oben. Die Überschrift `## <Version>` muss zu `version` in
 `custom_components/ha_views/manifest.json` passen – der Abschnitt wird beim Release
 automatisch als Beschreibung übernommen.
 
+## 1.7.1
+- Verlauf: Zeiträume **3 Monate, 6 Monate, 1 Jahr und 2 Jahre**. Über 10 Tage kommen alle Serien aus den
+  Langzeit-Statistiken von Home Assistant (ab 3 Monaten als Tageswerte), auch ohne `statistics` in der Karte;
+  `transform` gilt auch dort. Serien ohne Statistik (Sensor ohne `state_class` oder `attribute`) zeigen die
+  letzten 10 Tage und sind oben mit „nur 10 Tage“ gekennzeichnet. Lange Zeiträume laden nur alle 15 Minuten neu.
+
 ## 1.7.0
 - Neue Ansicht **Verlauf**: zeigt die Diagramme des HA-Dashboards „Verlauf“ (`dashboard-verlauf`, je Ansicht eine
   ApexCharts-Card) groß und zoombar – Achsen, Farben, Transformationen und Zeitraum kommen aus der Karte, Zeitraum
