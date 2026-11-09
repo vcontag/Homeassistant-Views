@@ -47,6 +47,13 @@ Fertig – die passenden Ansichten stehen danach in der Seitenleiste.
   ⚠️ Das Token ist im lokalen Netz ohne Anmeldung abrufbar – nur verwenden, wenn
   Home Assistant nicht aus dem Internet erreichbar ist.
 
+## Design und Diagnose
+
+Die Seiten folgen in der Home-Assistant-Oberfläche dem Design von Home Assistant, sonst dem des Geräts. Passt auf
+einem Gerät etwas nicht (z. B. dunkel oder keine Mobilansicht in einem App-Browser), die Seite
+`/ha_views/diagnose.html` **auf diesem Gerät** öffnen (Link unten auf der Übersicht). Sie zeigt die Ursache, lässt
+das Design für dieses Gerät fest auf Hell oder Dunkel stellen und schickt den Bericht auf Wunsch an Home Assistant.
+
 ## Direkt aufrufen / als App installieren
 
 Die Seiten liegen unter `http://<deine-ha-adresse>:8123/ha_views/`, z. B.
@@ -107,12 +114,11 @@ Schwellen, Boost …) sind unter „Einstellungen“ eingeklappt.
 ## Wetter (Wetter & Warnungen)
 
 Für die Integration [Wetter & Warnungen](https://github.com/SH1FT-W/wetter-warnungen). Ganz oben die **amtlichen Warnungen**
-(DWD und NINA), nach Schwere gefärbt; ein Tipp zeigt Beschreibung, Handlungsempfehlung und Absender. Ohne Warnung
+(DWD und NINA), nach Schwere gefärbt; ein Tipp öffnet ein Popup mit Beschreibung, Handlungsempfehlung und Absender. Ohne Warnung
 steht „Keine Warnungen“ mit dem Warngebiet. Darunter das aktuelle Wetter mit „Regen in X Minuten“, Wind, Luftfeuchte,
 Druck und Sicht, die nächsten 48 Stunden mit Temperaturkurve und Niederschlag, die Vorhersage für 8 Tage sowie
 Pollenflug und UV-Index. Die Vorhersage aktualisiert sich live.
 
 Ist zusätzlich die Integration **DWD Weather Warnings** eingerichtet, kommen ihre Warnungen für die eingestellte
-Warnregion mit in die Liste (Vorabinformationen gekennzeichnet). Gibt es eine neue **aktuelle** DWD-Warnung, öffnet
-die Seite ein **Popup** mit Stufe, Zeitraum, Text und Handlungsempfehlung. Nach „Verstanden“ erscheint dieselbe
-Warnung in diesem Browser nicht erneut. Ist nur DWD Weather Warnings eingerichtet, zeigt die Seite nur die Warnungen.
+Warnregion mit in die Liste (Vorabinformationen gekennzeichnet); auch sie zeigen ihre Details im Popup.
+Ist nur DWD Weather Warnings eingerichtet, zeigt die Seite nur die Warnungen.

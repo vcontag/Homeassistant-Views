@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
 <link rel="manifest" href="pwa/start.webmanifest">
 <meta name="theme-color" content="#ECEFF4" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#10151F" media="(prefers-color-scheme: dark)">
@@ -10,6 +11,7 @@
 <link rel="apple-touch-icon" href="pwa/start-192.png">
 <link rel="icon" href="pwa/start-192.png">
 <title>Smart Home</title>
+<script src="ha-views.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -39,6 +41,8 @@ p.sub{margin:0 0 20px;color:var(--muted)}
 .app:active{transform:scale(.98)}
 @media (hover:hover){.app:hover{border-color:var(--muted)}}
 .app[hidden]{display:none}
+.foot{margin:22px 0 0;color:var(--muted);font-size:.85rem;text-align:center}
+.foot a{color:inherit;font-weight:700}
 .none{color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px;text-align:center}
 @media (max-width:640px){
   .wrap{padding:16px 12px 32px}
@@ -66,6 +70,7 @@ p.sub{margin:0 0 20px;color:var(--muted)}
     <a class="app" href="ford-transit.html" data-view="ford"><img src="pwa/ford-192.png" alt=""><div><b>Transit</b><span>Schloss, Status, Standort</span></div></a>
     <a class="app" href="zigbee-manager.html" data-view="zigbee"><img src="pwa/zigbee-192.png" alt=""><div><b>Zigbee</b><span>Geräte verwalten</span></div></a>
   </nav>
+  <p class="foot"><a href="diagnose.html">Diagnose &amp; Darstellung</a> – falls Design oder Mobilansicht auf einem Gerät nicht passen</p>
   <p class="none" id="none" hidden>Keine passenden Geräte gefunden. Die Ansichten erscheinen automatisch, sobald die zugehörige Integration in Home Assistant eingerichtet ist.</p>
 </div>
 <script>

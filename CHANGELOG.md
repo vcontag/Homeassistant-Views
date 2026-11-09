@@ -4,6 +4,17 @@ Neue Einträge oben. Die Überschrift `## <Version>` muss zu `version` in
 `custom_components/ha_views/manifest.json` passen – der Abschnitt wird beim Release
 automatisch als Beschreibung übernommen.
 
+## 1.5.2
+- Neue **Diagnoseseite** (`/ha_views/diagnose.html`, Link unten auf der Übersicht): misst auf dem jeweiligen Gerät Design
+  und Mobilansicht (Breite, Zoom, In-App-Browser, Desktop-Modus, System-/HA-Design), erklärt die Ursache im Klartext
+  und sendet den Bericht auf Wunsch als Benachrichtigung an Home Assistant.
+- **Design je Gerät** wählbar (Automatisch, Hell, Dunkel) – gilt für alle Seiten in diesem Browser bzw. dieser App.
+- „Automatisch“ folgt in der Home-Assistant-Oberfläche jetzt dem **Design von Home Assistant** statt dem des Systems.
+- Alle Seiten melden ein eigenes dunkles Design an (`color-scheme`), damit App-Browser sie nicht zwangsweise abdunkeln.
+- Wetter: Das Warnungs-Popup öffnet sich nicht mehr von selbst, sondern beim Tippen auf eine Warnung oben
+  und zeigt dann alle Details (Stufe, Zeitraum, Text, „Was tun?“, Absender, Link). Gilt für alle Warnungen,
+  auch die von Wetter & Warnungen.
+
 ## 1.5.0
 - Neue Ansicht **Wetter** für [Wetter & Warnungen](https://github.com/SH1FT-W/wetter-warnungen): amtliche Warnungen
   (DWD und NINA) nach Schwere mit Beschreibung und Handlungsempfehlung, aktuelles Wetter, „Regen in X Minuten“,
