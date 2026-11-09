@@ -147,7 +147,9 @@ Route, darunter alle Tankstellen nach Preis mit Abstand zur günstigsten in Cent
 Zeigt die Diagramme des Dashboards **„Verlauf“** (Adresse `dashboard-verlauf`) seitenfüllend und zoombar. Jede Ansicht
 des Dashboards mit einer **ApexCharts-Card** wird ein Diagramm; Serien, Farben, Achsen, Transformationen, Zeitraum
 (`graph_span`) und Aktualisierung kommen aus der Karte – Änderungen also einfach in Home Assistant an der Karte machen.
-Oben Diagramm und Zeitraum wählen (6 h bis 2 Jahre). Über 10 Tage kommen die Werte aus den Langzeit-Statistiken
-von Home Assistant (ab 3 Monaten als Tageswerte); dafür braucht der Sensor eine `state_class` (z. B. `measurement`),
-sonst reicht er nur 10 Tage zurück und ist mit „nur 10 Tage“ gekennzeichnet. URL-Parameter: `d=<Ansicht>`, `h=<Stunden>`, `kopf=0` (ohne Kopfzeile, z. B. für eine
+Oben Diagramm und Zeitraum wählen (6 h bis 2 Jahre). Bis 30 Tage zeigt die Seite die Rohdaten, darüber die
+Langzeit-Statistiken von Home Assistant (ab 3 Monaten als Tageswerte) für Sensoren mit `state_class`; alle anderen
+Serien kommen über den ganzen Zeitraum aus den Rohdaten. Wie weit die zurückreichen, hängt vom Recorder ab
+(Standard 10 Tage, mit eigener Datenbank wie MySQL/MariaDB entsprechend länger) – die Seite nimmt, was da ist, ergänzt
+fehlende Anfänge aus der Statistik und zeigt „Daten ab …“, wenn eine Serie später beginnt. URL-Parameter: `d=<Ansicht>`, `h=<Stunden>`, `kopf=0` (ohne Kopfzeile, z. B. für eine
 Webseiten-Karte), `dash=<anderes Dashboard>`.

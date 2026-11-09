@@ -56,8 +56,9 @@
 // Änderungen also einfach in HA an der Karte machen – diese Seite übernimmt sie beim nächsten Laden.
 // URL-Parameter: d=<Ansicht> h=<Stunden> kopf=0 (ohne Kopfzeile) dash=<anderes Dashboard>
 const REFRESH_S = 15;
-const RAW_MAX_H = 240;   // HA speichert Rohdaten standardmäßig 10 Tage – darüber Langzeit-Statistiken (bleiben dauerhaft)
+const RAW_MAX_H = 720;   // bis 30 Tage Rohdaten; darüber Langzeit-Statistiken (wo vorhanden), sonst Rohdaten
 const DAY_MIN_H = 2160;  // ab 3 Monaten Tageswerte statt Stundenwerte (schnelleres Laden)
+const MAX_POINTS = 4000; // mehr Rohpunkte je Serie werden für die Anzeige verdichtet (Min/Max je Abschnitt)
 
 const qs = new URLSearchParams(location.search);
 const DASH = qs.get("dash") || "dashboard-verlauf";
@@ -207,44 +208,83 @@ window.ResizeObserver && new ResizeObserver(resize).observe(chartEl);
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const num = v => (v === null || v === undefined || v === "" || isNaN(+v)) ? null : +v;
 
-// Bis 10 Tage Rohdaten (History). Darüber Langzeit-Statistiken für alle Serien, die welche haben (Sensoren mit
-// state_class) – ab 3 Monaten als Tageswerte. Serien ohne Statistik (oder mit attribute) fallen auf Rohdaten zurück.
+// Wie lange Rohdaten vorliegen, hängt vom Recorder ab (Standard 10 Tage, mit eigener Datenbank z. B. 2 Jahre) –
+// die Seite richtet sich nach dem, was tatsächlich da ist:
+//  - bis 30 Tage: Rohdaten; fangen sie später an als der Zeitraum, wird der Anfang aus der Langzeit-Statistik ergänzt
+//  - darüber: Langzeit-Statistik (Stunden-, ab 3 Monaten Tageswerte) für Sensoren mit state_class,
+//    Rohdaten über den ganzen Zeitraum für alle anderen und für Attribut-Serien
+async function rawHistory(ents, startIso, endIso, withAttr) {
+  if (!ents.length) return [];
+  const q = `filter_entity_id=${ents.join(",")}&end_time=${encodeURIComponent(endIso)}&significant_changes_only=0` + (withAttr ? "" : "&minimal_response&no_attributes");
+  return api(`/api/history/period/${encodeURIComponent(startIso)}?${q}`);
+}
+async function statistics(ents, startIso, endIso, period) {
+  if (!ents.length) return {};
+  return send({ type: "recorder/statistics_during_period", start_time: startIso, end_time: endIso, statistic_ids: ents, period,
+                types: ["mean", "min", "max", "state", "sum"] });
+}
+const statValue = (s, p) => s.stat ? (p[s.statType] ?? p.mean ?? p.state) : (p.mean ?? p.state);
+const ts = p => typeof p.start === "number" ? p.start : new Date(p.start).getTime();
+// viele Rohpunkte verdichten: je Abschnitt Min und Max in zeitlicher Reihenfolge (Spitzen bleiben sichtbar)
+function thin(arr) {
+  if (arr.length <= MAX_POINTS) return arr;
+  const n = Math.floor(MAX_POINTS / 2), size = arr.length / n, out = [];
+  for (let b = 0; b < n; b++) {
+    let lo = null, hi = null;
+    for (let j = Math.floor(b * size); j < Math.floor((b + 1) * size); j++) {
+      const p = arr[j]; if (p[1] === null) continue;
+      if (!lo || p[1] < lo[1]) lo = p; if (!hi || p[1] > hi[1]) hi = p;
+    }
+    if (lo && hi) out.push(...(lo[0] <= hi[0] ? (lo === hi ? [lo] : [lo, hi]) : [hi, lo]));
+  }
+  return out;
+}
+
 async function fetchData(d, now) {
-  const startMs = now - hours * 3600e3, start = new Date(startMs).toISOString();
-  const useStat = hours > RAW_MAX_H;
+  const startMs = now - hours * 3600e3, start = new Date(startMs).toISOString(), end = new Date(now).toISOString();
   const out = d.series.map(() => []);
-  const statEnts = useStat ? [...new Set(d.series.filter(s => !s.attr).map(s => s.entity))] : [];
-  const hasStat = new Set();
-  if (statEnts.length) {
-    const period = hours >= DAY_MIN_H ? "day" : (d.series.find(x => x.stat)?.statPeriod || "hour");
-    const r = await send({ type: "recorder/statistics_during_period", start_time: start, end_time: new Date(now).toISOString(),
-                           statistic_ids: statEnts, period, types: ["mean", "min", "max", "state", "sum"] });
+  const plain = [...new Set(d.series.filter(s => !s.attr).map(s => s.entity))];
+  const attrd = [...new Set(d.series.filter(s => s.attr).map(s => s.entity))];
+  const period = hours >= DAY_MIN_H ? "day" : (d.series.find(x => x.stat)?.statPeriod || "hour");
+  const fillRaw = (hist, s, i) => {
+    const h = hist.find(x => x[0]?.entity_id === s.entity) || [];
+    for (const st of h) {
+      const raw = s.attr ? (st.attributes || {})[s.attr] : st.state;
+      out[i].push([new Date(st.last_updated || st.last_changed).getTime(), s.map ? s.map(raw) : num(raw)]);
+    }
+  };
+  if (hours <= RAW_MAX_H) {
+    const [hp, ha] = await Promise.all([rawHistory(plain, start, end, false), rawHistory(attrd, start, end, true)]);
+    d.series.forEach((s, i) => fillRaw(s.attr ? ha : hp, s, i));
+    // Rohdaten reichen nicht bis zum Anfang (z. B. Recorder mit 10 Tagen): Anfang aus der Statistik ergänzen
+    const gap = d.series.map((s, i) => !s.attr && (!out[i].length || out[i][0][0] > startMs + 6 * 3600e3));
+    const need = [...new Set(d.series.filter((s, i) => gap[i]).map(s => s.entity))];
+    if (need.length) {
+      const r = await statistics(need, start, end, period);
+      d.series.forEach((s, i) => {
+        if (!gap[i] || !r[s.entity]?.length) return;
+        const until = out[i].length ? out[i][0][0] : Infinity;
+        const add = r[s.entity].filter(p => ts(p) < until).map(p => [ts(p), s.map ? s.map(statValue(s, p)) : num(statValue(s, p))]);
+        out[i].unshift(...add);
+      });
+    }
+  } else {
+    const r = await statistics(plain, start, end, period);
+    const noStat = plain.filter(e => !r[e]?.length);
     d.series.forEach((s, i) => {
-      const pts = s.attr ? null : r[s.entity];
-      if (!pts?.length) return;
-      hasStat.add(s.entity);
-      for (const p of pts) {
-        const v = s.stat ? (p[s.statType] ?? p.mean ?? p.state) : (p.mean ?? p.state);
-        out[i].push([typeof p.start === "number" ? p.start : new Date(p.start).getTime(), s.map ? s.map(v) : num(v)]);
-      }
+      if (s.attr || !r[s.entity]?.length) return;
+      for (const p of r[s.entity]) out[i].push([ts(p), s.map ? s.map(statValue(s, p)) : num(statValue(s, p))]);
     });
+    const [hp, ha] = await Promise.all([rawHistory(noStat, start, end, false), rawHistory(attrd, start, end, true)]);
+    d.series.forEach((s, i) => { if (s.attr || noStat.includes(s.entity)) fillRaw(s.attr ? ha : hp, s, i); });
   }
-  const rawEnts = [...new Set(d.series.filter(s => s.attr || !hasStat.has(s.entity)).map(s => s.entity))];
-  if (rawEnts.length) {
-    const rawStart = new Date(Math.max(startMs, useStat ? now - RAW_MAX_H * 3600e3 : startMs)).toISOString();
-    const hist = await api(`/api/history/period/${rawStart}?filter_entity_id=${rawEnts.join(",")}&significant_changes_only=0`);
-    d.series.forEach((s, i) => {
-      if (!(s.attr || !hasStat.has(s.entity))) return;
-      const h = hist.find(x => x[0]?.entity_id === s.entity) || [];
-      for (const st of h) {
-        const raw = s.attr ? (st.attributes || {})[s.attr] : st.state;
-        out[i].push([new Date(st.last_updated || st.last_changed).getTime(), s.map ? s.map(raw) : num(raw)]);
-      }
-    });
+  for (let i = 0; i < out.length; i++) {
+    out[i].sort((a, b) => a[0] - b[0]);
+    out[i] = thin(out[i]);
+    if (out[i].length) out[i].push([now, out[i][out[i].length - 1][1]]);
   }
-  for (const arr of out) if (arr.length) arr.push([now, arr[arr.length - 1][1]]);
-  // Serien, die bei langem Zeitraum nur die letzten 10 Tage haben (keine Langzeit-Statistik)
-  out.short = useStat ? d.series.map(s => !!(s.attr || !hasStat.has(s.entity))) : d.series.map(() => false);
+  // Serien, deren Daten deutlich später anfangen als der gewählte Zeitraum
+  out.from = out.map(a => a.length && a[0][0] > startMs + Math.max(24, hours * 0.05) * 3600e3 ? a[0][0] : null);
   return out;
 }
 
@@ -266,8 +306,8 @@ async function load(reset) {
     const last = a => { for (let i = a.length - 1; i >= 0; i--) if (a[i][1] !== null) return a[i][1]; return null; };
     const f = (v, u, dec = 1) => v === null ? "–" : v.toLocaleString("de-DE", { maximumFractionDigits: dec }) + " " + u;
     document.getElementById("now").innerHTML = d.series.map((s, i) =>
-      `<span style="color:${s.color || "inherit"}">${s.name} <b>${f(last(data[i]), s.unit || "", s.dec ?? 1)}</b>${data.short[i]
-        ? ' <small style="color:var(--muted)" title="Für diesen Sensor gibt es keine Langzeit-Statistik (state_class fehlt) – Home Assistant hat nur die letzten 10 Tage.">· nur 10 Tage</small>' : ""}</span>`).join("");
+      `<span style="color:${s.color || "inherit"}">${s.name} <b>${f(last(data[i]), s.unit || "", s.dec ?? 1)}</b>${data.from[i]
+        ? ` <small style="color:var(--muted)" title="Für den gewählten Zeitraum liegen erst ab diesem Tag Werte vor (Aufbewahrung des Recorders bzw. keine Langzeit-Statistik).">· Daten ab ${new Date(data.from[i]).toLocaleDateString("de-DE")}</small>` : ""}</span>`).join("");
 
     const fg = css("--fg"), muted = css("--muted"), line = css("--line");
     // Farbwechsel (hell/dunkel) braucht ein vollständiges Neuzeichnen
