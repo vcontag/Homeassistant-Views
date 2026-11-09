@@ -76,6 +76,13 @@ VIEWS: tuple[View, ...] = (
         components=("waste_collection_schedule",),
     ),
     View(
+        "garten",
+        "garten.html",
+        "Garten",
+        "mdi:sprinkler-variant",
+        domains=("garten_bewaesserung",),
+    ),
+    View(
         "zigbee",
         "zigbee-manager.html",
         "Zigbee",
