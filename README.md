@@ -47,6 +47,13 @@ Fertig – die passenden Ansichten stehen danach in der Seitenleiste.
   ⚠️ Das Token ist im lokalen Netz ohne Anmeldung abrufbar – nur verwenden, wenn
   Home Assistant nicht aus dem Internet erreichbar ist.
 
+## Design und Diagnose
+
+Die Seiten folgen in der Home-Assistant-Oberfläche dem Design von Home Assistant, sonst dem des Geräts. Passt auf
+einem Gerät etwas nicht (z. B. dunkel oder keine Mobilansicht in einem App-Browser), die Seite
+`/ha_views/diagnose.html` **auf diesem Gerät** öffnen (Link unten auf der Übersicht). Sie zeigt die Ursache, lässt
+das Design für dieses Gerät fest auf Hell oder Dunkel stellen und schickt den Bericht auf Wunsch an Home Assistant.
+
 ## Direkt aufrufen / als App installieren
 
 Die Seiten liegen unter `http://<deine-ha-adresse>:8123/ha_views/`, z. B.

@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#ECEFF4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#10151F" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="pwa/start-192.png">
+<script src="ha-token.js"></script>
+<script src="ha-views.js"></script>
+<title>Diagnose</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#ECEFF4; --surface:#FFFFFF; --surface-2:#F4F6FA; --ink:#14213D; --muted:#5A6781; --line:#D5DBE6;
+  --accent:#1B4FA0; --ok:#2E8B57; --warn:#B7790A; --bad:#C23B3B;
+  color-scheme:light; box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--bg:#10151F; --surface:#1A2130; --surface-2:#212A3B; --ink:#E5EAF3; --muted:#95A1B8; --line:#2C3749; --accent:#6D9EF0; --ok:#4CC282; --warn:#E3A93A; --bad:#EF6B6B; color-scheme:dark}
+}
+:root[data-theme="dark"]{--bg:#10151F; --surface:#1A2130; --surface-2:#212A3B; --ink:#E5EAF3; --muted:#95A1B8; --line:#2C3749; --accent:#6D9EF0; --ok:#4CC282; --warn:#E3A93A; --bad:#EF6B6B; color-scheme:dark}
+*,*::before,*::after{box-sizing:inherit}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 Manrope,"Segoe UI",system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:900px;margin:0 auto;padding:20px 16px 48px}
+h1{margin:0 0 4px;font-size:1.6rem;font-weight:800;letter-spacing:-.02em}
+p.sub{margin:0 0 18px;color:var(--muted)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin-top:14px}
+.card h2{margin:0 0 10px;font-size:1.05rem;font-weight:800}
+.find{display:flex;gap:12px;align-items:flex-start;padding:10px 0}
+.find + .find{border-top:1px solid var(--line)}
+.find i{flex:none;width:12px;height:12px;border-radius:50%;margin-top:5px;background:var(--ok)}
+.find.warn i{background:var(--warn)} .find.bad i{background:var(--bad)}
+.find b{display:block;font-weight:800}
+.find span{color:var(--muted);font-size:.9rem}
+.seg{display:flex;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:3px;gap:2px}
+.seg button{flex:1;border:0;background:none;border-radius:8px;padding:9px 10px;font-weight:700;cursor:pointer;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.hint{font-size:.82rem;color:var(--muted);margin:8px 0 0}
+.kv{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:6px 12px;margin:0;font-size:.88rem}
+.kv dt{color:var(--muted)} .kv dd{margin:0;font-weight:700;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.ruler{position:relative;height:30px;border-radius:8px;background:var(--surface-2);overflow:hidden;margin-top:6px}
+.ruler i{position:absolute;inset:0 auto 0 0;background:color-mix(in srgb,var(--accent) 25%,transparent);border-right:2px solid var(--accent)}
+.ruler span{position:absolute;inset:0;display:grid;place-items:center;font-weight:800;font-size:.85rem}
+.mq{display:inline-block;border-radius:6px;padding:2px 8px;font-weight:800;font-size:.8rem;background:var(--surface-2)}
+.only-mobile{display:none} @media (max-width:640px){.only-mobile{display:inline-block;background:var(--ok);color:#fff}.only-desk{display:none}}
+.only-desk{background:var(--warn);color:#fff}
+.actions{display:flex;gap:10px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:9px 14px;font-weight:700;cursor:pointer;min-height:42px;color:var(--ink);text-decoration:none;display:inline-flex;align-items:center}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.msg{font-weight:700;font-size:.9rem;margin-top:8px}
+.msg.ok{color:var(--ok)} .msg.err{color:var(--bad)}
+pre{white-space:pre-wrap;word-break:break-word;background:var(--surface-2);border-radius:10px;padding:10px 12px;font-size:.78rem;margin:10px 0 0;max-height:260px;overflow:auto}
+@media (max-width:640px){ .wrap{padding:14px 12px 32px} h1{font-size:1.4rem} .card{padding:14px} .kv{grid-template-columns:1fr} .kv dd{margin-bottom:6px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Diagnose</h1>
+  <p class="sub">Darstellung auf diesem Gerät: Design und Mobilansicht. Öffne diese Seite in dem Browser bzw. der App, in der das Problem auftritt.</p>
+
+  <div class="card"><h2>Auswertung</h2><div id="finds"></div></div>
+
+  <div class="card"><h2>Design auf diesem Gerät</h2>
+    <div class="seg" role="group" aria-label="Design" id="theme">
+      <button data-v="auto">Automatisch</button><button data-v="light">Hell</button><button data-v="dark">Dunkel</button></div>
+    <p class="hint">Gilt für alle Seiten in diesem Browser bzw. dieser App. „Automatisch“: in der Home-Assistant-Oberfläche wie Home Assistant, sonst wie das System.</p>
+  </div>
+
+  <div class="card"><h2>Breite</h2>
+    <div class="ruler" aria-hidden="true"><i id="rulerBar"></i><span id="rulerTxt"></span></div>
+    <p class="hint">Der Balken zeigt die Breite, mit der die Seite rechnet, im Verhältnis zur Schwelle der Mobilansicht (640 px). Status: <span class="mq only-mobile">Mobilansicht aktiv</span><span class="mq only-desk">Desktop-Ansicht</span></p>
+  </div>
+
+  <div class="card"><h2>Messwerte</h2><dl class="kv" id="kv"></dl></div>
+
+  <div class="card"><h2>Bericht</h2>
+    <div class="actions">
+      <button class="btn primary" id="sendBtn">An Home Assistant senden</button>
+      <button class="btn" id="copyBtn">Kopieren</button>
+      <a class="btn" href="start.html">Zur Übersicht</a>
+    </div>
+    <div class="msg" id="msg"></div>
+    <p class="hint">„An Home Assistant senden“ legt eine Benachrichtigung in Home Assistant an – so kannst du den Bericht vom Handy bequem am PC lesen.</p>
+    <pre id="report"></pre>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const mq = q => window.matchMedia ? matchMedia(q).matches : null;
+
+function embedded(){ try { return window.parent !== window && !!window.parent.document.querySelector('home-assistant'); } catch { return window.parent !== window ? 'fremd' : false; } }
+
+function measure(){
+  const ua = navigator.userAgent, vv = window.visualViewport;
+  return {
+    ua,
+    webview: /; wv\)|Version\/[\d.]+ Chrome\/[\d.]+ Mobile/.test(ua) && /Android/.test(ua),
+    mobileUA: /Mobi|Android|iPhone|iPad/i.test(ua),
+    companion: /Home ?Assistant/i.test(ua),
+    innerW: innerWidth, innerH: innerHeight, docW: document.documentElement.clientWidth,
+    screenW: screen.width, screenH: screen.height, dpr: devicePixelRatio,
+    vvW: vv ? Math.round(vv.width) : null, vvScale: vv ? +vv.scale.toFixed(2) : null,
+    viewportMeta: document.querySelector('meta[name=viewport]')?.content || '',
+    mobileView: mq('(max-width:640px)'),
+    touch: navigator.maxTouchPoints || 0, coarse: mq('(pointer:coarse)'),
+    sysDark: mq('(prefers-color-scheme: dark)'),
+    themeChoice: window.HAV ? HAV.choice() : 'auto',
+    haDark: window.HAV ? HAV.haDark() : null,
+    dataTheme: document.documentElement.getAttribute('data-theme') || '',
+    effectiveDark: getComputedStyle(document.documentElement).getPropertyValue('--bg').trim().toUpperCase() !== '#ECEFF4',
+    embedded: embedded(), standalone: mq('(display-mode: standalone)'),
+    lang: navigator.language, tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    fixedToken: !!window.HA_FIXED_TOKEN, haLogin: (() => { try { return !!JSON.parse(localStorage.getItem('hassTokens'))?.refresh_token; } catch { return false; } })(),
+    url: location.pathname,
+  };
+}
+
+function findings(m){
+  const out = [], phone = m.coarse || m.touch > 0;
+  // Mobilansicht
+  if (m.mobileView) out.push(['ok', 'Mobilansicht aktiv', `Die Seite rechnet mit ${m.innerW} px Breite.`]);
+  else if (phone && m.screenW <= 900) {
+    const why = !m.mobileUA ? 'Der Browser meldet sich als Desktop-Rechner – in der App ist vermutlich „Desktop-Website“ / „Desktop-Modus“ eingeschaltet. Bitte dort ausschalten.'
+      : m.innerW >= 900 ? 'Der Browser der App ignoriert die Viewport-Angabe der Seite und rechnet mit einer festen Desktop-Breite. In den App-Einstellungen nach „Weite Ansicht“, „Übersichtsmodus“, „Seite einpassen“ oder „Desktop-Modus“ suchen und ausschalten.'
+      : (m.vvScale && m.vvScale < 1) ? 'Die Seite ist herausgezoomt. Zoom bzw. Textgröße der App auf 100 % stellen.'
+      : 'Die App rechnet mit einer größeren Breite als das Display. Prüfe Zoom-/Textgrößen-Einstellungen der App.';
+    out.push(['bad', 'Keine Mobilansicht', `Display ${m.screenW} px breit, die Seite rechnet aber mit ${m.innerW} px. ${why}`]);
+  } else out.push(['ok', 'Desktop-Ansicht', `Großer Bildschirm (${m.innerW} px) – die Desktop-Ansicht ist hier richtig.`]);
+  // Design
+  if (m.themeChoice !== 'auto') out.push(['ok', `Design fest auf „${m.themeChoice === 'dark' ? 'Dunkel' : 'Hell'}“`, 'Auf diesem Gerät eingestellt (siehe unten).']);
+  else if (m.haDark !== null) out.push(['ok', `Design wie Home Assistant: ${m.haDark ? 'dunkel' : 'hell'}`, m.sysDark !== m.haDark ? `Das System meldet ${m.sysDark ? 'dunkel' : 'hell'}, die Seiten folgen aber Home Assistant.` : 'System und Home Assistant stimmen überein.']);
+  else if (m.sysDark) out.push(['warn', 'Dunkles Design vom System bzw. der App', `${m.embedded === false ? 'Die Seite läuft nicht innerhalb der Home-Assistant-Oberfläche, daher gilt das Design, das ' + (m.webview ? 'die App' : 'der Browser') + ' meldet. ' : ''}Wenn du hell möchtest: unten „Hell“ wählen.`]);
+  else out.push(['ok', 'Helles Design vom System', 'Erscheint die Seite trotzdem dunkel, dunkelt die App sie selbst ab (z. B. „Erzwungener Dunkelmodus“). Ab dieser Version melden die Seiten ein eigenes dunkles Design an, damit sollte das nicht mehr passieren – sonst in der App die Abdunklung ausschalten.']);
+  if (m.webview) out.push(['warn', 'In-App-Browser erkannt', 'Die Seite läuft im eingebauten Browser einer App (Android WebView). Diese folgen oft nicht den Browser-Einstellungen.']);
+  if (!m.fixedToken && !m.haLogin && m.embedded !== true) out.push(['warn', 'Keine Anmeldung in diesem Browser', 'Die Steuerseiten brauchen hier eine HA-Anmeldung („Angemeldet bleiben“) oder das feste Zugriffstoken aus der Integration.']);
+  return out;
+}
+
+function report(m){
+  return ['HA Views Diagnose ' + new Date().toLocaleString('de-DE'), ...Object.entries(m).map(([k, v]) => `${k}: ${v}`)].join('\n');
+}
+
+const LABELS = {ua:'User-Agent', webview:'In-App-Browser (WebView)', mobileUA:'Meldet sich als Mobilgerät', companion:'HA Companion-App', innerW:'Seitenbreite (CSS px)', innerH:'Seitenhöhe (CSS px)',
+  docW:'Dokumentbreite', screenW:'Displaybreite', screenH:'Displayhöhe', dpr:'Pixelverhältnis', vvW:'Sichtbare Breite', vvScale:'Zoom',
+  viewportMeta:'Viewport-Angabe', mobileView:'Mobilansicht aktiv', touch:'Touchpunkte', coarse:'Fingerbedienung', sysDark:'System meldet dunkel',
+  themeChoice:'Design-Wahl (Gerät)', haDark:'Home Assistant dunkel', dataTheme:'Gesetztes Design', effectiveDark:'Seite ist dunkel', embedded:'In HA-Oberfläche eingebettet',
+  standalone:'Als App installiert', lang:'Sprache', tz:'Zeitzone', fixedToken:'Festes Token vorhanden', haLogin:'HA-Anmeldung gespeichert', url:'Seite'};
+const fmt = v => v === true ? 'ja' : v === false ? 'nein' : v === null ? 'unbekannt' : v;
+
+function render(){
+  const m = measure();
+  $('#finds').innerHTML = findings(m).map(([c, t, d]) => `<div class="find ${c}"><i></i><div><b>${esc(t)}</b><span>${esc(d)}</span></div></div>`).join('');
+  $('#kv').innerHTML = Object.entries(m).map(([k, v]) => `<dt>${esc(LABELS[k] || k)}</dt><dd>${esc(fmt(v))}</dd>`).join('');
+  const pct = Math.min(100, m.innerW / 1280 * 100);
+  $('#rulerBar').style.width = pct + '%';
+  $('#rulerTxt').textContent = `${m.innerW} px (Mobil bis 640 px)`;
+  document.querySelectorAll('#theme button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === m.themeChoice));
+  $('#report').textContent = report(m);
+  return m;
+}
+
+$('#theme').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; HAV.setTheme(b.dataset.v); setTimeout(render, 50); });
+$('#copyBtn').onclick = async () => {
+  const txt = $('#report').textContent, msg = $('#msg');
+  try { await navigator.clipboard.writeText(txt); msg.className = 'msg ok'; msg.textContent = 'Kopiert.'; }
+  catch { const r = document.createRange(); r.selectNodeContents($('#report')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); msg.className = 'msg'; msg.textContent = 'Text markiert – jetzt kopieren.'; }
+};
+
+/* Anmeldung wie auf den anderen Seiten, dann Benachrichtigung über die REST-API */
+async function getToken(){
+  if (window.HA_FIXED_TOKEN) return window.HA_FIXED_TOKEN;
+  try {
+    const auth = window.parent !== window && window.parent.document.querySelector('home-assistant')?.hass?.auth;
+    if (auth) { if (auth.expired) await auth.refreshAccessToken(); return auth.accessToken; }
+  } catch {}
+  try {
+    const t = JSON.parse(localStorage.getItem('hassTokens'));
+    if (t?.refresh_token) {
+      if (!t.expires || t.expires < Date.now() + 60000) {
+        const r = await fetch((t.hassUrl || location.origin) + '/auth/token', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+          body:new URLSearchParams({grant_type:'refresh_token', client_id:t.clientId || location.origin + '/', refresh_token:t.refresh_token})});
+        if (!r.ok) throw new Error('refresh');
+        const n = await r.json();
+        Object.assign(t, {access_token:n.access_token, expires_in:n.expires_in, expires:Date.now() + n.expires_in * 1000});
+        localStorage.setItem('hassTokens', JSON.stringify(t));
+      }
+      return t.access_token;
+    }
+  } catch {}
+  return null;
+}
+$('#sendBtn').onclick = async () => {
+  const msg = $('#msg'), m = render();
+  msg.className = 'msg'; msg.textContent = 'Sende …';
+  const token = await getToken();
+  if (!token) { msg.className = 'msg err'; msg.textContent = 'Keine Anmeldung in diesem Browser – bitte „Kopieren“ verwenden.'; return; }
+  const text = findings(m).map(([c, t, d]) => `- **${t}**: ${d}`).join('\n') + '\n\n```\n' + report(m) + '\n```';
+  try {
+    const r = await fetch(location.origin + '/api/services/persistent_notification/create', {method:'POST',
+      headers:{'Authorization':'Bearer ' + token, 'Content-Type':'application/json'},
+      body:JSON.stringify({title:'HA Views Diagnose', message:text, notification_id:'ha_views_diagnose'})});
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    msg.className = 'msg ok'; msg.textContent = 'Gesendet – in Home Assistant unter Benachrichtigungen (Glocke).';
+  } catch (err) { msg.className = 'msg err'; msg.textContent = 'Senden fehlgeschlagen: ' + err.message; }
+};
+addEventListener('resize', render);
+matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', render);
+render();
+</script>
+</body>
+</html>
