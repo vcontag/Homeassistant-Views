@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<link rel="manifest" href="pwa/fritz.webmanifest">
+<meta name="theme-color" content="#ECEFF4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#10151F" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="pwa/fritz-192.png">
+<link rel="icon" href="pwa/fritz-192.png">
+<script src="ha-token.js"></script>
+<script src="ha-views.js"></script>
+<title>FRITZ!Box</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#ECEFF4; --surface:#FFFFFF; --surface-2:#F4F6FA; --ink:#14213D; --muted:#5A6781; --line:#D5DBE6;
+  --accent:#D6332F; --accent-ink:#FFFFFF; --down:#2B7BD6; --up:#E08A1E;
+  --ok:#2E8B57; --warn:#B7790A; --bad:#C23B3B;
+  color-scheme:light; box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#10151F; --surface:#1A2130; --surface-2:#212A3B; --ink:#E5EAF3; --muted:#95A1B8; --line:#2C3749;
+    --accent:#F05A55; --accent-ink:#FFFFFF; --down:#5AA6F0; --up:#F2A84A; --ok:#4CC282; --warn:#E3A93A; --bad:#EF6B6B; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#10151F; --surface:#1A2130; --surface-2:#212A3B; --ink:#E5EAF3; --muted:#95A1B8; --line:#2C3749;
+  --accent:#F05A55; --accent-ink:#FFFFFF; --down:#5AA6F0; --up:#F2A84A; --ok:#4CC282; --warn:#E3A93A; --bad:#EF6B6B; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 Manrope,"Segoe UI",system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit}
+button,a,input{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+[hidden]{display:none!important}
+.wrap{max-width:1000px;margin:0 auto;padding:20px 16px 48px}
+header{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+header .t{flex:1;min-width:0}
+h1{margin:0;font-size:1.6rem;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.meta{color:var(--muted);font-size:.85rem;display:flex;align-items:center;gap:6px;margin-top:3px}
+.meta i{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
+.meta.on i{background:var(--ok)} .meta.err i{background:var(--bad)}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;text-decoration:none;color:var(--ink)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.small{min-height:32px;padding:4px 10px;font-size:.85rem}
+.btn:disabled{opacity:.5;cursor:default}
+@media (hover:hover){.btn:hover{border-color:var(--muted)}}
+.seg{display:flex;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:3px;gap:2px}
+.seg button{flex:1;border:0;background:none;border-radius:8px;padding:7px 12px;font-weight:700;font-size:.88rem;cursor:pointer;color:var(--muted);white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.sw{position:relative;width:48px;height:28px;border-radius:14px;border:0;background:var(--line);cursor:pointer;flex:none;transition:background .2s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.sw[aria-checked="true"]{background:var(--ok)}
+.sw[aria-checked="true"]::after{transform:translateX(20px)}
+.sw:disabled{opacity:.5}
+
+.hero{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:20px 22px;display:grid;gap:14px}
+.hero .top{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+.hero .st{flex:1;min-width:200px}
+.state{display:inline-flex;align-items:center;gap:10px;font-size:1.5rem;font-weight:800;letter-spacing:-.01em}
+.state::before{content:"";width:14px;height:14px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 5px color-mix(in srgb,var(--ok) 22%,transparent)}
+.state.off::before{background:var(--bad);box-shadow:0 0 0 5px color-mix(in srgb,var(--bad) 22%,transparent)}
+.state.link::before{background:var(--warn);box-shadow:0 0 0 5px color-mix(in srgb,var(--warn) 22%,transparent)}
+.sub{color:var(--muted);font-weight:600;margin-top:4px}
+.ips{display:flex;flex-wrap:wrap;gap:8px}
+.ip{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:.85rem;cursor:pointer;text-align:left;min-width:0}
+.ip span{display:block;color:var(--muted);font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.ip b{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:600;overflow-wrap:anywhere}
+.fw{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:.9rem;color:var(--muted);font-weight:600}
+.fw b{color:var(--ink)}
+.fw .new{color:var(--accent);font-weight:800}
+
+.rates{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+.rate{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px;display:grid;gap:6px}
+.rate span{color:var(--muted);font-size:.8rem;font-weight:700;display:flex;align-items:center;gap:6px}
+.rate span::before{content:"";width:10px;height:10px;border-radius:3px;background:var(--c)}
+.rate strong{font-size:1.8rem;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.rate strong small{font-size:.85rem;color:var(--muted);margin-left:4px}
+.rate .bar{height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden}
+.rate .bar i{display:block;height:100%;background:var(--c);border-radius:3px;transition:width .6s}
+.rate em{font-style:normal;color:var(--muted);font-size:.78rem}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin-top:14px}
+.card-h{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.card-h h2{margin:0;font-size:1.05rem;font-weight:800;flex:1}
+.card-h small{color:var(--muted);font-weight:700}
+.chart{width:100%;height:auto;display:block}
+.chart .d{fill:none;stroke:var(--down);stroke-width:2} .chart .da{fill:color-mix(in srgb,var(--down) 16%,transparent)}
+.chart .u{fill:none;stroke:var(--up);stroke-width:2}
+.chart .g{stroke:var(--line)} .chart text{fill:var(--muted);font-size:11px;font-weight:600;font-family:inherit}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.tile{background:var(--surface-2);border-radius:12px;padding:10px 12px;display:grid;gap:2px;min-width:0}
+.tile span{color:var(--muted);font-size:.78rem;font-weight:700}
+.tile strong{font-size:1.1rem;font-weight:800;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.tile strong small{font-size:.78rem;color:var(--muted);margin-left:3px}
+
+.row{display:flex;align-items:center;gap:12px;padding:10px 0}
+.row + .row{border-top:1px solid var(--line)}
+.row .n{flex:1;min-width:0}
+.row .n b{display:block;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .n small{display:block;color:var(--muted);font-size:.8rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--ok);flex:none}
+.dot.off{background:var(--line)}
+.ico{width:34px;height:34px;border-radius:10px;background:var(--surface-2);display:grid;place-items:center;flex:none;color:var(--muted)}
+.ico svg{width:20px;height:20px}
+.qr{display:flex;gap:16px;align-items:center;flex-wrap:wrap;background:var(--surface-2);border-radius:12px;padding:12px;margin-top:10px}
+.qr img{width:132px;height:132px;border-radius:8px;background:#fff;padding:6px}
+.qr .t{flex:1;min-width:180px}
+.qr .t b{display:block;font-weight:800}
+.qr .t small{color:var(--muted)}
+.qr .t .btn{margin-top:10px}
+.tools{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.tools input{flex:1;min-width:160px;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 12px;min-height:40px}
+.devs{margin-top:6px}
+.wol{flex:none}
+.inet{display:flex;align-items:center;gap:6px;font-size:.75rem;font-weight:700;color:var(--muted)}
+.more-btn{margin-top:10px;width:100%}
+.actions{display:flex;gap:10px;flex-wrap:wrap}
+.empty{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:36px 20px;text-align:center;color:var(--muted)}
+.empty .btn{margin-top:12px}
+.hint{font-size:.8rem;color:var(--muted);margin:8px 0 0}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;font-size:.9rem;box-shadow:0 6px 24px rgba(0,0,0,.25);z-index:50;max-width:calc(100% - 32px)}
+.toast.err{background:var(--bad);color:#fff}
+@media (max-width:640px){
+  .wrap{padding:12px 12px 32px}
+  h1{font-size:1.35rem}
+  .hero{padding:16px}
+  .state{font-size:1.3rem}
+  .rates{gap:10px;margin-top:10px}
+  .rate{padding:12px}
+  .rate strong{font-size:1.4rem}
+  .card{padding:14px}
+  .tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .btn{min-height:44px}
+  input{font-size:16px!important}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="t"><h1 id="title">FRITZ!Box</h1><div class="meta" id="meta"><i></i><span>Nicht verbunden</span></div></div>
+  </header>
+  <main id="main"></main>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const load = k => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } };
+const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+const nf = (v, d = 1) => new Intl.NumberFormat('de-DE', {maximumFractionDigits:d}).format(v);
+let tt;
+function toast(msg, err){
+  document.querySelector('.toast')?.remove();
+  const el = Object.assign(document.createElement('div'), {className:'toast' + (err ? ' err' : ''), textContent:msg});
+  el.setAttribute('role', 'status'); document.body.append(el);
+  clearTimeout(tt); tt = setTimeout(() => el.remove(), err ? 6000 : 3000);
+}
+
+/* ---------- Anmeldung (wie bei den anderen Seiten) ---------- */
+const FIXED_TOKEN = window.HA_FIXED_TOKEN || '';
+async function getToken(){
+  if (FIXED_TOKEN) return {token: FIXED_TOKEN, via: 'festes Token'};
+  try {
+    const auth = window.parent !== window && window.parent.document.querySelector('home-assistant')?.hass?.auth;
+    if (auth) { if (auth.expired) await auth.refreshAccessToken(); return {token: auth.accessToken, via: 'HA-Anmeldung'}; }
+  } catch {}
+  try {
+    const t = JSON.parse(localStorage.getItem('hassTokens'));
+    if (t?.refresh_token) {
+      if (!t.expires || t.expires < Date.now() + 60000) {
+        const r = await fetch((t.hassUrl || location.origin) + '/auth/token', {
+          method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: new URLSearchParams({grant_type: 'refresh_token', client_id: t.clientId || location.origin + '/', refresh_token: t.refresh_token})
+        });
+        if (!r.ok) throw new Error('refresh');
+        const n = await r.json();
+        Object.assign(t, {access_token: n.access_token, expires_in: n.expires_in, expires: Date.now() + n.expires_in * 1000});
+        localStorage.setItem('hassTokens', JSON.stringify(t));
+      }
+      return {token: t.access_token, via: 'HA-Anmeldung'};
+    }
+  } catch {}
+  return null;
+}
+const NO_LOGIN = 'Keine Anmeldung gefunden. Öffne die Seite über die Seitenleiste von Home Assistant oder melde dich in diesem Browser mit „Angemeldet bleiben“ an. Für Verknüpfungen außerhalb der HA-Oberfläche lässt sich in der Integration „Home Assistant Views“ unter „Konfigurieren“ ein festes Zugriffstoken hinterlegen.';
+const cfg = {url: location.origin};
+
+const S = {entities:[], devices:[], states:new Map(), entry: load('fb:entry'), busy:new Set(), hist:{}, q:'', filter: load('fb:filter') || 'online', showAll:false};
+let ws, msgId = 0; const pending = new Map();
+function setMeta(kind, text){ const m = $('#meta'); m.className = 'meta ' + kind; m.querySelector('span').textContent = text; }
+
+async function connect(){
+  if (ws) { ws.onclose = null; ws.close(); }
+  setMeta('', 'Verbinde …');
+  const auth = await getToken();
+  if (!cfg.url || !auth) { setMeta('err', 'Nicht angemeldet'); showError(NO_LOGIN); return; }
+  ws = new WebSocket(cfg.url.replace(/^http/i, 'ws').replace(/\/+$/, '') + '/api/websocket');
+  let authed = false;
+  ws.onmessage = async e => {
+    const m = JSON.parse(e.data);
+    if (m.type === 'auth_required') ws.send(JSON.stringify({type:'auth', access_token:auth.token}));
+    else if (m.type === 'auth_invalid') { setMeta('err', 'Anmeldung abgelehnt'); showError('Die Anmeldung wurde abgelehnt. Melde dich in Home Assistant neu an.'); }
+    else if (m.type === 'auth_ok') {
+      authed = true; setMeta('on', 'Verbunden über ' + auth.via);
+      send({type:'subscribe_events', event_type:'state_changed'}).catch(() => {});
+      try { await loadAll(); } catch (err) { showError(err.message); }
+    }
+    else if (m.type === 'result') { const p = pending.get(m.id); if (p) { pending.delete(m.id); m.success ? p.res(m.result) : p.rej(new Error(m.error?.message || 'Fehler')); } }
+    else if (m.type === 'event' && m.event?.event_type === 'state_changed') {
+      const {entity_id, new_state} = m.event.data;
+      if (!S.mine?.has(entity_id)) return;
+      if (new_state) {
+        S.states.set(entity_id, new_state);
+        if (S.hist[entity_id]) { const n = parseFloat(new_state.state); if (Number.isFinite(n)) S.hist[entity_id].push([Date.now(), n]); }
+      } else S.states.delete(entity_id);
+      S.busy.delete(entity_id); scheduleRender();
+    }
+  };
+  ws.onerror = () => { if (!authed) { setMeta('err', 'Nicht verbunden'); showError('Keine Verbindung zu ' + cfg.url + '.'); } };
+  ws.onclose = () => { if (authed) { setMeta('err', 'Verbindung verloren, neuer Versuch …'); setTimeout(connect, 5000); } };
+}
+function send(msg){
+  return new Promise((res, rej) => {
+    if (!ws || ws.readyState !== 1) return rej(new Error('Nicht verbunden'));
+    const id = ++msgId; pending.set(id, {res, rej}); ws.send(JSON.stringify({...msg, id}));
+  });
+}
+const call = (domain, service, data) => send({type:'call_service', domain, service, service_data:data});
+
+/* ---------- Daten der Integration ----------
+   Box-Entitäten: unique_id "<Seriennummer>-<schlüssel>"; Geräte im Netz: "<MAC>_tracker",
+   "<MAC>_internet_access" (Kindersicherung), "<MAC>_wake_on_lan". */
+const DOMAIN = 'fritz';
+const MAC_RE = /^([0-9A-F]{2}(?::[0-9A-F]{2}){5})_(tracker|internet_access|wake_on_lan)$/i;
+async function loadAll(){
+  const [devices, entities, states] = await Promise.all([
+    send({type:'config/device_registry/list'}), send({type:'config/entity_registry/list'}), send({type:'get_states'})]);
+  S.entities = entities.filter(e => !e.disabled_by && e.platform === DOMAIN);
+  S.devices = devices;
+  S.mine = new Set(S.entities.map(e => e.entity_id));
+  S.states = new Map(states.filter(s => S.mine.has(s.entity_id)).map(s => [s.entity_id, s]));
+  S.entries = [...new Set(S.entities.map(e => e.config_entry_id).filter(Boolean))];
+  // Haupt-Box (mit Internetverbindung) zuerst
+  S.entries.sort((a, b) => +!!model(b).box.get('is_connected') - +!!model(a).box.get('is_connected'));
+  if (!S.entries.includes(S.entry)) S.entry = S.entries[0];
+  render();
+  loadHistory();
+}
+function model(entry){
+  const box = new Map(), macs = new Map(), wifi = [], ports = [], defl = [];
+  let serial = '';
+  for (const e of S.entities.filter(x => x.config_entry_id === entry)) {
+    const uid = String(e.unique_id || ''), mm = uid.match(MAC_RE);
+    if (mm) {
+      const mac = mm[1].toUpperCase();
+      if (!macs.has(mac)) macs.set(mac, {mac});
+      macs.get(mac)[mm[2]] = e; continue;
+    }
+    const k = uid.match(/^([^-]+)-(.+)$/);
+    if (!k) continue;
+    serial = serial || k[1];
+    const key = k[2];
+    if (e.entity_id.startsWith('switch.') && key.startsWith('wi_fi_')) wifi.push(e);
+    else if (e.entity_id.startsWith('switch.') && key.startsWith('port_forward')) ports.push(e);
+    else if (e.entity_id.startsWith('switch.') && key.startsWith('call_deflection')) defl.push(e);
+    else box.set(key, e);
+  }
+  const dev = S.devices.find(d => (d.identifiers || []).some(([dom, id]) => dom === DOMAIN && id === serial));
+  return {entry, box, macs:[...macs.values()], wifi, ports, defl, dev};
+}
+const st = e => e && S.states.get(e.entity_id);
+const usable = s => s && !['unavailable', 'unknown', ''].includes(s.state);
+const num = s => { const n = parseFloat(s?.state); return usable(s) && Number.isFinite(n) ? n : null; };
+// Datenrate in Mbit/s
+function mbit(s){
+  const v = num(s); if (v == null) return null;
+  const u = String(s.attributes.unit_of_measurement || 'kB/s');
+  const f = {'bit/s':1e-6, 'kbit/s':1e-3, 'Mbit/s':1, 'Gbit/s':1000, 'B/s':8e-6, 'kB/s':8e-3, 'MB/s':8, 'GB/s':8000, 'KiB/s':8.192e-3, 'MiB/s':8.389}[u] ?? 8e-3;
+  return v * f;
+}
+const fmtRate = v => v == null ? '–' : v >= 100 ? nf(v, 0) : v >= 10 ? nf(v, 1) : nf(v, 2);
+const rtf = new Intl.RelativeTimeFormat('de', {numeric:'auto'});
+function since(v){
+  const t = Date.parse(v); if (isNaN(t)) return '';
+  const s = (Date.now() - t) / 1000;
+  if (s < 3600) return `seit ${Math.max(1, Math.round(s / 60))} Min.`;
+  if (s < 86400) return `seit ${Math.round(s / 3600)} Std.`;
+  return `seit ${Math.round(s / 86400)} Tagen`;
+}
+function ago(v){
+  const t = Date.parse(v); if (isNaN(t)) return '';
+  const s = (t - Date.now()) / 1000, a = Math.abs(s);
+  if (a < 60) return 'gerade eben';
+  if (a < 3600) return rtf.format(Math.round(s / 60), 'minute');
+  if (a < 86400) return rtf.format(Math.round(s / 3600), 'hour');
+  return rtf.format(Math.round(s / 86400), 'day');
+}
+
+/* ---------- Verlauf Durchsatz (3 Stunden) ---------- */
+async function loadHistory(){
+  const m = model(S.entry), ids = ['kb_s_received', 'kb_s_sent'].map(k => m.box.get(k)?.entity_id).filter(Boolean);
+  if (!ids.length) return;
+  try {
+    const r = await send({type:'history/history_during_period', start_time:new Date(Date.now() - 3 * 3600e3).toISOString(),
+      entity_ids:ids, minimal_response:true, no_attributes:true, significant_changes_only:false});
+    for (const id of ids) {
+      let last = 0;
+      S.hist[id] = (r[id] || []).map(x => { last = x.lu ? x.lu * 1000 : last; return [last, parseFloat(x.s)]; }).filter(p => Number.isFinite(p[1]));
+    }
+    render();
+  } catch (err) { console.warn('Verlauf', err); }
+}
+
+/* ---------- Darstellung ---------- */
+let rt; function scheduleRender(){ clearTimeout(rt); rt = setTimeout(render, 300); }
+function showError(msg){ $('#main').innerHTML = `<div class="empty">${esc(msg)}<br><button class="btn primary" onclick="connect()">Erneut versuchen</button></div>`; }
+const I = {
+  wifi:'<svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 21l3.6-4.8a6 6 0 0 0-7.2 0L12 21zm0-18C7.9 3 4.1 4.4 1 6.7l1.8 2.4A15 15 0 0 1 12 6c3.4 0 6.5 1.1 9.2 3.1L23 6.7A18 18 0 0 0 12 3zm0 6c-2.7 0-5.2.9-7.2 2.4l1.8 2.4A9 9 0 0 1 12 12c2 0 3.9.7 5.4 1.8l1.8-2.4A12 12 0 0 0 12 9z"/></svg>',
+  lan:'<svg viewBox="0 0 24 24"><path fill="currentColor" d="M10 2v6H8v3H3v4H1v7h6v-7H5v-2h14v2h-2v7h6v-7h-2v-4h-5V8h-2V2h-4z"/></svg>',
+  port:'<svg viewBox="0 0 24 24"><path fill="currentColor" d="M4 4h16v4H4zm0 6h16v4H4zm0 6h16v4H4z" opacity=".35"/><path fill="currentColor" d="M14 5l4 2-4 2V5zm0 6l4 2-4 2v-4zm0 6l4 2-4 2v-4z"/></svg>',
+  phone:'<svg viewBox="0 0 24 24"><path fill="currentColor" d="M6.6 10.8a15 15 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/></svg>',
+};
+
+function heroHTML(m){
+  const g = k => st(m.box.get(k));
+  const conn = g('is_connected'), link = g('is_linked');
+  const kind = !conn ? '' : conn.state === 'on' ? 'ok' : link?.state === 'on' ? 'link' : 'off';
+  const txt = {ok:'Internet verbunden', link:'Leitung da, keine Internetverbindung', off:'Keine Internetverbindung', '':'FRITZ!Box'}[kind];
+  const up = g('connection_uptime'), devUp = g('device_uptime'), v4 = g('external_ip'), v6 = g('external_ipv6');
+  const upd = st(m.box.get('update')), updE = m.box.get('update');
+  const reconnect = m.box.get('reconnect'), reboot = m.box.get('reboot');
+  const ip = (label, s) => usable(s) ? `<button class="ip" data-copy="${esc(s.state)}" title="Kopieren"><span>${label}</span><b>${esc(s.state)}</b></button>` : '';
+  return `<article class="hero">
+    <div class="top"><div class="st"><div class="state ${kind === 'ok' ? '' : kind}">${esc(txt)}</div>
+      <div class="sub">${esc([usable(up) && 'Verbindung ' + since(up.state), usable(devUp) && 'Box läuft ' + since(devUp.state).replace('seit ', 'seit ')].filter(Boolean).join(' · '))}</div></div></div>
+    <div class="ips">${ip('IPv4 extern', v4)}${ip('IPv6 extern', v6)}</div>
+    ${upd ? `<div class="fw">FRITZ!OS <b>${esc(upd.attributes.installed_version || '–')}</b>${upd.state === 'on' ? ` <span class="new">Update auf ${esc(upd.attributes.latest_version)} verfügbar</span>
+      <button class="btn small" data-update="${esc(updE.entity_id)}" ${S.busy.has(updE.entity_id) || upd.attributes.in_progress ? 'disabled' : ''}>${upd.attributes.in_progress ? 'Wird installiert …' : 'Installieren'}</button>` : ' · aktuell'}</div>` : ''}
+    ${reconnect || reboot ? `<div class="actions">${reconnect ? `<button class="btn" data-press="${esc(reconnect.entity_id)}" data-confirm="Internetverbindung neu aufbauen? Die Verbindung ist dabei kurz unterbrochen, die externe IP-Adresse kann sich ändern.">Neu verbinden</button>` : ''}
+      ${reboot ? `<button class="btn" data-press="${esc(reboot.entity_id)}" data-confirm="FRITZ!Box neu starten? Internet, WLAN und Telefonie sind dabei einige Minuten weg.">Neustart</button>` : ''}</div>` : ''}
+  </article>`;
+}
+
+function ratesHTML(m){
+  const g = k => st(m.box.get(k));
+  const down = mbit(g('kb_s_received')), upv = mbit(g('kb_s_sent'));
+  if (down == null && upv == null) return '';
+  const maxD = mbit(g('max_kb_s_received')) || mbit(g('link_kb_s_received')), maxU = mbit(g('max_kb_s_sent')) || mbit(g('link_kb_s_sent'));
+  const tile = (label, c, v, max) => `<div class="rate" style="--c:var(--${c})"><span>${label}</span><strong>${fmtRate(v)}<small>Mbit/s</small></strong>
+    <div class="bar"><i style="width:${max && v != null ? Math.min(100, v / max * 100) : 0}%"></i></div><em>${max ? `von ${fmtRate(max)} Mbit/s` : ''}</em></div>`;
+  return `<div class="rates">${tile('Download', 'down', down, maxD)}${tile('Upload', 'up', upv, maxU)}</div>${chartHTML(m)}`;
+}
+
+function chartHTML(m){
+  const dE = m.box.get('kb_s_received'), uE = m.box.get('kb_s_sent');
+  const D = S.hist[dE?.entity_id] || [], U = S.hist[uE?.entity_id] || [];
+  if (D.length < 2 && U.length < 2) return '';
+  const f = s => mbit({state:'1', attributes:st(s)?.attributes || {}}) || 8e-3;
+  const fd = f(dE), fu = f(uE), now = Date.now(), t0 = now - 3 * 3600e3;
+  const W = Math.max(300, Math.round(($('#main').clientWidth || 900) - 38)), H = 170, pl = 40, pb = 20, pt = 8;
+  const all = [...D.map(p => p[1] * fd), ...U.map(p => p[1] * fu)], max = Math.max(1, ...all) * 1.1;
+  const x = t => pl + (W - pl) * Math.max(0, (t - t0)) / (now - t0), y = v => pt + (H - pt - pb) * (1 - v / max);
+  // Treppenlinie bis jetzt
+  const path = (P, fac) => { if (!P.length) return ''; let d = `M${x(Math.max(t0, P[0][0]))},${y(P[0][1] * fac)}`;
+    for (let i = 1; i < P.length; i++) d += ` H${x(P[i][0])} V${y(P[i][1] * fac)}`; return d + ` H${x(now)}`; };
+  const dp = path(D, fd), up = path(U, fu);
+  const grid = [0, max / 2, max].map(v => `<line class="g" x1="${pl}" x2="${W}" y1="${y(v)}" y2="${y(v)}"/><text x="${pl - 6}" y="${y(v) + 4}" text-anchor="end">${fmtRate(v)}</text>`).join('');
+  const ticks = [3, 2, 1, 0].map(h => `<text x="${x(now - h * 3600e3)}" y="${H - 4}" text-anchor="${h === 0 ? 'end' : h === 3 ? 'start' : 'middle'}">${h === 0 ? 'jetzt' : '−' + h + ' h'}</text>`).join('');
+  return `<div class="card"><div class="card-h"><h2>Durchsatz</h2><small>letzte 3 Stunden · Mbit/s</small></div>
+    <svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Download und Upload der letzten 3 Stunden">${grid}
+      ${dp ? `<path class="da" d="${dp} V${y(0)} H${x(Math.max(t0, D[0][0]))} Z"/><path class="d" d="${dp}"/>` : ''}${up ? `<path class="u" d="${up}"/>` : ''}${ticks}</svg></div>`;
+}
+
+function lineHTML(m){
+  const g = k => st(m.box.get(k));
+  const t = (label, s, unit, digits = 1, conv) => { let v = num(s); if (v == null) return ''; if (conv) v = conv(v, s);
+    return `<div class="tile"><span>${label}</span><strong>${nf(v, digits)}${unit ? `<small>${unit}</small>` : ''}</strong></div>`; };
+  const html = [
+    t('Empfangen', g('gb_received'), 'GB'), t('Gesendet', g('gb_sent'), 'GB'),
+    (() => { const s = g('link_kb_s_received'); const v = mbit(s); return v == null ? '' : `<div class="tile"><span>Leitung ↓</span><strong>${fmtRate(v)}<small>Mbit/s</small></strong></div>`; })(),
+    (() => { const s = g('link_kb_s_sent'); const v = mbit(s); return v == null ? '' : `<div class="tile"><span>Leitung ↑</span><strong>${fmtRate(v)}<small>Mbit/s</small></strong></div>`; })(),
+    t('Störabstand ↓', g('link_noise_margin_received'), 'dB'), t('Störabstand ↑', g('link_noise_margin_sent'), 'dB'),
+    t('Dämpfung ↓', g('link_attenuation_received'), 'dB'), t('Dämpfung ↑', g('link_attenuation_sent'), 'dB'),
+    t('CPU-Temperatur', g('cpu_temperature'), '°C', 0),
+  ].filter(Boolean).join('');
+  return html ? `<div class="card"><div class="card-h"><h2>Leitung & Box</h2></div><div class="tiles">${html}</div></div>` : '';
+}
+
+function switchRow(e, icon, title, sub){
+  const s = st(e), busy = S.busy.has(e.entity_id);
+  return `<div class="row"><div class="ico">${icon}</div><div class="n"><b>${esc(title)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</div>
+    <button class="sw" role="switch" aria-checked="${s?.state === 'on'}" aria-label="${esc(title)}" data-sw="${esc(e.entity_id)}" ${!usable(s) || busy ? 'disabled' : ''}></button></div>`;
+}
+const nameOf = e => { const s = st(e); let n = e.name || s?.attributes.friendly_name || e.original_name || e.entity_id;
+  const dev = S.devices.find(d => d.id === e.device_id), dn = dev?.name_by_user || dev?.name;
+  if (dn && n.startsWith(dn + ' ')) n = n.slice(dn.length + 1);
+  return n; };
+
+function wifiHTML(m){
+  const qrE = S.entities.find(e => e.config_entry_id === m.entry && /-guest_wifi_qr_code$/.test(e.unique_id || ''));
+  if (!m.wifi.length && !qrE) return '';
+  const rows = m.wifi.map(e => { const a = st(e)?.attributes || {};
+    return switchRow(e, I.wifi, nameOf(e).replace(/^Wi-?Fi\s*/i, 'WLAN '), [a.standard && 'Standard ' + a.standard, a.bssid].filter(Boolean).join(' · ')); }).join('');
+  const q = st(qrE);
+  const qr = qrE && q?.attributes.entity_picture ? `<div class="qr"><img src="${esc(cfg.url + q.attributes.entity_picture)}" alt="QR-Code für das Gast-WLAN">
+    <div class="t"><b>Gast-WLAN ${esc(nameOf(qrE))}</b><small>Zum Verbinden mit der Handykamera scannen.</small><br>
+    ${m.dev ? `<button class="btn small" data-guestpw="${esc(m.dev.id)}" data-confirm="Neues zufälliges Passwort für das Gast-WLAN setzen? Verbundene Gäste müssen sich neu anmelden.">Neues Passwort</button>` : ''}</div></div>` : '';
+  return `<div class="card"><div class="card-h"><h2>WLAN</h2></div>${rows}${qr}</div>`;
+}
+
+function devicesHTML(m){
+  if (!m.macs.length) return '';
+  const list = m.macs.map(d => { const s = st(d.tracker), a = s?.attributes || {};
+    return {...d, s, a, name: a.friendly_name || d.tracker?.original_name || d.mac, online: s?.state === 'home'}; })
+    .filter(d => d.tracker);
+  const on = list.filter(d => d.online).length;
+  const q = S.q.trim().toLowerCase();
+  let shown = list.filter(d => S.filter === 'all' || d.online)
+    .filter(d => !q || [d.name, d.a.ip, d.mac, d.a.host_name, d.a.ssid].some(v => String(v || '').toLowerCase().includes(q)))
+    .sort((x, y) => (y.online - x.online) || x.name.localeCompare(y.name, 'de', {numeric:true}));
+  const LIMIT = 30, more = shown.length > LIMIT && !S.showAll && !q;
+  if (more) shown = shown.slice(0, LIMIT);
+  const rows = shown.map(d => {
+    const lan = String(d.a.connection_type || '').toUpperCase() === 'LAN';
+    const sub = d.online ? [d.a.ip, lan ? 'LAN' : d.a.ssid ? 'WLAN ' + d.a.ssid : d.a.connection_type, d.a.connected_to && d.a.connected_to !== m.dev?.name ? 'über ' + d.a.connected_to : '']
+      : [d.a.ip, d.a.last_time_reachable && 'zuletzt ' + ago(d.a.last_time_reachable)];
+    const ia = d.internet_access, iaS = st(ia);
+    return `<div class="row"><span class="dot ${d.online ? '' : 'off'}" title="${d.online ? 'Online' : 'Offline'}"></span>
+      <div class="ico">${lan ? I.lan : I.wifi}</div>
+      <div class="n"><b>${esc(d.name)}</b><small>${esc(sub.filter(Boolean).join(' · '))}</small></div>
+      ${d.wake_on_lan && !d.online ? `<button class="btn small wol" data-press="${esc(d.wake_on_lan.entity_id)}" title="Wake on LAN">Wecken</button>` : ''}
+      ${ia ? `<label class="inet" title="Internetzugang">Internet<button class="sw" role="switch" aria-checked="${iaS?.state === 'on'}" aria-label="Internetzugang ${esc(d.name)}" data-sw="${esc(ia.entity_id)}" ${!usable(iaS) || S.busy.has(ia.entity_id) ? 'disabled' : ''}></button></label>` : ''}</div>`;
+  }).join('');
+  return `<div class="card"><div class="card-h"><h2>Geräte</h2><small>${on} online · ${list.length} bekannt</small></div>
+    <div class="tools"><input type="search" id="q" placeholder="Name, IP, MAC suchen" value="${esc(S.q)}" aria-label="Geräte suchen">
+      <div class="seg" role="group" aria-label="Filter"><button data-filter="online" aria-pressed="${S.filter === 'online'}">Online</button><button data-filter="all" aria-pressed="${S.filter === 'all'}">Alle</button></div></div>
+    <div class="devs">${rows || '<p class="hint">Kein Gerät passt.</p>'}</div>
+    ${more ? `<button class="btn more-btn" data-showall="1">Alle ${list.filter(d => S.filter === 'all' || d.online).length} anzeigen</button>` : ''}</div>`;
+}
+
+function portsHTML(m){
+  const p = m.ports.map(e => { const a = st(e)?.attributes || {};
+    return switchRow(e, I.port, nameOf(e).replace(/^Port forward\s*/i, ''), a.external_port ? `${a.protocol || ''} ${a.external_port} → ${a.internal_ip}:${a.internal_port}` : ''); }).join('');
+  const d = m.defl.map(e => { const a = st(e)?.attributes || {};
+    return switchRow(e, I.phone, nameOf(e).replace(/^Call deflection\s*/i, 'Rufumleitung '), [a.number && 'von ' + a.number, a.deflection_to_number && 'an ' + a.deflection_to_number, a.mode].filter(Boolean).join(' · ')); }).join('');
+  return (p ? `<div class="card"><div class="card-h"><h2>Portfreigaben</h2></div>${p}</div>` : '') + (d ? `<div class="card"><div class="card-h"><h2>Rufumleitungen</h2></div>${d}</div>` : '');
+}
+
+function render(){
+  if (!S.entities.length) { $('#main').innerHTML = '<div class="empty">Keine Einträge der Integration FRITZ!Box Tools gefunden.</div>'; return; }
+  const ae = document.activeElement;
+  const typing = ae?.id === 'q' ? [ae.selectionStart, ae.selectionEnd] : null;
+  const m = model(S.entry);
+  let html = '';
+  if (S.entries.length > 1) html += `<div class="seg" style="margin-bottom:14px" role="group" aria-label="Gerät">${S.entries.map(id => { const d = model(id).dev;
+    return `<button data-entry="${esc(id)}" aria-pressed="${id === S.entry}">${esc(d?.name_by_user || d?.name || 'FRITZ!')}</button>`; }).join('')}</div>`;
+  $('#title').textContent = m.dev?.name_by_user || m.dev?.name || 'FRITZ!Box';
+  html += heroHTML(m) + ratesHTML(m) + wifiHTML(m) + devicesHTML(m) + portsHTML(m) + lineHTML(m);
+  $('#main').innerHTML = html;
+  if (typing) { const q = $('#q'); q.focus(); q.setSelectionRange(...typing); }
+}
+
+/* ---------- Aktionen ---------- */
+async function run(key, fn, msg){
+  S.busy.add(key); render();
+  try { await fn(); toast(msg || 'Gesendet'); }
+  catch (err) { toast('Fehlgeschlagen: ' + err.message, true); }
+  setTimeout(() => { S.busy.delete(key); render(); }, 3000);
+}
+$('#main').addEventListener('click', e => {
+  const t = e.target.closest('button'); if (!t) return;
+  if (t.dataset.entry) { S.entry = t.dataset.entry; save('fb:entry', S.entry); S.hist = {}; render(); loadHistory(); return; }
+  if (t.dataset.filter) { S.filter = t.dataset.filter; save('fb:filter', S.filter); S.showAll = false; render(); return; }
+  if (t.dataset.showall) { S.showAll = true; render(); return; }
+  if (t.dataset.copy) { navigator.clipboard?.writeText(t.dataset.copy).then(() => toast('Kopiert'), () => {}); return; }
+  if (t.dataset.confirm && !confirm(t.dataset.confirm)) return;
+  if (t.dataset.sw) { const id = t.dataset.sw; run(id, () => call('switch', t.getAttribute('aria-checked') === 'true' ? 'turn_off' : 'turn_on', {entity_id:id}), 'Geschaltet'); return; }
+  if (t.dataset.press) { const id = t.dataset.press; run(id, () => call('button', 'press', {entity_id:id}), 'Ausgelöst'); return; }
+  if (t.dataset.update) { const id = t.dataset.update; if (!confirm('FRITZ!OS-Update installieren? Die Box startet dabei neu.')) return; run(id, () => call('update', 'install', {entity_id:id}), 'Update wird installiert'); return; }
+  if (t.dataset.guestpw) { run('guestpw', () => call(DOMAIN, 'set_guest_wifi_password', {device_id:t.dataset.guestpw}), 'Neues Gast-Passwort gesetzt'); }
+});
+$('#main').addEventListener('input', e => { if (e.target.id === 'q') { S.q = e.target.value; render(); } });
+setInterval(() => { if (S.entities.length) render(); }, 60000);
+let rw = innerWidth; addEventListener('resize', () => { if (Math.abs(innerWidth - rw) > 40) { rw = innerWidth; scheduleRender(); } });
+connect();
+</script>
+</body>
+</html>

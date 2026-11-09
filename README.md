@@ -17,6 +17,8 @@ eingerichtet ist, und verschwindet wieder, wenn du sie entfernst.
 | Abfall | Waste Collection Schedule (`waste_collection_schedule`) eingerichtet ist – über die Oberfläche oder per YAML |
 | Garten | Garten-Bewässerung — Score Irrigation (`garten_bewaesserung`) eingerichtet ist |
 | Wetter | Wetter & Warnungen (`wetter`) oder DWD Weather Warnings (`dwd_weather_warnings`) eingerichtet ist |
+| FRITZ!Box | FRITZ!Box Tools (`fritz`) eingerichtet ist |
+| Tanken | Tankerkönig (`tankerkoenig`) eingerichtet ist |
 | Zigbee | ZHA eingerichtet ist oder Zigbee2MQTT-Geräte vorhanden sind |
 
 Die Seiten passen sich hellem und dunklem Design an, sind für das Handy optimiert und
@@ -124,3 +126,17 @@ Pollenflug und UV-Index. Die Vorhersage aktualisiert sich live.
 Ist zusätzlich die Integration **DWD Weather Warnings** eingerichtet, kommen ihre Warnungen für die eingestellte
 Warnregion mit in die Liste (Vorabinformationen gekennzeichnet); auch sie zeigen ihre Details im Popup.
 Ist nur DWD Weather Warnings eingerichtet, zeigt die Seite nur die Warnungen.
+
+## FRITZ!Box (FRITZ!Box Tools)
+
+Status der Internetverbindung mit externer IP (antippen kopiert sie), Verbindungsdauer und FRITZ!OS-Version samt
+Update-Knopf. Download und Upload live in Mbit/s mit Auslastung und Verlauf der letzten 3 Stunden. WLAN-Netze an/aus,
+Gast-WLAN mit QR-Code und „Neues Passwort“. Die Geräte im Netz mit Suche und Filter, IP, LAN/WLAN, Internetzugang je
+Gerät (wenn in der Integration Profile aktiv sind) und Wake on LAN. Dazu Portfreigaben, Rufumleitungen, Leitungswerte
+und **Neu verbinden** / **Neustart** (jeweils mit Rückfrage). Bei mehreren Boxen (Mesh) lässt sich oben umschalten.
+
+## Tanken (Tankerkönig)
+
+Kraftstoff wählen (E5, E10, Diesel). Oben die **günstigste geöffnete Tankstelle** mit Preis wie an der Säule und
+Route, darunter alle Tankstellen nach Preis mit Abstand zur günstigsten in Cent. Der **Preisverlauf** zeigt die letzten
+24 Stunden je Tankstelle; aus den letzten 7 Tagen errechnet die Seite, zu welcher Tageszeit es meist am günstigsten war.

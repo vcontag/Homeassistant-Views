@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<link rel="manifest" href="pwa/tanken.webmanifest">
+<meta name="theme-color" content="#ECEFF4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#10151F" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="pwa/tanken-192.png">
+<link rel="icon" href="pwa/tanken-192.png">
+<script src="ha-token.js"></script>
+<script src="ha-views.js"></script>
+<title>Tanken</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#ECEFF4; --surface:#FFFFFF; --surface-2:#F4F6FA; --ink:#14213D; --muted:#5A6781; --line:#D5DBE6;
+  --accent:#0E8A6A; --accent-ink:#FFFFFF; --accent-soft:#D8F0E8;
+  --ok:#2E8B57; --warn:#B7790A; --bad:#C23B3B;
+  color-scheme:light; box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#10151F; --surface:#1A2130; --surface-2:#212A3B; --ink:#E5EAF3; --muted:#95A1B8; --line:#2C3749;
+    --accent:#3CC79F; --accent-ink:#06231A; --accent-soft:#163A30; --ok:#4CC282; --warn:#E3A93A; --bad:#EF6B6B; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#10151F; --surface:#1A2130; --surface-2:#212A3B; --ink:#E5EAF3; --muted:#95A1B8; --line:#2C3749;
+  --accent:#3CC79F; --accent-ink:#06231A; --accent-soft:#163A30; --ok:#4CC282; --warn:#E3A93A; --bad:#EF6B6B; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 Manrope,"Segoe UI",system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit}
+button,a{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:900px;margin:0 auto;padding:20px 16px 48px}
+header{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+header .t{flex:1;min-width:0}
+h1{margin:0;font-size:1.6rem;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.meta{color:var(--muted);font-size:.85rem;display:flex;align-items:center;gap:6px;margin-top:3px}
+.meta i{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
+.meta.on i{background:var(--ok)} .meta.err i{background:var(--bad)}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;text-decoration:none;color:var(--ink)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.seg{display:flex;background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:4px;gap:3px;margin-bottom:14px}
+.seg button{flex:1;border:0;background:none;border-radius:9px;padding:9px 10px;font-weight:800;cursor:pointer;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.price{font-variant-numeric:tabular-nums;font-weight:800;letter-spacing:-.02em;white-space:nowrap}
+.price sup{font-size:.55em;vertical-align:.75em;margin-left:1px}
+.price small{font-size:.45em;color:var(--muted);margin-left:4px;font-weight:700;letter-spacing:0}
+
+.hero{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:20px 22px;display:grid;grid-template-columns:auto 1fr;gap:6px 22px;align-items:center}
+.hero .label{grid-column:1 / -1;font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.hero .price{font-size:3.4rem;line-height:1;color:var(--accent)}
+.hero .who b{display:block;font-size:1.2rem;font-weight:800}
+.hero .who span{color:var(--muted);font-weight:600}
+.hero .acts{grid-column:1 / -1;display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;font-weight:800;border-radius:999px;padding:3px 10px;background:var(--accent-soft);color:var(--accent)}
+.pill.closed{background:var(--surface-2);color:var(--muted)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin-top:14px}
+.card-h{display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap}
+.card-h h2{margin:0;font-size:1.05rem;font-weight:800;flex:1}
+.card-h small{color:var(--muted);font-weight:700}
+.st{display:flex;align-items:center;gap:14px;padding:11px 0}
+.st + .st{border-top:1px solid var(--line)}
+.st.closed{opacity:.55}
+.st .rank{width:26px;height:26px;border-radius:50%;background:var(--surface-2);display:grid;place-items:center;font-weight:800;font-size:.8rem;flex:none}
+.st.best .rank{background:var(--accent);color:var(--accent-ink)}
+.st .n{flex:1;min-width:0}
+.st .n b{display:block;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st .n small{display:block;color:var(--muted);font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st .p{text-align:right;flex:none}
+.st .p .price{font-size:1.35rem}
+.st .p em{display:block;font-style:normal;font-size:.78rem;font-weight:700;color:var(--muted)}
+.st .p em.up{color:var(--warn)}
+.st .other{display:flex;gap:10px;font-size:.78rem;color:var(--muted);font-weight:600;margin-top:2px}
+.chart{width:100%;height:auto;display:block}
+.chart path{fill:none;stroke-width:2.2;stroke-linejoin:round}
+.chart .g{stroke:var(--line)} .chart text{fill:var(--muted);font-size:11px;font-weight:600;font-family:inherit}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;font-size:.82rem;font-weight:600;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend span::before{content:"";width:12px;height:4px;border-radius:2px;background:var(--c)}
+.tip{display:flex;gap:10px;align-items:center;background:var(--accent-soft);border-radius:12px;padding:10px 12px;font-weight:700;margin-top:10px}
+.tip svg{width:20px;height:20px;flex:none;color:var(--accent)}
+.empty{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:36px 20px;text-align:center;color:var(--muted)}
+.empty .btn{margin-top:12px}
+.hint{font-size:.8rem;color:var(--muted);margin:10px 0 0}
+@media (max-width:640px){
+  .wrap{padding:12px 12px 32px}
+  h1{font-size:1.35rem}
+  .hero{padding:16px;grid-template-columns:1fr;gap:6px}
+  .hero .price{font-size:3rem}
+  .card{padding:14px}
+  .st{gap:10px}
+  .st .p .price{font-size:1.2rem}
+  .btn{min-height:44px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="t"><h1>Tanken</h1><div class="meta" id="meta"><i></i><span>Nicht verbunden</span></div></div>
+  </header>
+  <main id="main"></main>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const load = k => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } };
+const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+
+/* ---------- Anmeldung (wie bei den anderen Seiten) ---------- */
+const FIXED_TOKEN = window.HA_FIXED_TOKEN || '';
+async function getToken(){
+  if (FIXED_TOKEN) return {token: FIXED_TOKEN, via: 'festes Token'};
+  try {
+    const auth = window.parent !== window && window.parent.document.querySelector('home-assistant')?.hass?.auth;
+    if (auth) { if (auth.expired) await auth.refreshAccessToken(); return {token: auth.accessToken, via: 'HA-Anmeldung'}; }
+  } catch {}
+  try {
+    const t = JSON.parse(localStorage.getItem('hassTokens'));
+    if (t?.refresh_token) {
+      if (!t.expires || t.expires < Date.now() + 60000) {
+        const r = await fetch((t.hassUrl || location.origin) + '/auth/token', {
+          method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: new URLSearchParams({grant_type: 'refresh_token', client_id: t.clientId || location.origin + '/', refresh_token: t.refresh_token})
+        });
+        if (!r.ok) throw new Error('refresh');
+        const n = await r.json();
+        Object.assign(t, {access_token: n.access_token, expires_in: n.expires_in, expires: Date.now() + n.expires_in * 1000});
+        localStorage.setItem('hassTokens', JSON.stringify(t));
+      }
+      return {token: t.access_token, via: 'HA-Anmeldung'};
+    }
+  } catch {}
+  return null;
+}
+const NO_LOGIN = 'Keine Anmeldung gefunden. Öffne die Seite über die Seitenleiste von Home Assistant oder melde dich in diesem Browser mit „Angemeldet bleiben“ an. Für Verknüpfungen außerhalb der HA-Oberfläche lässt sich in der Integration „Home Assistant Views“ unter „Konfigurieren“ ein festes Zugriffstoken hinterlegen.';
+const cfg = {url: location.origin};
+
+const S = {entities:[], devices:[], states:new Map(), fuel: load('tk:fuel') || null, hist:{}, week:null};
+let ws, msgId = 0; const pending = new Map();
+function setMeta(kind, text){ const m = $('#meta'); m.className = 'meta ' + kind; m.querySelector('span').textContent = text; }
+
+async function connect(){
+  if (ws) { ws.onclose = null; ws.close(); }
+  setMeta('', 'Verbinde …');
+  const auth = await getToken();
+  if (!cfg.url || !auth) { setMeta('err', 'Nicht angemeldet'); showError(NO_LOGIN); return; }
+  ws = new WebSocket(cfg.url.replace(/^http/i, 'ws').replace(/\/+$/, '') + '/api/websocket');
+  let authed = false;
+  ws.onmessage = async e => {
+    const m = JSON.parse(e.data);
+    if (m.type === 'auth_required') ws.send(JSON.stringify({type:'auth', access_token:auth.token}));
+    else if (m.type === 'auth_invalid') { setMeta('err', 'Anmeldung abgelehnt'); showError('Die Anmeldung wurde abgelehnt. Melde dich in Home Assistant neu an.'); }
+    else if (m.type === 'auth_ok') {
+      authed = true; setMeta('on', 'Verbunden über ' + auth.via);
+      send({type:'subscribe_events', event_type:'state_changed'}).catch(() => {});
+      try { await loadAll(); } catch (err) { showError(err.message); }
+    }
+    else if (m.type === 'result') { const p = pending.get(m.id); if (p) { pending.delete(m.id); m.success ? p.res(m.result) : p.rej(new Error(m.error?.message || 'Fehler')); } }
+    else if (m.type === 'event' && m.event?.event_type === 'state_changed') {
+      const {entity_id, new_state} = m.event.data;
+      if (!S.mine?.has(entity_id)) return;
+      if (new_state) {
+        S.states.set(entity_id, new_state);
+        const n = parseFloat(new_state.state);
+        if (S.hist[entity_id] && Number.isFinite(n)) S.hist[entity_id].push([Date.now(), n]);
+      } else S.states.delete(entity_id);
+      scheduleRender();
+    }
+  };
+  ws.onerror = () => { if (!authed) { setMeta('err', 'Nicht verbunden'); showError('Keine Verbindung zu ' + cfg.url + '.'); } };
+  ws.onclose = () => { if (authed) { setMeta('err', 'Verbindung verloren, neuer Versuch …'); setTimeout(connect, 5000); } };
+}
+function send(msg){
+  return new Promise((res, rej) => {
+    if (!ws || ws.readyState !== 1) return rej(new Error('Nicht verbunden'));
+    const id = ++msgId; pending.set(id, {res, rej}); ws.send(JSON.stringify({...msg, id}));
+  });
+}
+
+/* ---------- Tankstellen ----------
+   Preise: unique_id "<Tankstellen-ID>_<e5|e10|diesel>", geöffnet: "<Tankstellen-ID>_status". */
+const DOMAIN = 'tankerkoenig';
+const FUELS = [['e5', 'Super E5'], ['e10', 'Super E10'], ['diesel', 'Diesel']];
+async function loadAll(){
+  const [devices, entities, states] = await Promise.all([
+    send({type:'config/device_registry/list'}), send({type:'config/entity_registry/list'}), send({type:'get_states'})]);
+  S.entities = entities.filter(e => !e.disabled_by && e.platform === DOMAIN);
+  S.devices = devices;
+  S.mine = new Set(S.entities.map(e => e.entity_id));
+  S.states = new Map(states.filter(s => S.mine.has(s.entity_id)).map(s => [s.entity_id, s]));
+  const have = FUELS.filter(([f]) => stations().some(s => s.fuel[f]));
+  if (!have.some(([f]) => f === S.fuel)) S.fuel = have[0]?.[0] || 'e5';
+  render();
+  loadHistory();
+}
+function stations(){
+  const map = new Map();
+  for (const e of S.entities) {
+    const m = String(e.unique_id || '').match(/^(.+)_(e5|e10|diesel|status)$/);
+    if (!m) continue;
+    if (!map.has(m[1])) map.set(m[1], {id:m[1], fuel:{}, status:null, device:S.devices.find(d => d.id === e.device_id)});
+    if (m[2] === 'status') map.get(m[1]).status = e; else map.get(m[1]).fuel[m[2]] = e;
+  }
+  return [...map.values()].map(s => {
+    const any = Object.values(s.fuel)[0], a = S.states.get(any?.entity_id)?.attributes || {};
+    const open = s.status ? S.states.get(s.status.entity_id)?.state === 'on' : null;
+    const brand = a.brand || s.device?.model || '';
+    let name = a.station_name || s.device?.name_by_user || s.device?.name || brand || 'Tankstelle';
+    return {...s, a, brand, name, open, addr:[[a.street, a.house_number].filter(Boolean).join(' '), [a.postcode, a.city].filter(Boolean).join(' ')].filter(Boolean).join(', ')};
+  });
+}
+const price = (s, f) => { const st = S.states.get(s.fuel[f]?.entity_id); const n = parseFloat(st?.state); return Number.isFinite(n) && n > 0 ? n : null; };
+
+/* Preisanzeige wie an der Säule: 1,74⁹ */
+function priceHTML(v){
+  if (v == null) return '<span class="price">–</span>';
+  const s = v.toFixed(3).replace('.', ','), main = s.slice(0, -1), last = s.slice(-1);
+  return `<span class="price">${main}<sup>${last}</sup><small>€</small></span>`;
+}
+
+/* ---------- Verlauf: 24 h für die Linien, 7 Tage für „meist günstig um …“ ---------- */
+async function loadHistory(){
+  const ids = S.entities.filter(e => e.entity_id.startsWith('sensor.')).map(e => e.entity_id);
+  if (!ids.length) return;
+  try {
+    const r = await send({type:'history/history_during_period', start_time:new Date(Date.now() - 7 * 86400e3).toISOString(),
+      entity_ids:ids, minimal_response:true, no_attributes:true, significant_changes_only:false});
+    for (const id of ids) {
+      let last = 0;
+      S.hist[id] = (r[id] || []).map(x => { last = x.lu ? x.lu * 1000 : last; return [last, parseFloat(x.s)]; }).filter(p => Number.isFinite(p[1]) && p[1] > 0);
+    }
+    render();
+  } catch (err) { console.warn('Verlauf', err); }
+}
+// Durchschnittlicher Aufschlag je Stunde gegenüber dem Tagesminimum, über alle Tankstellen (zeitgewichtet)
+function cheapHours(f, list){
+  const now = Date.now(), from = now - 7 * 86400e3, sum = Array(24).fill(0), cnt = Array(24).fill(0);
+  for (const s of list) {
+    const P = S.hist[s.fuel[f]?.entity_id]; if (!P || P.length < 5) continue;
+    // stündlich abtasten
+    let i = 0;
+    const byDay = new Map();
+    // zur halben Stunde abtasten: das ist der Preis, der in dieser Stunde überwiegend galt
+    for (let t = Math.ceil(from / 3600e3) * 3600e3 + 1800e3; t < now; t += 3600e3) {
+      while (i + 1 < P.length && P[i + 1][0] <= t) i++;
+      if (P[i][0] > t) continue;
+      const d = new Date(t), key = d.toDateString();
+      if (!byDay.has(key)) byDay.set(key, []);
+      byDay.get(key).push([d.getHours(), P[i][1]]);
+    }
+    for (const arr of byDay.values()) {
+      if (arr.length < 20) continue;
+      const min = Math.min(...arr.map(x => x[1]));
+      for (const [h, v] of arr) { sum[h] += v - min; cnt[h]++; }
+    }
+  }
+  if (cnt.filter(Boolean).length < 20) return null;
+  const avg = sum.map((s, h) => cnt[h] ? s / cnt[h] : Infinity);
+  // günstigstes 2-Stunden-Fenster zwischen 6 und 22 Uhr
+  let best = null;
+  for (let h = 6; h <= 21; h++) { const v = avg[h] + avg[h + 1]; if (!best || v < best.v) best = {h, v}; }
+  const worst = Math.max(...avg.filter(Number.isFinite));
+  return best && Number.isFinite(best.v) ? {from:best.h, to:best.h + 2, save:worst - best.v / 2} : null;
+}
+
+/* ---------- Darstellung ---------- */
+let rt; function scheduleRender(){ clearTimeout(rt); rt = setTimeout(render, 200); }
+function showError(msg){ $('#main').innerHTML = `<div class="empty">${esc(msg)}<br><button class="btn primary" onclick="connect()">Erneut versuchen</button></div>`; }
+const COLORS = ['#0E8A6A', '#2B7BD6', '#E08A1E', '#9B51E0', '#D6332F', '#5A6781', '#C2508A', '#1A9C9C'];
+const mapsUrl = s => s.a.latitude != null ? `https://www.google.com/maps/dir/?api=1&destination=${s.a.latitude},${s.a.longitude}`
+  : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent([s.brand, s.addr].filter(Boolean).join(' '))}`;
+
+function render(){
+  if (!S.entities.length) { $('#main').innerHTML = '<div class="empty">Keine Tankstellen der Integration Tankerkönig gefunden.</div>'; return; }
+  const all = stations(), f = S.fuel;
+  const have = FUELS.filter(([k]) => all.some(s => s.fuel[k]));
+  const list = all.filter(s => s.fuel[f]).map(s => ({...s, p:price(s, f)}))
+    .sort((a, b) => (b.open !== false) - (a.open !== false) || (a.p ?? 99) - (b.p ?? 99));
+  const openList = list.filter(s => s.open !== false && s.p != null);
+  const best = openList[0], min = best?.p;
+  let html = have.length > 1 ? `<div class="seg" role="group" aria-label="Kraftstoff">${have.map(([k, t]) => `<button data-fuel="${k}" aria-pressed="${k === f}">${t}</button>`).join('')}</div>` : '';
+  if (best) {
+    const others = FUELS.filter(([k]) => k !== f && best.fuel[k]).map(([k, t]) => `${t} ${price(best, k)?.toFixed(3).replace('.', ',') ?? '–'} €`).join(' · ');
+    html += `<article class="hero"><div class="label">Am günstigsten · ${esc(FUELS.find(x => x[0] === f)[1])}</div>
+      ${priceHTML(best.p)}
+      <div class="who"><b>${esc(best.brand || best.name)}</b><span>${esc(best.addr || best.name)}</span><br>
+        <span class="pill">Geöffnet</span>${others ? `<div class="hint" style="margin-top:6px">${esc(others)}</div>` : ''}</div>
+      <div class="acts"><a class="btn primary" href="${esc(mapsUrl(best))}" target="_blank" rel="noopener">Route</a></div></article>`;
+  } else html += '<div class="empty">Gerade hat keine Tankstelle geöffnet.</div>';
+
+  html += `<div class="card"><div class="card-h"><h2>Alle Tankstellen</h2><small>${openList.length} von ${list.length} geöffnet</small></div>${list.map((s, i) => {
+    const diff = s.p != null && min != null ? s.p - min : null;
+    const other = FUELS.filter(([k]) => k !== f && s.fuel[k]).map(([k, t]) => `${t.replace('Super ', '')} ${price(s, k)?.toFixed(3).replace('.', ',') ?? '–'}`);
+    return `<div class="st ${s.open === false ? 'closed' : ''} ${s === best ? 'best' : ''}"><span class="rank">${s.open === false ? '–' : i + 1}</span>
+      <div class="n"><b>${esc(s.brand && s.brand !== s.name ? s.brand + ' · ' + s.name : s.name)}</b><small>${esc(s.addr)}</small>
+        ${other.length ? `<div class="other">${other.map(esc).join('<span>·</span>')}</div>` : ''}</div>
+      <div class="p">${priceHTML(s.p)}${s.open === false ? '<em>geschlossen</em>' : diff ? `<em class="up">+${(diff * 100).toFixed(1).replace('.', ',')} ct</em>` : s === best ? '<em>günstigste</em>' : ''}</div></div>`;
+  }).join('')}</div>`;
+
+  html += chartHTML(list, f);
+  $('#main').innerHTML = html;
+}
+
+function chartHTML(list, f){
+  const now = Date.now(), t0 = now - 24 * 3600e3;
+  const series = list.slice(0, 8).map((s, i) => {
+    const P = (S.hist[s.fuel[f]?.entity_id] || []);
+    // letzter Wert vor dem Fenster als Startpunkt
+    const before = P.filter(p => p[0] < t0).pop(), inWin = P.filter(p => p[0] >= t0);
+    const pts = [...(before ? [[t0, before[1]]] : []), ...inWin];
+    return {s, c:COLORS[i % COLORS.length], pts};
+  }).filter(x => x.pts.length);
+  if (!series.length) return '';
+  const vals = series.flatMap(x => x.pts.map(p => p[1])), lo = Math.min(...vals) - .01, hi = Math.max(...vals) + .01;
+  const W = Math.max(300, Math.round(($('#main').clientWidth || 900) - 38)), H = 200, pl = 46, pb = 20, pt = 8;
+  const x = t => pl + (W - pl) * (t - t0) / (now - t0), y = v => pt + (H - pt - pb) * (1 - (v - lo) / (hi - lo));
+  const lines = series.map(({c, pts}) => { let d = `M${x(pts[0][0])},${y(pts[0][1])}`;
+    for (let i = 1; i < pts.length; i++) d += ` H${x(pts[i][0])} V${y(pts[i][1])}`; return `<path d="${d} H${x(now)}" style="stroke:${c}"/>`; }).join('');
+  const grid = [lo + .01, (lo + hi) / 2, hi - .01].map(v => `<line class="g" x1="${pl}" x2="${W}" y1="${y(v)}" y2="${y(v)}"/><text x="${pl - 6}" y="${y(v) + 4}" text-anchor="end">${v.toFixed(2).replace('.', ',')}</text>`).join('');
+  const ticks = (W < 500 ? [24, 12, 0] : [24, 18, 12, 6, 0]).map(h => { const t = new Date(now - h * 3600e3);
+    return `<text x="${x(t)}" y="${H - 4}" text-anchor="${h === 24 ? 'start' : h === 0 ? 'end' : 'middle'}">${h === 0 ? 'jetzt' : t.getHours() + ' Uhr'}</text>`; }).join('');
+  const tip = cheapHours(f, list);
+  return `<div class="card"><div class="card-h"><h2>Preisverlauf</h2><small>letzte 24 Stunden · €/l</small></div>
+    <svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Preise der letzten 24 Stunden">${grid}${lines}${ticks}</svg>
+    <div class="legend">${series.map(({s, c}) => `<span style="--c:${c}">${esc(s.brand || s.name)}</span>`).join('')}</div>
+    ${tip ? `<div class="tip"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 5v5.4l4 2.4-.8 1.3L11 13V7h2z"/></svg>
+      In den letzten 7 Tagen meist am günstigsten zwischen ${tip.from} und ${tip.to} Uhr${tip.save >= .01 ? ` – im Schnitt ${(tip.save * 100).toFixed(0)} ct/l weniger als zur teuersten Stunde` : ''}.</div>` : ''}
+    <p class="hint">Daten: Tankerkönig (Markttransparenzstelle für Kraftstoffe).</p></div>`;
+}
+
+$('#main').addEventListener('click', e => {
+  const t = e.target.closest('button'); if (!t) return;
+  if (t.dataset.fuel) { S.fuel = t.dataset.fuel; save('tk:fuel', S.fuel); render(); }
+});
+setInterval(() => { if (S.entities.length) render(); }, 60000);
+let rw = innerWidth; addEventListener('resize', () => { if (Math.abs(innerWidth - rw) > 40) { rw = innerWidth; scheduleRender(); } });
+connect();
+</script>
+</body>
+</html>
