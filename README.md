@@ -74,6 +74,13 @@ Die Seiten liegen unter `http://<deine-ha-adresse>:8123/ha_views/`, z. B.
 Wer die Seiten bisher unter `/local/` genutzt hat, kann die alten Dateien aus `config/www`
 löschen und Verknüpfungen von `/local/…` auf `/ha_views/…` ändern.
 
+## Saugroboter – letzte Reinigungen
+
+Ganz unten auf der Saugroboter-Seite stehen die letzten 10 Reinigungen mit Datum, Uhrzeit, Fläche, Dauer, Räumen und
+Fehlern. Sie werden aus dem Verlauf der Roborock-Sensoren (Letzte Reinigung gestartet/beendet, Fläche, Dauer,
+aktueller Raum, Fehler) zusammengesetzt – mit dem Standard-Recorder also aus den letzten 10 Tagen, mit eigener
+Datenbank (MySQL/MariaDB) entsprechend weiter zurück.
+
 ## Updates
 
 Änderungen je Version stehen im [CHANGELOG](CHANGELOG.md). Releases entstehen automatisch, sobald eine neue

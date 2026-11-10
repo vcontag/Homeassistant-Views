@@ -4,6 +4,13 @@ Neue Einträge oben. Die Überschrift `## <Version>` muss zu `version` in
 `custom_components/ha_views/manifest.json` passen – der Abschnitt wird beim Release
 automatisch als Beschreibung übernommen.
 
+## 1.7.2
+- Saugroboter: ganz unten die **letzten 10 Reinigungen** – Datum, Uhrzeit von–bis, gereinigte Fläche, Dauer,
+  die dabei angefahrenen Räume und Fehler (auf Deutsch). Die Integration hat keine eigene Abfrage dafür; die Berichte
+  entstehen aus dem Verlauf von Home Assistant (Sensoren „Letzte Reinigung gestartet/beendet“, Fläche, Dauer,
+  aktueller Raum, Fehler) und reichen so weit zurück, wie der Recorder Daten aufhebt. Nach einer neuen Reinigung
+  aktualisiert sich die Liste von selbst.
+
 ## 1.7.1
 - Verlauf: Zeiträume **3 Monate, 6 Monate, 1 Jahr und 2 Jahre**.
 - Die Seite richtet sich nach den tatsächlich gespeicherten Daten – egal ob Standard-Recorder (10 Tage) oder eigene

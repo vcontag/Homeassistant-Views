@@ -170,6 +170,22 @@ section > h2 small{margin-left:auto;font-size:.8rem;color:var(--muted);font-weig
 .sw[aria-checked="true"]::after{transform:translateX(20px)}
 .sw:disabled{opacity:.5}
 .tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+.reps{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:4px 16px}
+.rep{display:flex;gap:14px;align-items:flex-start;padding:12px 0}
+.rep + .rep{border-top:1px solid var(--line)}
+.rep .d{width:54px;flex:none;line-height:1.15}
+.rep .d b{display:block;font-weight:800;font-variant-numeric:tabular-nums}
+.rep .d small{color:var(--muted);font-weight:700;font-size:.78rem;text-transform:uppercase}
+.rep .x{flex:1;min-width:0;display:grid;gap:4px}
+.rep .x .t{font-weight:700;font-variant-numeric:tabular-nums}
+.rep .x .t span{color:var(--muted);font-weight:600}
+.rep .rooms{display:flex;flex-wrap:wrap;gap:4px}
+.rep .rooms i{font-style:normal;font-size:.78rem;font-weight:700;border-radius:999px;padding:1px 8px;background:var(--surface-2,rgba(127,127,127,.12));color:var(--muted)}
+.rep .rooms i.err{background:color-mix(in srgb,var(--bad,#C23B3B) 15%,transparent);color:var(--bad,#C23B3B)}
+.rep .k{text-align:right;flex:none;display:grid;gap:2px;font-variant-numeric:tabular-nums}
+.rep .k b{font-weight:800}
+.rep .k span{color:var(--muted);font-size:.85rem;font-weight:600}
+.reps .hint{color:var(--muted);font-size:.85rem;padding:12px 0;margin:0}
 .tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;text-align:left;cursor:pointer;display:grid;gap:2px;min-width:0}
 .tile span{color:var(--muted);font-size:.8rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tile strong{font-size:1.05rem;font-weight:700;overflow-wrap:anywhere}
@@ -339,6 +355,7 @@ async function connect(){
       const {entity_id, new_state} = m.event.data;
       if (!S.mine?.has(entity_id)) return;
       new_state ? S.states.set(entity_id, new_state) : S.states.delete(entity_id);
+      if (/last_clean_end/.test(entity_id)) { clearTimeout(S.repT); S.repT = setTimeout(loadReports, 90000); } // Fläche/Dauer kommen kurz danach
       scheduleRender();
     }
   };
@@ -372,8 +389,10 @@ async function loadAll(){
   S.mine = new Set(S.entities.map(e => e.entity_id));
   S.states = new Map(states.filter(s => S.mine.has(s.entity_id)).map(s => [s.entity_id, s]));
   if (!S.devices.some(d => d.id === S.dev)) S.dev = S.devices[0]?.id;
+  S.reports = null;
   render();
   loadRooms();
+  loadReports();
 }
 
 /* ---------- Texte ---------- */
@@ -450,6 +469,88 @@ function fmt(s){
   return tr(s.state) + (u ? ' ' + u : '');
 }
 const find = (dom, re, not) => ents().find(e => e.entity_id.startsWith(dom + '.') && (re.test(e.entity_id) || (e.original_name && re.test(e.original_name.toLowerCase().replace(/\s+/g, '_')))) && !(not && not.test(e.entity_id)));
+
+/* ---------- Reinigungsberichte ----------
+   Die Integration hat keine Abfrage für den Reinigungsverlauf. Die Berichte entstehen aus dem Verlauf (Recorder) der
+   Sensoren „Letzte Reinigung gestartet/beendet“, Reinigungsdauer, Fläche, aktueller Raum und Fehler:
+   jeder neue Wert von „beendet“ ist eine abgeschlossene Reinigung. */
+const REP_N = 10;
+const repEntities = () => ({
+  end: find('sensor', /last_clean_end/), start: find('sensor', /last_clean_(start|begin)/),
+  area: find('sensor', /cleaning_area$/, /total/), time: find('sensor', /cleaning_time$/, /total/),
+  room: find('sensor', /current_room/), err: find('sensor', /vacuum_error|_error$/, /dock/),
+});
+const BAD = /^(none|ok|unknown|unavailable|no_error|0|)$/;
+// Wert eines Verlaufs zu einem Zeitpunkt (letzte Änderung davor)
+const valueAt = (H, t) => { let v = null; for (const [ts, s] of H || []) { if (ts > t) break; v = s; } return v; };
+// Endwert einer Reinigung; liegt sie vor dem Abfragezeitraum, steht ihr Endwert im ersten Verlaufseintrag
+const endValue = (H, at, nextStart) => { const v = valueAt(H, at); return v ?? (H?.[0] && H[0][0] < nextStart ? H[0][1] : null); };
+const ERR_DE = {main_brush_jammed:'Hauptbürste blockiert', side_brush_jammed:'Seitenbürste blockiert', side_brush_error:'Seitenbürste',
+  wheels_jammed:'Räder blockiert', wheel_jammed:'Rad blockiert', robot_trapped:'Steckt fest', robot_stuck:'Steckt fest', stuck:'Steckt fest',
+  bin_missing:'Staubbehälter fehlt', dustbin_not_installed:'Staubbehälter fehlt', filter_blocked:'Filter verstopft', filter_missing:'Filter fehlt',
+  cliff_sensor_error:'Absturzsensor', bumper_stuck:'Stoßfänger klemmt', laser_sensor_fault:'Lasersensor', low_battery:'Akku leer',
+  charging_error:'Ladefehler', water_box_missing:'Wassertank fehlt', mop_missing:'Mopp fehlt', clean_water_tank_empty:'Frischwasser leer',
+  dirty_water_tank_full:'Schmutzwasser voll', vibrarise_jammed:'Wischmodul blockiert', internal_error:'Interner Fehler', strong_magnetic_field:'Magnetfeld'};
+const errDe = v => ERR_DE[norm(v)] || (DE[norm(v)] ? tr(v) : String(v).replace(/_/g, ' ').replace(/^./, c => c.toUpperCase()));
+function buildReports(R, H){
+  const ends = [...new Set((H[R.end.entity_id] || []).map(x => x[1]).filter(v => !isNaN(Date.parse(v))))].map(v => Date.parse(v)).sort((a, b) => b - a);
+  const starts = R.start ? [...new Set((H[R.start.entity_id] || []).map(x => x[1]).filter(v => !isNaN(Date.parse(v))))].map(v => Date.parse(v)).sort((a, b) => a - b) : [];
+  const aU = st(R.area)?.attributes.unit_of_measurement || 'm²', tU = st(R.time)?.attributes.unit_of_measurement || 'min';
+  return ends.map(end => {
+    const start = starts.filter(t => t < end).pop() ?? null;
+    const nextStart = starts.find(t => t > end) ?? Infinity;
+    // Endwerte etwas nach Reinigungsende ablesen (die Sensoren aktualisieren verzögert), aber vor der nächsten Reinigung
+    const at = Math.min(end + 5 * 60e3, nextStart - 1);
+    const area = R.area ? parseFloat(endValue(H[R.area.entity_id], at, nextStart)) : NaN;
+    const tv = R.time ? parseFloat(endValue(H[R.time.entity_id], at, nextStart)) : NaN;
+    const mins = Number.isFinite(tv) ? toH(tv, tU) * 60 : start ? (end - start) / 60e3 : null;
+    const inRange = id => (H[id] || []).filter(([t]) => start != null && t >= start && t <= end).map(x => x[1]);
+    // Räume, die während der Reinigung gemeldet wurden (der Wert davor ist meist noch der Raum vom letzten Mal)
+    let rooms = R.room && start != null ? [...new Set(inRange(R.room.entity_id).filter(v => v && !BAD.test(norm(v))))] : [];
+    if (R.room && start != null && !rooms.length) { const v = valueAt(H[R.room.entity_id], end); if (v && !BAD.test(norm(v))) rooms = [v]; }
+    const errs = R.err && start != null ? [...new Set(inRange(R.err.entity_id).filter(v => v && !BAD.test(norm(v))))] : [];
+    return {start, end, mins, area: Number.isFinite(area) ? area : null, aU, rooms, errs};
+  });
+}
+let repBusy = false;
+async function loadReports(){
+  const R = repEntities();
+  if (!R.end) { S.reports = []; scheduleRender(); return; }
+  if (repBusy) return; repBusy = true;
+  try {
+    const ids = Object.values(R).filter(Boolean).map(e => e.entity_id);
+    let reps = [];
+    // schrittweise weiter zurück, bis 10 Berichte da sind oder der Recorder keine älteren Daten hat
+    for (const days of [30, 180, 730]) {
+      const from = Date.now() - days * 86400e3;
+      const r = await send({type:'history/history_during_period', start_time:new Date(from).toISOString(), entity_ids:ids,
+        minimal_response:true, no_attributes:true, significant_changes_only:false});
+      const H = {};
+      for (const id of ids) { let last = 0; H[id] = (r[id] || []).map(x => { last = (x.lu ?? x.lc) ? (x.lu ?? x.lc) * 1000 : last; return [last, x.s]; }); }
+      reps = buildReports(R, H);
+      const first = (r[R.end.entity_id] || [])[0];
+      const reachesBack = first && ((first.lu ?? first.lc) * 1000) <= from + 86400e3;
+      if (reps.length >= REP_N || !reachesBack) break;
+    }
+    S.reports = reps.slice(0, REP_N); S.repErr = '';
+  } catch (err) { S.reports = []; S.repErr = err.message; }
+  finally { repBusy = false; scheduleRender(); }
+}
+function reportsHTML(){
+  if (!repEntities().end) return '';
+  const total = numOf(st(find('sensor', /total_cleaning_count/)));
+  const head = `<h2>Letzte Reinigungen${total != null ? `<small>insgesamt ${nf.format(total)}</small>` : ''}</h2>`;
+  if (S.reports === null) return `<section>${head}<div class="reps"><p class="hint">Lade Verlauf …</p></div></section>`;
+  if (!S.reports.length) return `<section>${head}<div class="reps"><p class="hint">${S.repErr ? 'Verlauf nicht verfügbar: ' + esc(S.repErr)
+    : 'Im Verlauf von Home Assistant ist noch keine Reinigung gespeichert.'}</p></div></section>`;
+  const hm = t => new Date(t).toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'});
+  return `<section>${head}<div class="reps">${S.reports.map(r => { const e = new Date(r.end);
+    return `<div class="rep"><div class="d"><small>${esc(e.toLocaleDateString('de-DE', {weekday:'short'}).replace('.', ''))}</small><b>${esc(e.toLocaleDateString('de-DE', {day:'2-digit', month:'2-digit'}))}</b></div>
+      <div class="x"><div class="t">${r.start ? `${hm(r.start)}–${hm(r.end)}` : `bis ${hm(r.end)}`} <span>Uhr</span></div>
+        ${r.rooms.length || r.errs.length ? `<div class="rooms">${r.rooms.map(x => `<i>${esc(tr(x))}</i>`).join('')}${r.errs.map(x => `<i class="err">${esc(errDe(x))}</i>`).join('')}</div>` : ''}</div>
+      <div class="k">${r.area != null ? `<b>${nf.format(r.area)} ${esc(r.aU)}</b>` : ''}${r.mins != null ? `<span>${dur(r.mins)}</span>` : ''}</div></div>`;
+  }).join('')}</div></section>`;
+}
 
 /* ---------- Räume ---------- */
 async function loadRooms(){
@@ -620,6 +721,7 @@ function render(){
   // Alle Werte
   const sens = E.filter(e => /^(sensor|binary_sensor)\./.test(e.entity_id) && !wear.includes(e) && !dockUsed.has(e.entity_id)).sort((a, b) => label(a).localeCompare(label(b), 'de'));
   if (sens.length) html += `<section><h2>Alle Werte</h2>${grouped(sens, tileHTML, 'tiles')}</section>`;
+  html += reportsHTML();
 
   if (document.activeElement?.tagName === 'SELECT' && $('#main').contains(document.activeElement)) return;
   $('#main').innerHTML = html;
