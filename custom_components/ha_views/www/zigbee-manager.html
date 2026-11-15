@@ -139,6 +139,14 @@ dialog[open]{animation:pop .18s ease-out}
 .facts{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;margin:0;font-size:.9rem}
 .facts dt{color:var(--muted)} .facts dd{margin:0;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
 h3{margin:0 0 6px;font-size:.95rem;font-weight:700}
+.rename{grid-column:1/-1;display:grid;gap:6px;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:.88rem}
+.rename label{display:flex;gap:8px;align-items:center;font-weight:700;cursor:pointer}
+.rename input{width:18px;height:18px;accent-color:var(--accent,#2F6FDE)}
+.rename ul{list-style:none;margin:0;padding:0;display:grid;gap:3px;max-height:180px;overflow:auto}
+.rename li{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.78rem;overflow-wrap:anywhere;color:var(--muted)}
+.rename li b{color:var(--ink);font-weight:600}
+.rename li.skip{color:var(--bad)}
+.rename .hint{margin:0}
 .ents{list-style:none;margin:0;padding:0;border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .ents li{display:flex;justify-content:space-between;gap:12px;padding:8px 12px;border-bottom:1px solid var(--line);font-size:.88rem}
 .ents li:last-child{border-bottom:0}
@@ -567,6 +575,11 @@ function drawDevice(){
       <form id="devForm" class="two" style="align-items:end">
         <div class="field"><label for="devName">Name</label><input id="devName" value="${esc(m.name)}" placeholder="${esc(m.defaultName)}"></div>
         <div class="field"><label for="devArea">Bereich</label><select id="devArea">${areaOpts}</select></div>
+        <div class="rename" id="renameBox" hidden>
+          <label><input type="checkbox" id="renameIds" checked> Entitäts-IDs anpassen</label>
+          <ul id="renameList"></ul>
+          <p class="hint" id="renameHint"></p>
+        </div>
         <div style="grid-column:1/-1;display:flex;justify-content:flex-end"><button class="btn primary">Änderungen speichern</button></div>
       </form>
       <dl class="facts">
@@ -587,17 +600,67 @@ function drawDevice(){
       </div>
     </div>`;
   $('#devForm').onsubmit = e => { e.preventDefault(); saveDevice(m); };
+  $('#devName').addEventListener('input', () => drawRename(m));
+  $('#renameIds').addEventListener('change', () => drawRename(m));
+  drawRename(m);
   $('#reconfBtn')?.addEventListener('click', () => reconfigure(m));
   $('#removeBtn')?.addEventListener('click', () => removeDevice(m));
+}
+
+/* ---------- Entitäts-IDs beim Umbenennen anpassen (wie in Home Assistant) ----------
+   Angepasst werden nur IDs, die mit dem bisherigen Gerätenamen beginnen, z. B. sensor.kuche_temperatur →
+   sensor.wohnzimmer_temperatur. Selbst vergebene IDs bleiben; ist eine neue ID schon vergeben, wird sie übersprungen. */
+function slugify(v){
+  return String(v || '').toLowerCase().replace(/ß/g, 'ss').normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+}
+function renamePlan(m, newName){
+  const oldSlug = slugify(m.name), newSlug = slugify(newName || m.defaultName);
+  if (!oldSlug || !newSlug || oldSlug === newSlug) return [];
+  const taken = new Set([...S.entities.map(e => e.entity_id), ...S.states.keys()]);
+  const plan = [];
+  for (const e of m.entities) {
+    const [dom, obj] = e.id.split('.');
+    if (obj !== oldSlug && !obj.startsWith(oldSlug + '_')) continue;
+    const to = `${dom}.${newSlug}${obj.slice(oldSlug.length)}`;
+    plan.push({from:e.id, to, skip: taken.has(to) && to !== e.id});
+    taken.add(to);
+  }
+  return plan;
+}
+function drawRename(m){
+  const box = $('#renameBox'); if (!box) return;
+  const name = $('#devName').value.trim(), plan = renamePlan(m, name);
+  box.hidden = !plan.length;
+  if (!plan.length) return;
+  const on = $('#renameIds').checked;
+  const kept = m.entities.length - plan.length;
+  $('#renameList').hidden = !on;
+  $('#renameList').innerHTML = plan.map(x => `<li class="${x.skip ? 'skip' : ''}">${esc(x.from)} → <b>${esc(x.to)}</b>${x.skip ? ' (schon vergeben, bleibt)' : ''}</li>`).join('');
+  $('#renameHint').textContent = on
+    ? `${plan.filter(x => !x.skip).length} von ${m.entities.length} IDs werden angepasst${kept ? `, ${kept} mit eigener ID bleiben` : ''}. Automationen, Skripte und Dashboards, die die alten IDs nutzen, bitte prüfen.`
+    : 'Die Entitäts-IDs bleiben unverändert.';
 }
 
 async function saveDevice(m){
   const name = $('#devName').value.trim(), area = $('#devArea').value;
   const nameByUser = !name || name === m.defaultName ? null : name;
-  if (S.demo) { Object.assign(m, {name: name || m.defaultName, area_id: area}); render(); drawDevice(); toast('Gespeichert'); return; }
+  const plan = $('#renameIds')?.checked ? renamePlan(m, name).filter(x => !x.skip) : [];
+  if (S.demo) {
+    for (const x of plan) { const e = m.entities.find(e => e.id === x.from); if (e) e.id = x.to; }
+    Object.assign(m, {name: name || m.defaultName, area_id: area}); render(); drawDevice();
+    toast(plan.length ? `Gespeichert, ${plan.length} IDs angepasst` : 'Gespeichert'); return;
+  }
   try {
     await ha.send({type:'config/device_registry/update', device_id:m.id, name_by_user:nameByUser, area_id:area || null});
-    toast('Gespeichert'); await loadAll();
+    const failed = [];
+    for (const x of plan) {
+      try { await ha.send({type:'config/entity_registry/update', entity_id:x.from, new_entity_id:x.to}); }
+      catch (e) { failed.push(`${x.from}: ${e.message}`); }
+    }
+    if (failed.length) toast(`Gespeichert, aber ${failed.length} ID(s) nicht angepasst: ${failed[0]}`, true);
+    else toast(plan.length ? `Gespeichert, ${plan.length} Entitäts-IDs angepasst` : 'Gespeichert');
+    await loadAll();
   } catch (e) { toast('Speichern fehlgeschlagen: ' + e.message, true); }
 }
 

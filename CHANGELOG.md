@@ -4,6 +4,12 @@ Neue Einträge oben. Die Überschrift `## <Version>` muss zu `version` in
 `custom_components/ha_views/manifest.json` passen – der Abschnitt wird beim Release
 automatisch als Beschreibung übernommen.
 
+## 1.7.3
+- Zigbee: Beim Umbenennen eines Geräts werden die **Entitäts-IDs mit angepasst** – wie in Home Assistant, z. B.
+  `sensor.kuche_sensor_temperatur` → `sensor.wohnzimmer_sensor_temperatur`. Vorschau „alt → neu“ im Dialog, per Haken
+  abschaltbar. Angepasst werden nur IDs, die mit dem bisherigen Gerätenamen beginnen; selbst vergebene IDs bleiben,
+  bereits vergebene neue IDs werden übersprungen und angezeigt.
+
 ## 1.7.2
 - Saugroboter: ganz unten die **letzten 10 Reinigungen** – Datum, Uhrzeit von–bis, gereinigte Fläche, Dauer,
   die dabei angefahrenen Räume und Fehler (auf Deutsch). Die Integration hat keine eigene Abfrage dafür; die Berichte
