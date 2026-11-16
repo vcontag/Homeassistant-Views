@@ -4,6 +4,12 @@ Neue Einträge oben. Die Überschrift `## <Version>` muss zu `version` in
 `custom_components/ha_views/manifest.json` passen – der Abschnitt wird beim Release
 automatisch als Beschreibung übernommen.
 
+## 1.7.4
+- Wasser (Grünbeck): **aktueller Wasserverbrauch** jetzt groß in der Hauptkarte – Durchfluss in l/min (hervorgehoben,
+  solange Wasser entnommen wird) und der Verbrauch von heute mit Vergleich zu gestern; ein Tipp darauf zeigt das
+  Verbrauchsdiagramm. Die Kachel darunter zeigt stattdessen den Ø pro Tag. Der Durchfluss richtet sich nach der Einheit
+  des Sensors. Der Durchschnitt zählt überall nur abgeschlossene Tage (vorher drückte der angefangene Tag den Wert).
+
 ## 1.7.3
 - Zigbee: Beim Umbenennen eines Geräts werden die **Entitäts-IDs mit angepasst** – wie in Home Assistant, z. B.
   `sensor.kuche_sensor_temperatur` → `sensor.wohnzimmer_sensor_temperatur`. Vorschau „alt → neu“ im Dialog, per Haken
