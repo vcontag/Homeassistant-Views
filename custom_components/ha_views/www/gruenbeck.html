@@ -87,6 +87,18 @@ h1{margin:0;font-size:1.6rem;font-weight:800;letter-spacing:-.02em;line-height:1
 .seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
 .seg button:disabled{cursor:default}
 .label{font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:-4px}
+/* Wasserverbrauch jetzt und heute, gut sichtbar in der Hauptkarte */
+.water{display:grid;grid-template-columns:1.25fr 1fr;gap:10px}
+.water > button{background:var(--surface-2);border:1px solid var(--line);border-radius:14px;padding:10px 14px;text-align:left;cursor:pointer;display:grid;gap:1px;min-width:0;color:var(--ink)}
+.water span{font-size:.75rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;display:flex;align-items:center;gap:6px}
+.water b{font-size:1.9rem;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.1;white-space:nowrap}
+.water b small{font-size:.9rem;font-weight:700;color:var(--muted);margin-left:4px}
+.water em{font-style:normal;font-size:.8rem;color:var(--muted);font-weight:600}
+.water .now.on{background:var(--accent-soft);border-color:var(--accent)}
+.water .now.on b{color:var(--accent)}
+.water .now svg{width:14px;height:14px;color:var(--muted)}
+.water .now.on svg{color:var(--accent);animation:pulse 1.2s ease-in-out infinite}
+@media (hover:hover){.water > button:hover{border-color:var(--muted)}}
 
 /* Meldungen */
 .alerts{margin-top:14px;display:grid;gap:8px}
@@ -183,6 +195,7 @@ dialog::backdrop{background:rgba(8,14,26,.5)}
   .hero .info{width:100%;justify-items:stretch}
   .hero .head{text-align:center}
   .hero .state{justify-content:center;width:100%}
+  .water b{font-size:1.6rem}
   .ring{width:200px;height:200px}
   .stats{gap:10px;margin-top:10px}
   .stat{padding:12px 14px}
@@ -202,7 +215,7 @@ dialog::backdrop{background:rgba(8,14,26,.5)}
   dialog::before{content:"";display:block;width:40px;height:4px;border-radius:2px;background:var(--line);margin:8px auto 0}
 }
 @keyframes sheet{from{transform:translateY(48px);opacity:.3}to{transform:none;opacity:1}}
-@media (prefers-reduced-motion:reduce){.ring .prog,.sw,.sw::after,dialog[open],.hero.regen .state::before{transition:none!important;animation:none!important}}
+@media (prefers-reduced-motion:reduce){.water .now svg,.ring .prog,.sw,.sw::after,dialog[open],.hero.regen .state::before{transition:none!important;animation:none!important}}
 </style>
 </head>
 <body>
@@ -415,6 +428,22 @@ function analyze(d){
   return {d, E, g, pct, vol, regen, step, stepIdx, alarm, errors, kind, stateText};
 }
 
+// Durchfluss in l/min – nach der Einheit des Sensors (die Integration meldet m³/h)
+function flowLmOf(st){
+  const v = num(st); if (v == null) return null;
+  const u = String(st.attributes.unit_of_measurement || 'm³/h').replace('m3', 'm³').toLowerCase();
+  return u === 'l/min' ? v : u === 'l/h' ? v / 60 : u === 'l/s' ? v * 60 : u === 'm³/min' ? v * 1000 : v * 1000 / 60;
+}
+// Wasserverbrauch je Tag (Liter) aus derselben Quelle wie das Diagramm: heute und Ø der letzten 7 abgeschlossenen Tage
+function waterDays(a){
+  const raw = series(a, 'water'); if (!raw) return null;
+  const by = new Map(raw.map(x => [String(x.date).slice(0, 10), +x.value || 0]));
+  const key = n => { const t = new Date(); t.setHours(12, 0, 0, 0); t.setDate(t.getDate() - n); return t.toISOString().slice(0, 10); };
+  const full = [1, 2, 3, 4, 5, 6].map(n => by.get(key(n))).filter(v => v != null);
+  return {today: by.get(key(0)) ?? null, yesterday: by.get(key(1)) ?? null, avg: full.length ? full.reduce((s, v) => s + v, 0) / full.length : null};
+}
+const liters = v => v >= 1000 ? [nf(v / 1000, 2), 'm³'] : [nf(v, 0), 'l'];
+
 /* ---------- Verbrauch: aus den Attributen daily_usage, sonst über die Aktion der Integration ---------- */
 function series(a, kind){
   const e = a.E.get(kind === 'water' ? 'soft_water_quantity' : 'salt_consumption');
@@ -451,7 +480,10 @@ function chartHTML(a){
   if (!have.length) return `<div class="card">${head}<div class="nodata">Für diesen Zeitraum liegen keine Verbrauchsdaten vor.</div></div>`;
   // Salz liefert die Cloud je Tag in Gramm, Wasser in Litern
   const unit = kind === 'water' ? 'l' : 'g';
-  const vals = have.map(p => p.v), total = vals.reduce((s, v) => s + v, 0), avg = total / vals.length;
+  const vals = have.map(p => p.v), total = vals.reduce((s, v) => s + v, 0);
+  // Durchschnitt nur über abgeschlossene Tage – der heutige ist noch nicht vorbei und würde ihn drücken
+  const full = pts.slice(0, -1).filter(p => p.v !== null).map(p => p.v);
+  const avg = full.length ? full.reduce((s, v) => s + v, 0) / full.length : total / vals.length;
   const todayV = pts[pts.length - 1].v;
   const show = (v, u) => u === 'g' && v >= 1000 ? `${nf(v / 1000, 2)} kg` : u === 'l' && v >= 1000 ? `${nf(v / 1000, 2)} m³` : `${nf(v, 0)} ${u}`;
   const W = Math.max(280, Math.round(($('#main').clientWidth || 600) - 38)), H = 190, pl = 34, pb = 20, pt = 8, max = Math.max(...vals, 1) * 1.1;
@@ -495,12 +527,27 @@ function heroHTML(a){
       <div class="head"><h2>${esc(devName(a.d))}</h2>${a.d.model ? `<div class="model">${esc(a.d.model)}</div>` : ''}</div>
       <div class="state">${esc(a.stateText)}</div>
       ${sub}
+      ${waterHTML(a)}
       ${modeSt ? `<div class="label">Betriebsart</div>
         <div class="seg" role="group" aria-label="Betriebsart">${(modeSt.attributes.options || []).map(o =>
           `<button data-mode="${esc(o)}" data-ent="${esc(modeE.entity_id)}" aria-pressed="${o === modeSt.state}" ${!usable(modeSt) || S.busy.has(modeE.entity_id) ? 'disabled' : ''}>${esc(opt(o))}</button>`).join('')}</div>` : ''}
       <button class="btn primary" data-regen="${esc(a.d.id)}" ${a.kind === 'regen' || a.kind === 'off' || busyRegen ? 'disabled' : ''}>
         ${a.kind === 'regen' ? 'Regeneration läuft …' : busyRegen ? 'Wird gestartet …' : 'Regeneration starten'}</button>
     </div></article>`;
+}
+
+function waterHTML(a){
+  const flowE = a.E.get('current_flow_rate'), fl = flowLmOf(a.g('current_flow_rate')), days = waterDays(a);
+  if (!flowE && !days) return '';
+  const on = fl != null && fl > 0.05;
+  const drop = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2s-7 7.6-7 12.5a7 7 0 0 0 14 0C19 9.6 12 2 12 2z"/></svg>';
+  const [tv, tu] = days?.today != null ? liters(days.today) : ['–', ''];
+  return `<div class="water">
+    ${flowE ? `<button class="now ${on ? 'on' : ''}" data-ent="${esc(flowE.entity_id)}" aria-label="Wasserverbrauch aktuell">
+      <span>${drop}Wasser aktuell</span><b>${fl == null ? '–' : nf(fl, 1)}<small>l/min</small></b><em>${fl == null ? 'nicht verfügbar' : on ? 'Wasser wird entnommen' : 'kein Wasserfluss'}</em></button>` : ''}
+    <button class="day" data-chart-kind="water" aria-label="Wasserverbrauch heute"><span>Heute</span><b>${tv}<small>${tu}</small></b>
+      <em>${days == null ? 'lädt …' : days.yesterday != null ? 'gestern ' + liters(days.yesterday).join(' ') : 'Wasserverbrauch'}</em></button>
+  </div>`;
 }
 
 function alertsHTML(a){
@@ -512,19 +559,18 @@ function alertsHTML(a){
 }
 
 function statsHTML(a){
-  const salt = num(a.g('salt_range')), flow = num(a.g('current_flow_rate'));
+  const salt = num(a.g('salt_range'));
   const raw = num(a.g('raw_water')), soft = num(a.g('soft_water'));
   const hu = a.g('raw_water')?.attributes.unit_of_measurement || '°dH';
   const saltCls = salt == null ? '' : salt <= 7 ? 'bad' : salt <= 14 ? 'warn' : '';
-  const flowLm = flow == null ? null : flow * 1000 / 60;   // m³/h → l/min
   const regs = num(a.g('regeneration_counter'));
   const tile = (key, cls, label, value, unit, extra) => `<button class="stat ${cls}" data-ent="${esc(a.E.get(key)?.entity_id || '')}">
     <span>${label}</span><strong>${value}${unit ? `<small>${unit}</small>` : ''}</strong>${extra || ''}</button>`;
   return `<div class="stats">
     ${tile('salt_range', saltCls, 'Salzreichweite', salt == null ? '–' : nf(salt, 0), salt == null ? '' : salt === 1 ? 'Tag' : 'Tage',
       `<div class="bar"><i style="width:${salt == null ? 0 : Math.min(100, salt / 90 * 100)}%"></i></div>${saltCls ? `<em>${salt <= 7 ? 'Bitte bald Salz nachfüllen' : 'Salz demnächst nachfüllen'}</em>` : ''}`)}
-    ${tile('current_flow_rate', '', 'Durchfluss', flowLm == null ? '–' : nf(flowLm, 1), flowLm == null ? '' : 'l/min',
-      `<em>${flowLm == null ? '' : flowLm > 0 ? 'Wasser wird entnommen' : 'Kein Wasserfluss'}</em>`)}
+    ${(() => { const d = waterDays(a), w = d?.avg != null ? liters(d.avg) : null;
+      return tile('soft_water_quantity', '', 'Wasser Ø pro Tag', w ? w[0] : '–', w ? w[1] : '', `<em>volle Tage der letzten Woche</em>`); })()}
     ${tile('soft_water', '', 'Wasserhärte', soft == null ? '–' : nf(soft, 1), soft == null ? '' : hu, raw != null ? `<em>Rohwasser ${nf(raw, 1)} ${esc(hu)}</em>` : '')}
     ${tile('regeneration_counter', '', 'Regenerationen', regs == null ? '–' : nf(regs, 0), '', usable(a.g('last_regeneration_exchanger')) ? `<em>zuletzt ${esc(fmt(a.g('last_regeneration_exchanger')))}</em>` : '')}
   </div>`;
@@ -616,7 +662,9 @@ async function run(key, fn, msg){
 $('#main').addEventListener('click', e => {
   const t = e.target.closest('button,summary'); if (!t) return;
   if (t.dataset.dev) { S.dev = t.dataset.dev; save('gb:dev', S.dev); render(); return; }
-  if (t.dataset.chartKind) { S.chart.kind = t.dataset.chartKind; save('gb:chart', S.chart); render(); return; }
+  if (t.dataset.chartKind) { S.chart.kind = t.dataset.chartKind; save('gb:chart', S.chart); render();
+    if (t.classList.contains('day')) document.querySelector('.chart')?.closest('.card')?.scrollIntoView({behavior:'smooth', block:'center'});
+    return; }
   if (t.dataset.chartDays) { S.chart.days = +t.dataset.chartDays; save('gb:chart', S.chart); render(); return; }
   if (t.dataset.mode) {
     const id = t.dataset.ent; if (t.getAttribute('aria-pressed') === 'true') return;
